@@ -1,3 +1,4 @@
 *.swp
 src/**/*.swp
+src/**/*.*.swp
 build/
