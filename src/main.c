@@ -2,13 +2,13 @@
 
 void greet()
 {
-	printf("Hello, 0x42!");
+	printf("Hello, 0x42!\n");
 }
 
 int main()
 {
-	printf("main() -> run ...");
+	printf("main() -> run ...\n");
 	greet();
-	printf("main() -> ... end");
+	printf("main() -> ... end\n");
 	return 0;
 }
