@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include "log/logging.h"
 
 void greet()
 {
@@ -9,6 +10,8 @@ int main()
 {
 	printf("main() -> run ...\n");
 	greet();
+	loggingINIT();
+	loggingFIN();
 	printf("main() -> ... end\n");
 	return 0;
 }
