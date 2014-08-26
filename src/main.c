@@ -1,9 +1,10 @@
 #include <stdio.h>
 #include "log/logging.h"
+#include "log/tools.h"
 
 void greet()
 {
-	printf("Hello, 0x42!\n");
+	debugPrint("Hello, 0x42!\n");
 }
 
 int main()
