@@ -6,7 +6,7 @@ static char *logFileName = 0;
 
 void loggingERROR(char *msg);
 char *setERR(int *flag);
-//void writeSysLog();
+void getTimeNow(char * timeBuf, int sizeBuf);
 void writeSysLog(char *funcName, char *errTxt, char *msg);
 
 /* иниц-ия получение имени файла для логирования*/
@@ -24,10 +24,12 @@ void loggingINFO(char *msg)
 	char *head = " INFO ";
 	char *errTxt = "";
 	int err = 0;
+	char timeBuf[80] = {0};
 	if(initFlg) {
-		FILE *file = fopen(logFileName, "r");
+		FILE *file = fopen(logFileName, "a+");
+		getTimeNow(timeBuf, sizeof(timeBuf));
 		if(file) {
-			if(fprintf(file, "%s%s\n", head, msg) < 0)
+			if(fprintf(file, "%s%s%s\n", timeBuf, head, msg) < 0)
 				errTxt = setERR(&err);
 			if(fclose(file) < 0) {
 				errTxt = setERR(&err);
@@ -38,7 +40,7 @@ void loggingINFO(char *msg)
 		errTxt = "run loggingINFO() before loggingINIT() when try write:\n";
 		err = 1;
 	}	
-	if(err) writeSysLog("loggingINFO()", "123", errTxt, msg);
+	if(err) writeSysLog("loggingINFO()", errTxt, msg);
 }
 
 /* выводим error сообщение в лог */
@@ -69,4 +71,24 @@ char * setERR(int *flag)
 	*flag = 1;
 	char *msg = strerror(errno);
 	return msg;
+}
+
+/* возвращает дату и время в заданном формате день-месяц-год час:мин:сек
+   size - размер буфер  */
+void getTimeNow(char *timeStr, int sizeBuf) 
+{
+	if(sizeBuf < 20) {
+		/*не пишем лог тк ошибка возможна только на этапе кодирования*/
+		printf("getTimeNow() - ERROR - массив не достаточного размера\n");
+		return;
+	}
+	struct tm *ptr;
+	time_t lt;
+	/*возвр текущ время системы*/
+	lt = time(NULL);
+	/*преобразует в структуру tm */
+	ptr = localtime(&lt);
+	if(strftime(timeStr, sizeBuf, "%d-%m-%Y %H:%M:%S", ptr) == 0)
+		/*не пишем лог тк ошибка возможна только на этапе кодирования*/
+		printf("getTimeNow() - ERROR - массив не достаточного размера\n"); 
 }

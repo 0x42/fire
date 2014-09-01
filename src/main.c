@@ -10,7 +10,6 @@ int main()
 	loggingINFO("START");
 	
 	loggingINFO("END");
-	loggingFIN();
 	printf("END\n");
 	return 0;
 }
