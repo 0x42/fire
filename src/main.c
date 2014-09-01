@@ -2,17 +2,15 @@
 #include "log/logging.h"
 #include "log/tools.h"
 
-void greet()
-{
-	debugPrint("Hello, 0x42!\n");
-}
-
 int main()
 {
-	printf("main() -> run ...\n");
-	greet();
+	
+	printf("START\n");
 	loggingINIT();
+	loggingINFO("START");
+	
+	loggingINFO("END");
 	loggingFIN();
-	printf("main() -> ... end\n");
+	printf("END\n");
 	return 0;
 }
