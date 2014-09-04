@@ -1,6 +1,7 @@
 *.swp
 *.o
 *.log
+*~
 .directory
 test1
 src/**/*.swp
