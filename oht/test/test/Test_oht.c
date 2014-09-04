@@ -67,6 +67,8 @@ TEST(oht, HashTablePutStringValue)
 	cfg = fopen("dump-string.txt", "w");
 	ht_dump(ht, cfg);
 	fclose(cfg);
+	
+	ht_free(ht);
 }
 
 TEST(oht, HashTablePutEmptyStringValue)
@@ -78,6 +80,8 @@ TEST(oht, HashTablePutEmptyStringValue)
 	cfg = fopen("dump-empty-string-value.txt", "w");
 	ht_dump(ht, cfg);
 	fclose(cfg);
+	
+	ht_free(ht);
 }
 
 TEST(oht, HashTablePutNullValue)
@@ -89,6 +93,8 @@ TEST(oht, HashTablePutNullValue)
 	cfg = fopen("dump-null-value.txt", "w");
 	ht_dump(ht, cfg);
 	fclose(cfg);
+	
+	ht_free(ht);
 }
 
 TEST(oht, HashTablePutEmptyStringKey)
@@ -100,6 +106,8 @@ TEST(oht, HashTablePutEmptyStringKey)
 	cfg = fopen("dump-empty-string-key.txt", "w");
 	ht_dump(ht, cfg);
 	fclose(cfg);
+	
+	ht_free(ht);
 }
 
 TEST(oht, HashTablePutNullKey)
@@ -111,6 +119,8 @@ TEST(oht, HashTablePutNullKey)
 	cfg = fopen("dump-null-key.txt", "w");
 	ht_dump(ht, cfg);
 	fclose(cfg);
+	
+	ht_free(ht);
 }
 
 TEST(oht, HashTableGetString)
@@ -119,6 +129,8 @@ TEST(oht, HashTableGetString)
 	ht_put(ht, ckey, cval);
 	
 	TEST_ASSERT_EQUAL_STRING(cval, ht_get(ht, ckey, "defvalue"));
+	
+	ht_free(ht);
 }
 
 TEST(oht, HashTableGetNull)
@@ -127,6 +139,8 @@ TEST(oht, HashTableGetNull)
 	ht_put(ht, ckey, NULL);
 	
 	TEST_ASSERT_NULL(ht_get(ht, ckey, "defvalue"));
+	
+	ht_free(ht);
 }
 
 TEST(oht, HashTableGetDefault)
@@ -135,6 +149,8 @@ TEST(oht, HashTableGetDefault)
 	ht_put(ht, ckey, cval);
 	
 	TEST_ASSERT_EQUAL_STRING("defvalue", ht_get(ht, "100", "defvalue"));
+	
+	ht_free(ht);
 }
 
 TEST(oht, HashTableModifyValue)
@@ -145,6 +161,8 @@ TEST(oht, HashTableModifyValue)
 
 	ht_put(ht, ckey, "new value");
 	TEST_ASSERT_EQUAL_STRING("new value", ht_get(ht, ckey, "defvalue"));
+	
+	ht_free(ht);
 }
 
 TEST(oht, HashTableRemoveKey)
@@ -155,6 +173,8 @@ TEST(oht, HashTableRemoveKey)
 
 	ht_remove(ht, ckey);
 	TEST_ASSERT_EQUAL_STRING("defvalue", ht_get(ht, ckey, "defvalue"));
+	
+	ht_free(ht);
 }
 
 TEST(oht, HashTableRandom)
@@ -190,5 +210,7 @@ TEST(oht, HashTableRandom)
 	cfg = fopen("dump-rand-post-put.txt", "w");
 	ht_dump(ht, cfg);
 	fclose(cfg);
+	
+	ht_free(ht);
 }
 
