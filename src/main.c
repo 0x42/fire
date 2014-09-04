@@ -5,9 +5,7 @@
 int main()
 {
 	printf("START\n");
-	loggingINIT();
 	loggingINFO("START");
-	
 	loggingINFO("END");
 	printf("END\n");
 	return 0;
