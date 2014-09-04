@@ -11,16 +11,27 @@
 void loggingINFO_writeNullMsg()
 {
 	char *msg = NULL;
-	loggingINIT();
 	int ans = loggingINFO(msg);
-	TEST_ASSERT_EQUAL(-1, ans);
+	TEST_ASSERT_EQUAL(1, ans);
 }
 
 void loggingINFO_writeOneChar()
 {
 	char *msg = "a";
-	loggingINIT();
 	int ans = loggingINFO(msg);
 	TEST_ASSERT_EQUAL(1, ans);
 }
 
+void loggingERROR_writeNullMsg()
+{
+	char *msg = NULL;
+	int ans = loggingERROR(msg);
+	TEST_ASSERT_EQUAL(1, ans);
+}
+
+void loggingERROR_writeOneChar()
+{
+	char *msg = "a";
+	int ans = loggingERROR(msg);
+	TEST_ASSERT_EQUAL(1, ans);
+}

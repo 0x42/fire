@@ -2,7 +2,8 @@
 
 void debugPrint(char *msg, ...)
 {
-	int flgShow = 1;
+	/*выставить в -1 если не нужно выводить в stdout*/
+	int flgShow = 1; 
 	if(flgShow) {
 		va_list ap; // указывает на очередной безымян-ый аргумент
 		char *p, *sval;

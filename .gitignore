@@ -2,6 +2,7 @@
 *.o
 *.log
 .directory
+test1
 src/**/*.swp
 src/**/*.*.swp
 src/**/*.*.gch
