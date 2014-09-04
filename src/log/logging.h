@@ -6,7 +6,7 @@
 #include <errno.h>
 #include <syslog.h>
 #include <time.h>
-#include "tools.h"
+#include "../tools/dbgout.h"
 
 int loggingINFO(char *msg);
 

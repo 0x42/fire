@@ -14,9 +14,9 @@ int wrtLog(char *head, char *msg, char *errTxt);
 /* иниц-ия получение имени файла для логирования*/
 void loggingINIT()
 {
-	debugPrint("loggingINIT run\n");
+	dbgout("loggingINIT run\n");
 	logFileName = "fire.log";
-	debugPrint("logFileName = %s\n", logFileName);
+	dbgout("logFileName = %s\n", logFileName);
 }
 
 /* выводим в logFileName инфор-ое сообщение
@@ -91,7 +91,7 @@ int wrtLog(char *head, char *msg, char *errTxt)
 /* сохраняем инфор о ошибках в системный лог /var/log/syslog*/
 void writeSysLog(char *funcName, char *errTxt, char *msg) 
 {
-	debugPrint("-----\nwriteSysLog() in syslog wrote message\n-----");
+	dbgout("-----\nwriteSysLog() in syslog wrote message\n-----");
 	/* откр соед к Linux'му логгеру
 	 * указывает PID приложения в каждом сообщение
 	   тип приложения пользовательское*/
