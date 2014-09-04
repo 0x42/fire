@@ -9,7 +9,6 @@
 
 void loggingINIT();
 
-void loggingINFO(char *msg);
-
+int loggingINFO(char *msg);
 
 #endif

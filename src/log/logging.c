@@ -1,6 +1,5 @@
 #include "logging.h"
-// флаг проверки инициализации
-static int initFlg = 0;
+
 // имя лог файла
 static char *logFileName = 0;
 
@@ -13,18 +12,27 @@ void writeSysLog(char *funcName, char *errTxt, char *msg);
 void loggingINIT()
 {
 	debugPrint("loggingINIT run\n");
-	initFlg = 1;
 	logFileName = "fire.log";
-	debugPrint("initFlg = %d\nlogFileName = %s\n", initFlg, logFileName);
+	debugPrint("logFileName = %s\n", logFileName);
 }
 
-/* выводим в logFileName инфор-ое сообщение*/
-void loggingINFO(char *msg)
+/* выводим в logFileName инфор-ое сообщение
+   @return = возвр -1 в случае ошибки, >0 вслучае успешной записи
+*/
+int loggingINFO(char *msg)
 {
+	if(msg == NULL) msg = "";
+	// флаг проверки инициализации
+	static int initFlg = -1;
 	char *head = " INFO ";
 	char *errTxt = "";
 	int err = 0;
+	int ans = 0;
 	char timeBuf[80] = {0};
+	if(initFlg < 0) {
+		loggingINIT();
+		initFlg = 1;
+	}
 	if(initFlg) {
 		FILE *file = fopen(logFileName, "a+");
 		getTimeNow(timeBuf, sizeof(timeBuf));
@@ -37,10 +45,14 @@ void loggingINFO(char *msg)
 			}
 		} else 	errTxt = setERR(&err);
 	} else {
-		errTxt = "run loggingINFO() before loggingINIT() when try write:\n";
+		errTxt = "loggingINFO() can't run loggingINIT() when try write:\n";
 		err = 1;
 	}	
-	if(err) writeSysLog("loggingINFO()", errTxt, msg);
+	if(err) {
+		writeSysLog("loggingINFO()", errTxt, msg);
+		ans = -1;
+	} else ans = 1;
+	return ans;
 }
 
 /* выводим error сообщение в лог */

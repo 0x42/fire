@@ -4,7 +4,6 @@
 
 int main()
 {
-	
 	printf("START\n");
 	loggingINIT();
 	loggingINFO("START");
