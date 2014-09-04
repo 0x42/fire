@@ -1,12 +1,12 @@
 #include <stdio.h>
 #include "log/logging.h"
-#include "log/tools.h"
+#include "tools/dbgout.h"
 
 int main()
 {
-	printf("START\n");
+	dbgout("START\n");
 	loggingINFO("START");
 	loggingINFO("END");
-	printf("END\n");
+	dbgout("END\n");
 	return 0;
 }
