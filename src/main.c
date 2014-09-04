@@ -1,14 +1,12 @@
 #include <stdio.h>
-
-void greet()
-{
-	printf("Hello, 0x42!\n");
-}
+#include "log/logging.h"
+#include "log/tools.h"
 
 int main()
 {
-	printf("main() -> run ...\n");
-	greet();
-	printf("main() -> ... end\n");
+	printf("START\n");
+	loggingINFO("START");
+	loggingINFO("END");
+	printf("END\n");
 	return 0;
 }
