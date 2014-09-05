@@ -2,6 +2,11 @@
 
 // имя лог файла
 static char *logFileName = 0;
+// макс кол-во символов в строке
+int maxlen = 100;
+//текущ. кол-во строк в лог файле
+int nrow = 0;
+
 /* флаг проверки инициализации */
 static int initFlg = -1;
 
@@ -15,7 +20,8 @@ int wrtLog(char *head, char *msg, char *errTxt);
 void loggingINIT()
 {
 	dbgout("loggingINIT run\n");
-	logFileName = "fire.log";
+	logFileName = "ringfile.log";
+//	nrow = readNRow(logFileName);
 	dbgout("logFileName = %s\n", logFileName);
 }
 
@@ -78,6 +84,15 @@ int wrtLog(char *head, char *msg, char *errTxt)
 	FILE *file = fopen(logFileName, "a+");
 	getTimeNow(timeBuf, sizeof(timeBuf));
 	if(file) {
+		int allSize = strlen(timeBuf);
+		allSize += strlen(head);
+		allSize += strlen(msg);
+		char logTxt[allSize];
+		strcat(logTxt, timeBuf);
+		strcat(logTxt, head);
+		strcat(logTxt, msg);
+		dbgout("wrtLog() [%s] strlen = %d\n", logTxt, strlen(logTxt));
+		wrtLogWrite(file, logTxt, strlen(logTxt));
 		if(fprintf(file, "%s%s%s\n", timeBuf, head, msg) < 0)
 			errTxt = setERR(&ans);
 		if(fclose(file) < 0) {
@@ -86,6 +101,32 @@ int wrtLog(char *head, char *msg, char *errTxt)
 		}
 	} else 	errTxt = setERR(&ans);
 	return ans;
+}
+
+int wrtLogWrite(FILE *file, char *txt, int size)
+{
+	if(size > maxlen) {
+		
+	}
+}
+/* читает кол-во строк в лог файле*/
+int readNRow(const char *fname) 
+{
+	int nrow = 0;
+	FILE *file = fopen(fname, "r");
+	if(file) {
+		char buf[maxlen];
+		while(!feof(file)) {
+			if(fgets(buf, maxlen, file)) {
+				nrow++;
+				printf(buf);
+			}
+		}
+	} else {
+		dbgout("readNRow() fname = %s error", fname);
+	}
+	printf("nrow = %d\n", nrow);
+	return nrow;
 }
 
 /* сохраняем инфор о ошибках в системный лог /var/log/syslog*/
