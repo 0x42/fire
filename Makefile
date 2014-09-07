@@ -19,7 +19,7 @@ main.o:
 	gcc $(CFLAGS) -c src/main.c
 
 runtest:
-	gcc $(INC_TEST) $(INC_SRC) $(SRC_LOG) $(UNITY) $(SRC_TEST) -o test1
+	gcc $(CFLAGS) $(INC_TEST) $(INC_SRC) $(SRC_LOG) $(UNITY) $(SRC_TEST) -o test1
 	./test1
 clean:
 	rm *.o

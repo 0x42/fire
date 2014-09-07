@@ -1,28 +1,33 @@
 #include "logging.h"
 
-// имя лог файла
-static char *logFileName = 0;
-// макс кол-во символов в строке
-int maxlen = 100;
-//текущ. кол-во строк в лог файле
-int nrow = 0;
+static struct {
+    /* имя лог файла*/
+    char *name;
+    /*текущ. кол-во строк в лог файле*/
+    int nrow;
+} log;
 
-/* флаг проверки инициализации */
-static int initFlg = -1;
+static int logInit = -1;
 
-//int loggingERROR(char *msg);
 char *setERR(int *flag);
 void getTimeNow(char * timeBuf, int sizeBuf);
 void writeSysLog(char *funcName, char *errTxt, char *msg);
 int wrtLog(char *head, char *msg, char *errTxt);
 
+void setLogFileName(char *fname, int size)
+{
+        log.name = fname;
+        logInit = 1;
+}
+
 /* иниц-ия получение имени файла для логирования*/
 void loggingINIT()
 {
 	dbgout("loggingINIT run\n");
-	logFileName = "ringfile.log";
+	log.name = "ringfile.log";
+        logInit = 1;
 //	nrow = readNRow(logFileName);
-	dbgout("logFileName = %s\n", logFileName);
+	dbgout("logFileName = %s\n", log.name);
 }
 
 /* выводим в logFileName инфор-ое сообщение
@@ -35,11 +40,10 @@ int loggingINFO(char *msg)
 	char *errTxt = "";
 	int err = 0;
 	int ans = 0;
-	if(initFlg < 0) {
+	if(logInit < 0) {
 		loggingINIT();
-		initFlg = 1;
 	}
-	if(initFlg) {
+	if(logInit) {
 		if (wrtLog(head, msg, errTxt) < 0) err = 1;
 	} else {
 		errTxt = "loggingINFO() can't run loggingINIT() when try write:\n";
@@ -60,11 +64,10 @@ int loggingERROR(char *msg)
 	char *errTxt = "";
 	int err = 0;
 	int ans = 0;
-	if(initFlg < 0) {
+	if(logInit < 0) {
 		loggingINIT();
-		initFlg = 1;
 	}
-	if(initFlg) {
+	if(logInit) {
 		if (wrtLog(head, msg, errTxt) < 0) err = 1;
 	} else {
 		errTxt = "loggingERROR() can't run loggingINIT() when try write:\n";
@@ -81,18 +84,9 @@ int wrtLog(char *head, char *msg, char *errTxt)
 {
 	int ans = 1;
 	char timeBuf[30] = {0};
-	FILE *file = fopen(logFileName, "a+");
+	FILE *file = fopen(log.name, "a+");
 	getTimeNow(timeBuf, sizeof(timeBuf));
 	if(file) {
-		int allSize = strlen(timeBuf);
-		allSize += strlen(head);
-		allSize += strlen(msg);
-		char logTxt[allSize];
-		strcat(logTxt, timeBuf);
-		strcat(logTxt, head);
-		strcat(logTxt, msg);
-		dbgout("wrtLog() [%s] strlen = %d\n", logTxt, strlen(logTxt));
-		wrtLogWrite(file, logTxt, strlen(logTxt));
 		if(fprintf(file, "%s%s%s\n", timeBuf, head, msg) < 0)
 			errTxt = setERR(&ans);
 		if(fclose(file) < 0) {
@@ -103,29 +97,21 @@ int wrtLog(char *head, char *msg, char *errTxt)
 	return ans;
 }
 
-int wrtLogWrite(FILE *file, char *txt, int size)
-{
-	if(size > maxlen) {
-		
-	}
-}
 /* читает кол-во строк в лог файле*/
 int readNRow(const char *fname) 
 {
 	int nrow = 0;
 	FILE *file = fopen(fname, "r");
 	if(file) {
-		char buf[maxlen];
-		while(!feof(file)) {
-			if(fgets(buf, maxlen, file)) {
-				nrow++;
-				printf(buf);
-			}
-		}
+                char str[10];
+                while(!feof(file)) {
+                        if( fscanf(file, "%10s", str) == 1)
+                                nrow++;
+                }
 	} else {
 		dbgout("readNRow() fname = %s error", fname);
+                nrow = -1;
 	}
-	printf("nrow = %d\n", nrow);
 	return nrow;
 }
 
@@ -139,7 +125,7 @@ void writeSysLog(char *funcName, char *errTxt, char *msg)
 	openlog("FIREROBOTS-NETWORK", LOG_PID, LOG_USER);
 	syslog(LOG_MAKEPRI(LOG_USER, LOG_ERR), 
 		"%s logFileName[%s] errno[%s] msg[%s]",
-		funcName, logFileName, errTxt, msg);
+		funcName, log.name, errTxt, msg);
 	closelog();
 }
 

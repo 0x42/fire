@@ -12,6 +12,7 @@
 
 //extern int loggingINFO(char *msg);
 extern int readNRow(const char *fname);
+extern int writeNRow(FILE *f, char *s, int n);
 
 void loggingINFO_writeNullMsg()
 {
@@ -44,7 +45,8 @@ void loggingERROR_writeOneChar()
 void delOldLog()
 {
 	char fname[] = "ringfile(1).log";
-	char *buf;
+	struct stat *buf;
+        // obtain info about file
 	if(stat(fname, buf) == 0) {
 		printf("file exist %s\n", fname);
 		if(remove(fname) < 0) {
@@ -84,9 +86,50 @@ void loggingRingFile()
 	fclose(file);
 }
 
-void testReadNRow()
+void testRead5Row()
 {
-	wrtLog(" INFO ", "01234567890123456789012345678901234567890123456789\
-			  01234567890123456789012345678901234567890123456789");
-	int nrow = readNRow("ringfile.log");
+        char *fname = "NRow.test"; 
+        FILE *f = fopen(fname, "w");
+        int nrow = -1;
+        if(f != NULL) {
+                fprintf(f, " \n");
+                fprintf(f, "a  a \n");
+                fprintf(f, "\n");
+                fprintf(f, " a \n");
+                fclose(f);
+                nrow = readNRow(fname);
+        }
+        remove(fname);
+        TEST_ASSERT_EQUAL(3, nrow);
+        
 }
+
+void testRead1Msg()
+{
+    char *logFileName = "msglog.test";
+    setLogFileName(logFileName, 11);
+    loggingINFO("Hello world");
+    int nrow = readNRow(logFileName);
+    TEST_ASSERT_EQUAL(1, nrow);
+}
+
+void testReadNRowFromEmptyFile()
+{
+        char *fname = "EmptyROW.test";
+        FILE *f = fopen(fname, "w");
+        fclose(f);
+        int nrow = -1;
+        nrow = readNRow(fname);
+        TEST_ASSERT_EQUAL(0, nrow);
+        remove(fname);
+}
+
+
+
+
+
+
+
+
+
+
