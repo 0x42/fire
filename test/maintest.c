@@ -17,7 +17,8 @@ extern void loggingINFO_writeOneChar();
 extern void loggingERROR_writeNullMsg();
 extern void loggingERROR_writeOneChar();
 extern void loggingRingFile();
-extern void delOldLog();
+extern void delOldFile_test();
+extern void isBigLogSize_test1000row();
 extern void testRead5Row();
 extern void testReadNRowFromEmptyFile();
 extern void testRead1Msg();
@@ -32,10 +33,11 @@ int main(int argc, char** argv)
 	RUN_TEST(loggingERROR_writeNullMsg, 25);
 	RUN_TEST(loggingERROR_writeOneChar, 32);
 //	RUN_TEST(loggingRingFile, 39);
-//	RUN_TEST(delOldLog, 43);
+	RUN_TEST(delOldFile_test, 46);
 	RUN_TEST(testRead5Row, 89);
        	RUN_TEST(testReadNRowFromEmptyFile, 116);
-//        RUN_TEST(testRead1Msg, 107);
+        RUN_TEST(testRead1Msg, 107);
+	RUN_TEST(isBigLogSize_test1000row, 130);
 	return 0;
 }
 

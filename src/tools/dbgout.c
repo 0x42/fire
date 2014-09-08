@@ -9,6 +9,7 @@ void dbgout(char *msg, ...)
 		char *p, *sval;
 		int ival; double dval;
 		va_start(ap, msg); // устанав ap на 1-й безымян-ый аргумент
+		
 		for(p = msg; *p; p++) {
 			if(*p != '%') {
 				putchar(*p);

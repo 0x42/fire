@@ -6,13 +6,11 @@
 #include "unity/src/unity.h"
 #include "../src/log/logging.h"
 
-/*
- * 
- */
-
-//extern int loggingINFO(char *msg);
 extern int readNRow(const char *fname);
 extern int writeNRow(FILE *f, char *s, int n);
+extern void setLogParam(char *fname, char *oldfname, int nrow, int maxrow);
+extern int delOldFile(char *fname);
+extern void resetLogInit();
 
 void loggingINFO_writeNullMsg()
 {
@@ -42,19 +40,16 @@ void loggingERROR_writeOneChar()
 	TEST_ASSERT_EQUAL(1, ans);
 }
 
-void delOldLog()
+void delOldFile_test()
 {
-	char fname[] = "ringfile(1).log";
-	struct stat *buf;
-        // obtain info about file
-	if(stat(fname, buf) == 0) {
-		printf("file exist %s\n", fname);
-		if(remove(fname) < 0) {
-			printf("can't del file: %s\n", fname);
-		}
-	} else {
-		printf("file no exist %s\n", fname);
-	}
+	char fname[] = "ringfile(1)_test.log";
+        FILE *f = fopen(fname, "a+");
+	fclose(f);
+	if(delOldFile(fname) < 0) printf(" ERROR ");
+	int err = 0;
+	if( (f = fopen(fname, "r")) == NULL) err = 1;
+	else err = 0;
+	TEST_ASSERT_TRUE(err);
 }
 
 void loggingRingFile()
@@ -92,6 +87,7 @@ void testRead5Row()
         FILE *f = fopen(fname, "w");
         int nrow = -1;
         if(f != NULL) {
+		fprintf(f, "\n");
                 fprintf(f, " \n");
                 fprintf(f, "a  a \n");
                 fprintf(f, "\n");
@@ -100,16 +96,18 @@ void testRead5Row()
                 nrow = readNRow(fname);
         }
         remove(fname);
-        TEST_ASSERT_EQUAL(3, nrow);
+        TEST_ASSERT_EQUAL(5, nrow);
         
 }
 
 void testRead1Msg()
 {
     char *logFileName = "msglog.test";
-    setLogFileName(logFileName, 11);
+    setLogParam(logFileName, "", 0, 1000);
     loggingINFO("Hello world");
     int nrow = readNRow(logFileName);
+    remove(logFileName);
+    resetLogInit();
     TEST_ASSERT_EQUAL(1, nrow);
 }
 
@@ -124,7 +122,29 @@ void testReadNRowFromEmptyFile()
         remove(fname);
 }
 
-
+/**/
+void isBigLogSize_test1000row()
+{
+	char *log = "log.test";
+	char *logOld = "logold.test";
+	setLogParam(log, logOld, 0, 1000);
+	remove(logOld);
+	remove(log);
+	int i;
+	for(i = 0; i < 1001; i++) {
+		loggingINFO(" Hello world ");
+	}
+	int flag = 0;
+	int oldRow = readNRow(logOld);
+	int curRow = readNRow(log);
+	dbgout("oldRow = %d\n", oldRow);
+	dbgout("curRow = %d\n", curRow);
+	if(oldRow == 1000 && curRow == 1) flag = 1;
+	TEST_ASSERT_TRUE(flag);
+	resetLogInit();
+	remove(logOld);
+	remove(log);
+}
 
 
 

@@ -1,32 +1,54 @@
 #include "logging.h"
 
-static struct {
-    /* имя лог файла*/
-    char *name;
-    /*текущ. кол-во строк в лог файле*/
-    int nrow;
-} log;
-
-static int logInit = -1;
 
 char *setERR(int *flag);
 void getTimeNow(char * timeBuf, int sizeBuf);
 void writeSysLog(char *funcName, char *errTxt, char *msg);
 int wrtLog(char *head, char *msg, char *errTxt);
+int readNRow(const char *fname);
+void isBigLogSize();
+int delOldFile(char *fname);
 
-void setLogFileName(char *fname, int size)
+/* ========================================================================== */
+static struct {
+    /* имя лог файла*/
+    char *name;
+    char *oldname;
+    /*текущ. кол-во строк в лог файле*/
+    int nrow;
+    /*макс кол-во строк в лог файле*/
+    int maxrow;
+} log;
+
+static int logInit = -1;
+
+
+void setLogParam(char *fname, char *oldfname, int nrow, int maxrow)
 {
         log.name = fname;
-        logInit = 1;
+        log.oldname = oldfname;
+	log.nrow = nrow;
+	log.maxrow = maxrow;
+	logInit = 1;
 }
 
+void resetLogInit()
+{
+	logInit = -1;
+}
+
+/* ========================================================================== */
 /* иниц-ия получение имени файла для логирования*/
 void loggingINIT()
 {
 	dbgout("loggingINIT run\n");
+	/* ЧИТАТЬ С КОНФ ФАЙЛА*/
 	log.name = "ringfile.log";
+	log.oldname = "ringfile_OLD.log";
+	log.maxrow = 1000;
+	/* ================= */
         logInit = 1;
-//	nrow = readNRow(logFileName);
+	log.nrow = readNRow(log.name);
 	dbgout("logFileName = %s\n", log.name);
 }
 
@@ -82,6 +104,7 @@ int loggingERROR(char *msg)
 
 int wrtLog(char *head, char *msg, char *errTxt)
 {
+	isBigLogSize();
 	int ans = 1;
 	char timeBuf[30] = {0};
 	FILE *file = fopen(log.name, "a+");
@@ -89,6 +112,7 @@ int wrtLog(char *head, char *msg, char *errTxt)
 	if(file) {
 		if(fprintf(file, "%s%s%s\n", timeBuf, head, msg) < 0)
 			errTxt = setERR(&ans);
+		else log.nrow++;
 		if(fclose(file) < 0) {
 			errTxt = setERR(&ans);
 			msg = "when try close file!";
@@ -97,19 +121,19 @@ int wrtLog(char *head, char *msg, char *errTxt)
 	return ans;
 }
 
-/* читает кол-во строк в лог файле*/
+/*@return - возвр. кол-во строк в лог файле*/
 int readNRow(const char *fname) 
 {
 	int nrow = 0;
 	FILE *file = fopen(fname, "r");
 	if(file) {
-                char str[10];
                 while(!feof(file)) {
-                        if( fscanf(file, "%10s", str) == 1)
-                                nrow++;
+			char ch;
+			if((ch = fgetc(file)) == '\n')
+				nrow++;
                 }
 	} else {
-		dbgout("readNRow() fname = %s error", fname);
+		sysError("readNRow()", fname);
                 nrow = -1;
 	}
 	return nrow;
@@ -127,6 +151,49 @@ void writeSysLog(char *funcName, char *errTxt, char *msg)
 		"%s logFileName[%s] errno[%s] msg[%s]",
 		funcName, log.name, errTxt, msg);
 	closelog();
+}
+
+void sysError(char *funcName, char *errTxt) 
+{
+	dbgout("\n!!! CRITICAL ERROR !!!\n");
+	if (errTxt == NULL) errTxt = "";
+	dbgout("in ->%s\nerr[%s]\n", funcName, errTxt);
+}
+
+/* проверяем размер файла log.name если nrow = maxrow то log.name
+ *  сохраняем c именем log.oldname. Создаем пустой файл c именем log.name  */
+void isBigLogSize()
+{
+	if(log.nrow >= log.maxrow) {
+		if(delOldFile(log.oldname) > 0 ) { 
+			if(rename(log.name, log.oldname) != 0) {
+				sysError("isBigLogSize()", 
+					strerror(errno));
+			} else log.nrow = 0;
+		}
+	}
+}
+
+int delOldFile(char *fname) 
+{
+	int err = -1;
+	char *errTxt = NULL;
+	FILE *file = fopen(fname, "r");
+	if(file != NULL) {
+		if(fclose(file) < 0) {
+			errTxt = setERR(&err);
+		} else {
+			if(remove(fname) < 0) {
+				errTxt = setERR(&err);
+			} 
+		}
+	}
+	int ans = 1;
+	if(err > 0) {
+		sysError("delOldFile()", errTxt);
+		ans = -1;
+	}
+	return ans;
 }
 
 /* сохраняем текст errno - чтобы не затЁрла др функция,
