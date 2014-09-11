@@ -5,8 +5,8 @@
 int main()
 {
 	dbgout("START\n");
-	loggingINFO("START");
-	loggingINFO("END");
+	logInfo("START");
+	logInfo("END");
 	dbgout("END\n");
 	return 0;
 }

@@ -9,8 +9,13 @@
 #include <sys/stat.h>
 #include "../tools/dbgout.h"
 
-int loggingINFO(char *msg);
+int logInfo(char *msg);
 
-int loggingERROR(char *msg);
+int logErr(char *msg);
 
+int readNRow(const char *fname);
+
+int writeNRow(FILE *f, char *s, int n);
+
+void setLogParam(char *fname, char *oldfname, int nrow, int maxrow);
 #endif

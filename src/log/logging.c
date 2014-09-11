@@ -8,7 +8,7 @@ int wrtLog(char *head, char *msg, char *errTxt);
 int readNRow(const char *fname);
 void isBigLogSize();
 int delOldFile(char *fname);
-
+void sysError(const char *funcMsg, const char *msg);
 /* ========================================================================== */
 static struct {
     /* имя лог файла*/
@@ -21,7 +21,6 @@ static struct {
 } log;
 
 static int logInit = -1;
-
 
 void setLogParam(char *fname, char *oldfname, int nrow, int maxrow)
 {
@@ -55,13 +54,14 @@ void loggingINIT()
 /* выводим в logFileName инфор-ое сообщение
    @return = возвр -1 в случае ошибки, >0 вслучае успешной записи
 */
-int loggingINFO(char *msg)
+int logInfo(char *msg)
 {
-	if(msg == NULL) msg = "";
 	char *head = " INFO ";
 	char *errTxt = "";
 	int err = 0;
 	int ans = 0;
+	
+	if(msg == NULL) msg = "";
 	if(logInit < 0) {
 		loggingINIT();
 	}
@@ -79,13 +79,14 @@ int loggingINFO(char *msg)
 }
 
 /* выводим error сообщение в лог */
-int loggingERROR(char *msg)
+int logErr(char *msg)
 {
 	char *head = " ERROR ";
-	if(msg == NULL) msg = "";
 	char *errTxt = "";
 	int err = 0;
 	int ans = 0;
+
+	if(msg == NULL) msg = "";
 	if(logInit < 0) {
 		loggingINIT();
 	}
@@ -104,10 +105,12 @@ int loggingERROR(char *msg)
 
 int wrtLog(char *head, char *msg, char *errTxt)
 {
-	isBigLogSize();
 	int ans = 1;
 	char timeBuf[30] = {0};
-	FILE *file = fopen(log.name, "a+");
+	FILE *file;
+	
+	isBigLogSize();
+	file = fopen(log.name, "a+");
 	getTimeNow(timeBuf, sizeof(timeBuf));
 	if(file) {
 		if(fprintf(file, "%s%s%s\n", timeBuf, head, msg) < 0)
@@ -153,7 +156,7 @@ void writeSysLog(char *funcName, char *errTxt, char *msg)
 	closelog();
 }
 
-void sysError(char *funcName, char *errTxt) 
+void sysError(const char *funcName, const char *errTxt) 
 {
 	dbgout("\n!!! CRITICAL ERROR !!!\n");
 	if (errTxt == NULL) errTxt = "";
@@ -178,6 +181,7 @@ int delOldFile(char *fname)
 {
 	int err = -1;
 	char *errTxt = NULL;
+	int ans = 1;
 	FILE *file = fopen(fname, "r");
 	if(file != NULL) {
 		if(fclose(file) < 0) {
@@ -188,7 +192,6 @@ int delOldFile(char *fname)
 			} 
 		}
 	}
-	int ans = 1;
 	if(err > 0) {
 		sysError("delOldFile()", errTxt);
 		ans = -1;
@@ -200,8 +203,9 @@ int delOldFile(char *fname)
    устанавливаем флаг что ошибка произошла*/
 char * setERR(int *flag) 
 {
+	char *msg;
 	*flag = 1;
-	char *msg = strerror(errno);
+	msg = strerror(errno);
 	return msg;
 }
 
@@ -209,13 +213,14 @@ char * setERR(int *flag)
    size - размер буфер  */
 void getTimeNow(char *timeStr, int sizeBuf) 
 {
+	struct tm *ptr;
+	time_t lt;
+
 	if(sizeBuf < 30) {
 		/*не пишем лог тк ошибка возможна только на этапе кодирования*/
 		printf("getTimeNow() - ERROR - массив не достаточного размера\n");
 		return;
 	}
-	struct tm *ptr;
-	time_t lt;
 	/*возвр текущ время системы*/
 	lt = time(NULL);
 	/*преобразует в структуру tm */

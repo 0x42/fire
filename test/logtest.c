@@ -15,28 +15,28 @@ extern void resetLogInit();
 void loggingINFO_writeNullMsg()
 {
 	char *msg = NULL;
-	int ans = loggingINFO(msg);
+	int ans = logInfo(msg);
 	TEST_ASSERT_EQUAL(1, ans);
 }
 
 void loggingINFO_writeOneChar()
 {
 	char *msg = "a";
-	int ans = loggingINFO(msg);
+	int ans = logInfo(msg);
 	TEST_ASSERT_EQUAL(1, ans);
 }
 
 void loggingERROR_writeNullMsg()
 {
 	char *msg = NULL;
-	int ans = loggingERROR(msg);
+	int ans = logErr(msg);
 	TEST_ASSERT_EQUAL(1, ans);
 }
 
 void loggingERROR_writeOneChar()
 {
 	char *msg = "a";
-	int ans = loggingERROR(msg);
+	int ans = logErr(msg);
 	TEST_ASSERT_EQUAL(1, ans);
 }
 
@@ -104,7 +104,7 @@ void testRead1Msg()
 {
     char *logFileName = "msglog.test";
     setLogParam(logFileName, "", 0, 1000);
-    loggingINFO("Hello world");
+    logInfo("Hello world");
     int nrow = readNRow(logFileName);
     remove(logFileName);
     resetLogInit();
@@ -132,13 +132,36 @@ void isBigLogSize_test1000row()
 	remove(log);
 	int i;
 	for(i = 0; i < 1001; i++) {
-		loggingINFO(" Hello world ");
+		logInfo(" Hello world ");
 	}
 	int flag = 0;
 	int oldRow = readNRow(logOld);
 	int curRow = readNRow(log);
-	dbgout("oldRow = %d\n", oldRow);
-	dbgout("curRow = %d\n", curRow);
+//	dbgout("oldRow = %d\n", oldRow);
+//	dbgout("curRow = %d\n", curRow);
+	if(oldRow == 1000 && curRow == 1) flag = 1;
+	TEST_ASSERT_TRUE(flag);
+	resetLogInit();
+	remove(logOld);
+	remove(log);
+}
+
+void isBigLogSize_test100000row()
+{
+	char *log = "log.test";
+	char *logOld = "logold.test";
+	setLogParam(log, logOld, 0, 1000);
+	remove(logOld);
+	remove(log);
+	int i;
+	for(i = 0; i < 100001; i++) {
+		logInfo(" Hello world ");
+	}
+	int flag = 0;
+	int oldRow = readNRow(logOld);
+	int curRow = readNRow(log);
+//	dbgout("oldRow = %d\n", oldRow);
+//	dbgout("curRow = %d\n", curRow);
 	if(oldRow == 1000 && curRow == 1) flag = 1;
 	TEST_ASSERT_TRUE(flag);
 	resetLogInit();
