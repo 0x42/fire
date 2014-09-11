@@ -1,13 +1,16 @@
 TARGET   = build/fire
 TARGET_T = build/test1 
 
-#CC = arm-elf_gcc
+#CC = arm-elf-gcc
 CC = gcc
 
 INC_DIR      = -Isrc/log -Isrc/tools -I/usr/local/arm-elf/include
 INC_DIR_TEST = -Itest/unity/src
 
-CFLAGS = -g -Wall -c
+CFLAGS  = -g -Wall -c
+
+LDFLAGS = 
+#LDFLAGS = -Wl, -elf2flt
 
 SRC    = src/main.c
 SRC1   = src/tools/dbgout.c
