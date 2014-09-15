@@ -43,10 +43,10 @@ void loggingERROR_writeOneChar()
 void delOldFile_test()
 {
 	char fname[] = "ringfile(1)_test.log";
-        FILE *f = fopen(fname, "a+");
+        int err = 0;
+	FILE *f = fopen(fname, "a+");
 	fclose(f);
 	if(delOldFile(fname) < 0) printf(" ERROR ");
-	int err = 0;
 	if( (f = fopen(fname, "r")) == NULL) err = 1;
 	else err = 0;
 	TEST_ASSERT_TRUE(err);
@@ -103,9 +103,10 @@ void testRead5Row()
 void testRead1Msg()
 {
     char *logFileName = "msglog.test";
+    int nrow = 0;
     setLogParam(logFileName, "", 0, 1000);
     logInfo("Hello world");
-    int nrow = readNRow(logFileName);
+    nrow = readNRow(logFileName);
     remove(logFileName);
     resetLogInit();
     TEST_ASSERT_EQUAL(1, nrow);
@@ -114,9 +115,9 @@ void testRead1Msg()
 void testReadNRowFromEmptyFile()
 {
         char *fname = "EmptyROW.test";
-        FILE *f = fopen(fname, "w");
-        fclose(f);
         int nrow = -1;
+	FILE *f = fopen(fname, "w");
+        fclose(f);
         nrow = readNRow(fname);
         TEST_ASSERT_EQUAL(0, nrow);
         remove(fname);
@@ -127,16 +128,17 @@ void isBigLogSize_test1000row()
 {
 	char *log = "log.test";
 	char *logOld = "logold.test";
+	int flag = 0;
+	int i;
+	int oldRow, curRow;
 	setLogParam(log, logOld, 0, 1000);
 	remove(logOld);
 	remove(log);
-	int i;
 	for(i = 0; i < 1001; i++) {
 		logInfo(" Hello world ");
 	}
-	int flag = 0;
-	int oldRow = readNRow(logOld);
-	int curRow = readNRow(log);
+	oldRow = readNRow(logOld);
+	curRow = readNRow(log);
 //	dbgout("oldRow = %d\n", oldRow);
 //	dbgout("curRow = %d\n", curRow);
 	if(oldRow == 1000 && curRow == 1) flag = 1;
@@ -150,16 +152,16 @@ void isBigLogSize_test100000row()
 {
 	char *log = "log.test";
 	char *logOld = "logold.test";
+	int flag = 0;
+	int i, oldRow, curRow;
 	setLogParam(log, logOld, 0, 1000);
 	remove(logOld);
 	remove(log);
-	int i;
 	for(i = 0; i < 100001; i++) {
 		logInfo(" Hello world ");
 	}
-	int flag = 0;
-	int oldRow = readNRow(logOld);
-	int curRow = readNRow(log);
+	oldRow = readNRow(logOld);
+	curRow = readNRow(log);
 //	dbgout("oldRow = %d\n", oldRow);
 //	dbgout("curRow = %d\n", curRow);
 	if(oldRow == 1000 && curRow == 1) flag = 1;
@@ -168,11 +170,3 @@ void isBigLogSize_test100000row()
 	remove(logOld);
 	remove(log);
 }
-
-
-
-
-
-
-
-
