@@ -1,21 +1,29 @@
 #ifndef LOGGING_H
 #define LOGGING_H
+/* отключаем static на время тестирования*/
+//#define STATIC static
+//#define SYSERRFILE "/dev/log"
+#define STATIC 
+#define SYSERRFILE "sys.err"
 
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
 #include <syslog.h>
 #include <time.h>
+#include <unistd.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 #include "../tools/dbgout.h"
 
-int logInfo(char *msg);
+int bo_log(char *msg, ...);
 
-int logErr(char *msg);
+int bo_tmplog(char *msg);
 
-int readNRow(const char *fname);
+void bo_resetLogInit();
 
-int writeNRow(FILE *f, char *s, int n);
+int bo_isBigLogSize(int *nrow, int maxrow, char *name, char *oldname);
 
-void setLogParam(char *fname, char *oldfname, int nrow, int maxrow);
+void bo_getTimeNow(char *buf, int size);
 #endif
+/* [0x42] */

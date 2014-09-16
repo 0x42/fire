@@ -2,41 +2,33 @@
 #include <stdlib.h>
 #include <dirent.h>
 #include <sys/stat.h>
-
 #include "unity/src/unity.h"
 #include "../src/log/logging.h"
 
 extern int readNRow(const char *fname);
 extern int writeNRow(FILE *f, char *s, int n);
-extern void setLogParam(char *fname, char *oldfname, int nrow, int maxrow);
 extern int delOldFile(char *fname);
-extern void resetLogInit();
+extern void sysErr();
+extern void bo_setLogParam(char *fname, char *oldfname, int nrow, int maxrow);
 
-void loggingINFO_writeNullMsg()
+void bo_log_writeNullMsg()
 {
 	char *msg = NULL;
-	int ans = logInfo(msg);
+	int ans = bo_log(msg);
 	TEST_ASSERT_EQUAL(1, ans);
 }
 
-void loggingINFO_writeOneChar()
+void bo_log_writeEmptyMsg()
+{
+	char *msg = "";
+	int ans = bo_log(msg);
+	TEST_ASSERT_EQUAL(1, ans);
+}
+
+void bo_log_writeOneChar()
 {
 	char *msg = "a";
-	int ans = logInfo(msg);
-	TEST_ASSERT_EQUAL(1, ans);
-}
-
-void loggingERROR_writeNullMsg()
-{
-	char *msg = NULL;
-	int ans = logErr(msg);
-	TEST_ASSERT_EQUAL(1, ans);
-}
-
-void loggingERROR_writeOneChar()
-{
-	char *msg = "a";
-	int ans = logErr(msg);
+	int ans = bo_log(msg);
 	TEST_ASSERT_EQUAL(1, ans);
 }
 
@@ -50,35 +42,6 @@ void delOldFile_test()
 	if( (f = fopen(fname, "r")) == NULL) err = 1;
 	else err = 0;
 	TEST_ASSERT_TRUE(err);
-}
-
-void loggingRingFile()
-{
-	FILE *file = fopen("ringfile.log","a+");
-	fpos_t pos;
-	int poss;
-	char buf[10];
-	int i = 1;
-	printf("ringlog ...\n");
-	while(!feof(file)) {
-		if(fgets(buf, 10, file)) {
-			printf("%d: [%s]\n", i, buf);
-			if(i == 3) {
-				fgetpos(file, &pos);
-				poss = ftell(file);
-			}
-			i++;
-		}
-	}
-	fclose(file);
-	
-	file = fopen("ringfile.log", "a+");
-	fseek(file, poss, SEEK_SET);
-//	rewind(file);
-	for(i = 0; i < 3; i++) 
-		fprintf(file,"b\n");
-	
-	fclose(file);
 }
 
 void testRead5Row()
@@ -97,33 +60,29 @@ void testRead5Row()
         }
         remove(fname);
         TEST_ASSERT_EQUAL(5, nrow);
-        
 }
 
 void testRead1Msg()
 {
     char *logFileName = "msglog.test";
     int nrow = 0;
-    setLogParam(logFileName, "", 0, 1000);
-    logInfo("Hello world");
+    bo_setLogParam(logFileName, "", 0, 1000);
+    bo_log("Hello world");
     nrow = readNRow(logFileName);
     remove(logFileName);
-    resetLogInit();
+    bo_resetLogInit();
     TEST_ASSERT_EQUAL(1, nrow);
 }
 
-void testReadNRowFromEmptyFile()
+void testReadNRowWithoutFile()
 {
         char *fname = "EmptyROW.test";
         int nrow = -1;
-	FILE *f = fopen(fname, "w");
-        fclose(f);
         nrow = readNRow(fname);
         TEST_ASSERT_EQUAL(0, nrow);
         remove(fname);
 }
 
-/**/
 void isBigLogSize_test1000row()
 {
 	char *log = "log.test";
@@ -131,11 +90,11 @@ void isBigLogSize_test1000row()
 	int flag = 0;
 	int i;
 	int oldRow, curRow;
-	setLogParam(log, logOld, 0, 1000);
+	bo_setLogParam(log, logOld, 0, 1000);
 	remove(logOld);
 	remove(log);
 	for(i = 0; i < 1001; i++) {
-		logInfo(" Hello world ");
+		bo_log(" Hello world ");
 	}
 	oldRow = readNRow(logOld);
 	curRow = readNRow(log);
@@ -143,7 +102,7 @@ void isBigLogSize_test1000row()
 //	dbgout("curRow = %d\n", curRow);
 	if(oldRow == 1000 && curRow == 1) flag = 1;
 	TEST_ASSERT_TRUE(flag);
-	resetLogInit();
+	bo_resetLogInit();
 	remove(logOld);
 	remove(log);
 }
@@ -154,11 +113,11 @@ void isBigLogSize_test100000row()
 	char *logOld = "logold.test";
 	int flag = 0;
 	int i, oldRow, curRow;
-	setLogParam(log, logOld, 0, 1000);
+	bo_setLogParam(log, logOld, 0, 1000);
 	remove(logOld);
 	remove(log);
 	for(i = 0; i < 100001; i++) {
-		logInfo(" Hello world ");
+		bo_log(" Hello world ");
 	}
 	oldRow = readNRow(logOld);
 	curRow = readNRow(log);
@@ -166,7 +125,24 @@ void isBigLogSize_test100000row()
 //	dbgout("curRow = %d\n", curRow);
 	if(oldRow == 1000 && curRow == 1) flag = 1;
 	TEST_ASSERT_TRUE(flag);
-	resetLogInit();
+	bo_resetLogInit();
 	remove(logOld);
 	remove(log);
 }
+
+void testsysErr()
+{	
+	int p_int = 100;
+	char *p_str = "Hello";
+	float p_float = 3.14;
+	sysErr("testsysErr() int=%d char=%c str=%s float=%f", 
+		p_int, p_str, p_float);
+	TEST_ASSERT_TRUE(1);
+}
+
+void testsysErrBADParam()
+{
+	sysErr("testsysErrBADParam() %s %s", 0, 0);
+	TEST_ASSERT_TRUE(1);
+}
+/* [0x42] */

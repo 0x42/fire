@@ -1,46 +1,59 @@
 #include "logging.h"
 
-
-char *setERR(int *flag);
-void getTimeNow(char * timeBuf, int sizeBuf);
-void writeSysLog(char *funcName, char *errTxt, char *msg);
-int wrtLog(char *head, char *msg, char *errTxt);
-int readNRow(const char *fname);
-void isBigLogSize();
-int delOldFile(char *fname);
-void sysError(const char *funcMsg, const char *msg);
-/* ========================================================================== */
+/* -------------------------------------------------------------------------- */
+STATIC void getTimeNow(char * timeBuf, int sizeBuf);
+STATIC void sysErr(char *msg, ...);
+STATIC void sysErrParam(char *msg, va_list *ap);
+STATIC int wrtLog(char *msg, va_list *ap, char *errTxt);
+STATIC int log_fprintf(FILE *f, char *timeBuf, va_list *ap, char *msg);
+STATIC int readNRow(const char *fname);
+STATIC int delOldFile(char *fname);
+/* ---------------------------------------------------------------------------- 
+ */
 static struct {
-    /* имя лог файла*/
-    char *name;
-    char *oldname;
-    /*текущ. кол-во строк в лог файле*/
-    int nrow;
-    /*макс кол-во строк в лог файле*/
-    int maxrow;
-} log;
-
+	/*pid процесса*/
+	int pid;
+	/* имя лог файла*/
+	char *name;
+	char *oldname;
+	/*текущ. кол-во строк в лог файле*/
+	int nrow;
+	/*макс кол-во строк в лог файле*/
+	int maxrow;
+} log = {0};
+/* -1 struct log - не иниц-на; 1 - инициал-на*/
 static int logInit = -1;
-
-void setLogParam(char *fname, char *oldfname, int nrow, int maxrow)
+/* ----------------------------------------------------------------------------
+ * @brief		устанав поля struct log
+ * @param fname		назв тек лог файла
+ * @param oldfname	старый лог файл
+ * @param nrow		текущ кол-во строк
+ * @param maxrow	макс кол-во строк
+ */
+STATIC void bo_setLogParam(char *fname, char *oldfname, int nrow, int maxrow)
 {
-        log.name = fname;
+	log.pid = getpid();
+	log.name = fname;
         log.oldname = oldfname;
 	log.nrow = nrow;
 	log.maxrow = maxrow;
 	logInit = 1;
 }
-
-void resetLogInit()
+/* ----------------------------------------------------------------------------
+ * @brief		сбрасываем флаг logInit
+ */
+void bo_resetLogInit()
 {
 	logInit = -1;
 }
-
-/* ========================================================================== */
-/* иниц-ия получение имени файла для логирования*/
-void loggingINIT()
+/* ----------------------------------------------------------------------------
+ * @brief		иниц-ия struct log получение имени файла для логирования
+ */
+STATIC void loggingINIT()
 {
 	dbgout("loggingINIT run\n");
+	/* получ-ие pid процесса*/
+	log.pid = getpid();
 	/* ЧИТАТЬ С КОНФ ФАЙЛА*/
 	log.name = "ringfile.log";
 	log.oldname = "ringfile_OLD.log";
@@ -48,84 +61,125 @@ void loggingINIT()
 	/* ================= */
         logInit = 1;
 	log.nrow = readNRow(log.name);
-	dbgout("logFileName = %s\n", log.name);
 }
-
-/* выводим в logFileName инфор-ое сообщение
-   @return = возвр -1 в случае ошибки, >0 вслучае успешной записи
-*/
-int logInfo(char *msg)
+/* ----------------------------------------------------------------------------
+ * @brief		выводим в logFileName инф-ое сообщение
+ *			%d - int %f - float %s - string
+ * @param msg		инфор которая вывод в лог	
+ * @return		возвр -1 в случае ошибки, >0 вслучае успешной записи
+ */
+int bo_log(char *msg, ...)
 {
-	char *head = " INFO ";
 	char *errTxt = "";
-	int err = 0;
-	int ans = 0;
+	int err = 0, ans = 0;
+	/* указывает на очередной безымян-ый аргумент */
+	va_list ap; 
+	/* защита если msg = null */
+	if(msg == NULL) msg = " ";
+	if(strlen(msg) < 1) msg = " ";
 	
-	if(msg == NULL) msg = "";
-	if(logInit < 0) {
-		loggingINIT();
-	}
+	/* устнав на 1 безым аргумент */
+	va_start(ap, msg);
+	if(logInit < 0) loggingINIT();
 	if(logInit) {
-		if (wrtLog(head, msg, errTxt) < 0) err = 1;
+		if(wrtLog(msg, &ap, errTxt) < 0) err = 1;
 	} else {
-		errTxt = "loggingINFO() can't run loggingINIT() when try write:\n";
+		errTxt = "bo_log() can't run loggingINIT()";
 		err = 1;
-	}	
+	}
 	if(err) {
-		writeSysLog("loggingINFO()", errTxt, msg);
+		sysErr("bo_log() errno[%s]\n msg:\n", errTxt);
+		sysErrParam(msg, &ap);
 		ans = -1;
 	} else ans = 1;
+	
+	/* очистка */
+	va_end(ap);
 	return ans;
 }
 
-/* выводим error сообщение в лог */
-int logErr(char *msg)
-{
-	char *head = " ERROR ";
-	char *errTxt = "";
-	int err = 0;
-	int ans = 0;
-
-	if(msg == NULL) msg = "";
-	if(logInit < 0) {
-		loggingINIT();
-	}
-	if(logInit) {
-		if (wrtLog(head, msg, errTxt) < 0) err = 1;
-	} else {
-		errTxt = "loggingERROR() can't run loggingINIT() when try write:\n";
-		err = 1;
-	}	
-	if(err) {
-		writeSysLog("loggingERROR()", errTxt, msg);
-		ans = -1;
-	} else ans = 1;
-	return ans;
-}
-
-int wrtLog(char *head, char *msg, char *errTxt)
+/* ----------------------------------------------------------------------------
+ * @brief	пишим в лог файл(указаный в log.name)
+ * @msg		текст с параметрами
+ * @ap		указатель на параметры 
+ * @errTxt	если произошла ошибка возвращает текст errno
+ * @return	>0 = ok; <0 = error 
+ */
+STATIC int wrtLog(char *msg, va_list *ap, char *errTxt)
 {
 	int ans = 1;
 	char timeBuf[30] = {0};
-	FILE *file;
-	
-	isBigLogSize();
-	file = fopen(log.name, "a+");
-	getTimeNow(timeBuf, sizeof(timeBuf));
-	if(file) {
-		if(fprintf(file, "%s%s%s\n", timeBuf, head, msg) < 0)
-			errTxt = setERR(&ans);
-		else log.nrow++;
-		if(fclose(file) < 0) {
-			errTxt = setERR(&ans);
-			msg = "when try close file!";
+	FILE *file = NULL;
+	/* проверка чтобы в логе сохр послед 1000 записей */
+	if(bo_isBigLogSize(&log.nrow, log.maxrow, log.name, log.oldname) > 0) {
+		file = fopen(log.name, "a+");
+		bo_getTimeNow(timeBuf, sizeof(timeBuf));
+		if(file) {
+			if(log_fprintf(file, timeBuf, ap, msg) < 0) {
+				errTxt = strerror(errno);
+				ans = -1;
+			} else log.nrow++;
+
+			if(fclose(file) < 0) {
+				errTxt = strerror(errno);
+				ans = -1;
+			}
+		} else {
+			errTxt = strerror(errno);
+			ans = -1;
 		}
-	} else 	errTxt = setERR(&ans);
+	} else {
+		ans = -1;
+	}
 	return ans;
 }
-
-/*@return - возвр. кол-во строк в лог файле*/
-int readNRow(const char *fname) 
+/* ----------------------------------------------------------------------------
+ * @brief		вывод в файл
+ * @param timeBuf	время
+ * @param ap		указ на первый безымяный параметр
+ * @param msg		сообщение возм испол %s--строка %d-число %f - double 
+ * @return		-1 error; >0 - ok
+ */
+STATIC int log_fprintf(FILE *f,  char *timeBuf, va_list *ap, char *msg)
+{
+	int ans = 1;
+	char *p = 0, *sval = 0;
+	int ival = 0; 
+	double dval;
+	if(log.pid == 0) log.pid = getpid();
+	if(fprintf(f, "%s", timeBuf) < 0) return -1;
+	if(fprintf(f, " [%d] ", log.pid) < 0) return -1;
+	for(p = msg; *p; p++) {
+		if(*p != '%') {
+			if(fprintf(f, "%c", *p) < 0) return -1;
+			continue;
+		}
+		switch(*++p) {
+			case 'd':
+				ival = va_arg(*ap, int);
+				if(fprintf(f, "%d", ival) < 0) return -1;
+				break;
+			case 'f':
+				dval = va_arg(*ap, double);
+				if(fprintf(f, "%f", dval) < 0) return -1;
+				break;
+			case 's':
+				sval = va_arg(*ap, char *);
+				if(fprintf(f, "%s", sval) < 0) return -1;
+				break;
+			default:
+				if(fprintf(f, "%c", *p) < 0) return -1;
+				break;
+		}
+	}
+	if(fprintf(f, "\n") < 0) return -1;
+	return ans;
+}
+/* ----------------------------------------------------------------------------
+ * @return	возвр. кол-во строк в fname файле ecли файл не сущест.
+ *		или не удалось открыть возв 0
+ */
+STATIC int readNRow(const char *fname) 
 {
 	int nrow = 0;
 	FILE *file = fopen(fname, "r");
@@ -135,49 +189,94 @@ int readNRow(const char *fname)
 			if((ch = fgetc(file)) == '\n')
 				nrow++;
                 }
-	} else {
-		sysError("readNRow()", fname);
-                nrow = -1;
 	}
 	return nrow;
 }
 
-/* сохраняем инфор о ошибках в системный лог /var/log/syslog*/
-void writeSysLog(char *funcName, char *errTxt, char *msg) 
+/* ---------------------------------------------------------------------------- 
+ * @brief		В moxa нет systemd(сохраняем инфор о ошибках в системный 
+ *			лог /var/log/syslog) Пишим в /dev/log
+ * @param funcName	имя функции в которой произошла ошибка
+ * @param msg		причина ошибки 
+ */
+STATIC void sysErr(char *msg, ...) 
 {
-	dbgout("-----\nwriteSysLog() in syslog wrote message\n-----");
-	/* откр соед к Linux'му логгеру
-	 * указывает PID приложения в каждом сообщение
-	   тип приложения пользовательское*/
-	openlog("FIREROBOTS-NETWORK", LOG_PID, LOG_USER);
-	syslog(LOG_MAKEPRI(LOG_USER, LOG_ERR), 
+	FILE *file = NULL;
+	char timeBuf[30] = {0};
+	va_list ap;
+	dbgout("-----\nsysErr() wrote message\n-----");
+	bo_getTimeNow(timeBuf, sizeof(timeBuf));
+/* 
+         openlog("FIREROBOTS-NETWORK", LOG_PID, LOG_USER);
+         syslog(LOG_MAKEPRI(LOG_USER, LOG_ERR), 
 		"%s logFileName[%s] errno[%s] msg[%s]",
-		funcName, log.name, errTxt, msg);
-	closelog();
-}
-
-void sysError(const char *funcName, const char *errTxt) 
-{
-	dbgout("\n!!! CRITICAL ERROR !!!\n");
-	if (errTxt == NULL) errTxt = "";
-	dbgout("in ->%s\nerr[%s]\n", funcName, errTxt);
-}
-
-/* проверяем размер файла log.name если nrow = maxrow то log.name
- *  сохраняем c именем log.oldname. Создаем пустой файл c именем log.name  */
-void isBigLogSize()
-{
-	if(log.nrow >= log.maxrow) {
-		if(delOldFile(log.oldname) > 0 ) { 
-			if(rename(log.name, log.oldname) != 0) {
-				sysError("isBigLogSize()", 
-					strerror(errno));
-			} else log.nrow = 0;
+                funcName, log.name, errTxt, msg);
+         closelog();
+ */	
+	file = fopen(SYSERRFILE, "a+");
+	if(file) {
+		va_start(ap, msg);
+		if(log_fprintf(file, timeBuf, &ap, msg) < 0)
+			printf("Error when write in /dev/log %s\n",
+				strerror(errno));
+		if(fclose(file) < 0) {
+			printf("Error when close /dev/log %s\n", 
+				strerror(errno));
 		}
+		va_end(ap);
+	} else {
+		printf("%s%s\n", "ERROR sysErr() ", strerror(errno));
 	}
 }
 
-int delOldFile(char *fname) 
+STATIC void sysErrParam(char *msg, va_list *ap)
+{
+	FILE *file = NULL;
+	char timeBuf[30] = {0};
+	file = fopen(SYSERRFILE, "a+");
+	bo_getTimeNow(timeBuf, sizeof(timeBuf));
+	if(file) {
+		if(log_fprintf(file, timeBuf, ap, msg) < 0)
+			printf("Error when write in /dev/log %s\n",
+				strerror(errno));
+		if(fclose(file) < 0) {
+			printf("Error when close /dev/log %s\n", 
+				strerror(errno));
+		}
+	} else {
+		printf("%s%s\n", "ERROR sysErr() ", strerror(errno));
+	}
+}
+/* ----------------------------------------------------------------------------
+ * @brief	 проверяем размер файла log.name если nrow = maxrow то log.name
+ *		 сохраняем c именем log.oldname. Создаем пустой файл c 
+ *		 именем log.name  
+ */
+int bo_isBigLogSize(int *nrow, int maxrow, char *name, char *oldname)
+{
+	int ans = 1;
+	char *errnoTxt = NULL;
+	if(*nrow >= maxrow) {
+		if(delOldFile(oldname) > 0 ) { 
+			if(rename(name, oldname) != 0) {
+				errnoTxt = strerror(errno);
+				sysErr("isBigLogSize() errno[%s]\n name=%s"\
+					" \noldname= %s\n nrow = %d\n maxrow = %d\n", 
+					errnoTxt, name,	oldname, nrow, maxrow);
+				ans = -1;
+			} else *nrow = 0;
+		} else {
+			ans = -1;
+		}
+	}
+	return ans;
+}
+/* ----------------------------------------------------------------------------
+ * @brief		удаляем файл fname если сущ-ет
+ * @param fname		имя файла для удаления
+ * @return		-1 error; 1 ок
+ */
+STATIC int delOldFile(char *fname) 
 {
 	int err = -1;
 	char *errTxt = NULL;
@@ -185,35 +284,32 @@ int delOldFile(char *fname)
 	FILE *file = fopen(fname, "r");
 	if(file != NULL) {
 		if(fclose(file) < 0) {
-			errTxt = setERR(&err);
+			err = 1;
+			errTxt = strerror(errno);
 		} else {
 			if(remove(fname) < 0) {
-				errTxt = setERR(&err);
+				err = 1;
+				errTxt = strerror(errno);
 			} 
 		}
 	}
 	if(err > 0) {
-		sysError("delOldFile()", errTxt);
+		sysErr("delOldFile() errno[%s]\n fname=%s\n", 
+			errTxt, fname);
 		ans = -1;
 	}
 	return ans;
 }
 
-/* сохраняем текст errno - чтобы не затЁрла др функция,
-   устанавливаем флаг что ошибка произошла*/
-char * setERR(int *flag) 
+/* ----------------------------------------------------------------------------
+ * @brief		возвращает дату и время в заданном формате 
+ *			день-месяц-год час:мин:сек
+ * @param timeStr	строка в кот-ую пишим время
+ * @param sizeBuf	размер timeStr  
+ */
+void bo_getTimeNow(char *timeStr, int sizeBuf) 
 {
-	char *msg;
-	*flag = 1;
-	msg = strerror(errno);
-	return msg;
-}
-
-/* возвращает дату и время в заданном формате день-месяц-год час:мин:сек
-   size - размер буфер  */
-void getTimeNow(char *timeStr, int sizeBuf) 
-{
-	struct tm *ptr;
+	struct tm *ptr = NULL;
 	time_t lt;
 
 	if(sizeBuf < 30) {
@@ -229,3 +325,4 @@ void getTimeNow(char *timeStr, int sizeBuf)
 		/*не пишем лог тк ошибка возможна только на этапе кодирования*/
 		printf("getTimeNow() - ERROR - массив не достаточного размера\n"); 
 }
+/* [0x42] */

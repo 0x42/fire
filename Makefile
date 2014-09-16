@@ -1,20 +1,21 @@
 TARGET   = build/fire
 TARGET_T = build/test1 
 
-CC = arm-elf-gcc
-#CC = gcc
+#CC = arm-elf-gcc
+CC = gcc
 
 INC_DIR      = -Isrc/log -Isrc/tools -I/usr/local/arm-elf/include
 INC_DIR_TEST = -Itest/unity/src
 
 CFLAGS  = -g -Wall -c
 
-#LDFLAGS = 
-LDFLAGS = -Wl, -elf2flt
+LDFLAGS = 
+#LDFLAGS = -Wl, -elf2flt
 
 SRC    = src/main.c
 SRC1   = src/tools/dbgout.c
 SRC2   = src/log/logging.c
+SRC3   = src/log/robolog.c
 
 SRC_T  = test/maintest.c
 SRC_T1 = test/unity/src/unity.c
@@ -23,6 +24,7 @@ SRC_T2 = test/logtest.c
 OBJ    = build/main.o
 OBJ1   = build/dbgout.o
 OBJ2   = build/logging.o
+OBJ3   = build/robolog.o
 
 OBJ_T  = build/maintest.o 
 OBJ_T1 = build/unity.o
@@ -31,8 +33,9 @@ OBJ_T2 = build/logtest.o
 default:
 	$(CC) $(INC_DIR) $(CFLAGS) $(SRC1) -o $(OBJ1)
 	$(CC) $(INC_DIR) $(CFLAGS) $(SRC2) -o $(OBJ2)
+	$(CC) $(INC_DIR) $(CFLAGS) $(SRC3) -o $(OBJ3)
 	$(CC) $(INC_DIR) $(CFLAGS) $(SRC)  -o $(OBJ)
-	$(CC) $(LDFLAGS) $(OBJ1) $(OBJ2) $(OBJ) -o $(TARGET)
+	$(CC) $(LDFLAGS) $(OBJ1) $(OBJ2) $(OBJ3) $(OBJ) -o $(TARGET)
 
 check:
 	$(CC) $(INC_DIR) $(CFLAGS) $(SRC1) -o $(OBJ1)
