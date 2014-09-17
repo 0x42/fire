@@ -8,5 +8,7 @@ test1
 src/**/*.swp
 src/**/*.*.swp
 src/**/*.*.gch
+test/stress/*.o
+test/stress/stress
 build/
 nbproject/

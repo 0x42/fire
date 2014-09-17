@@ -4,13 +4,14 @@
  * домашняя страница проекта:
  * http://throwtheswitch.org/white-papers/unity-intro.html
  * запуск тестов производится командой 
- * $ make runtest 
+ * $ make check 
  */
 
 #include <stdio.h>
 #include <stdlib.h>
 #include "unity/src/unity.h"
 #include "../src/log/logging.h"
+#include "../src/log/robolog.h"
 
 extern void bo_log_writeNullMsg();
 extern void bo_log_writeOneChar();
@@ -28,6 +29,11 @@ extern void test_isBigLogSize_BADParam();
 void setUp(void) {}
 void tearDown(void) {}
 
+extern void test_borobLogNotInit();
+extern void test_borobLog();
+extern void test_borobLog1000();
+extern void test_borobLog10000();
+
 int main(int argc, char** argv)
 {
 	RUN_TEST(bo_log_writeNullMsg, 14);
@@ -41,6 +47,10 @@ int main(int argc, char** argv)
 	RUN_TEST(isBigLogSize_test100000row, 149);
 	RUN_TEST(testsysErr, 134);
 	RUN_TEST(testsysErrBADParam, 143);
+	RUN_TEST(test_borobLogNotInit, 3);
+	RUN_TEST(test_borobLog, 10);
+	RUN_TEST(test_borobLog1000, 22);
+	RUN_TEST(test_borobLog10000, 43);
 	return 0;
 }
 

@@ -1,9 +1,9 @@
 #include "logging.h"
 
 /* -------------------------------------------------------------------------- */
-STATIC void getTimeNow(char * timeBuf, int sizeBuf);
 STATIC void sysErr(char *msg, ...);
 STATIC void sysErrParam(char *msg, va_list *ap);
+STATIC void bo_setLogParam(char *fname, char *oldfname, int nrow, int maxrow);
 STATIC int wrtLog(char *msg, va_list *ap, char *errTxt);
 STATIC int log_fprintf(FILE *f, char *timeBuf, va_list *ap, char *msg);
 STATIC int readNRow(const char *fname);
@@ -102,7 +102,7 @@ int bo_log(char *msg, ...)
  * @brief	пишим в лог файл(указаный в log.name)
  * @msg		текст с параметрами
  * @ap		указатель на параметры 
- * @errTxt	если произошла ошибка возвращает текст errno
+ * @errTxt	если произошла ошибка возвращает текст errno в errTxt
  * @return	>0 = ok; <0 = error 
  */
 STATIC int wrtLog(char *msg, va_list *ap, char *errTxt)
@@ -204,7 +204,6 @@ STATIC void sysErr(char *msg, ...)
 	FILE *file = NULL;
 	char timeBuf[30] = {0};
 	va_list ap;
-	dbgout("-----\nsysErr() wrote message\n-----");
 	bo_getTimeNow(timeBuf, sizeof(timeBuf));
 /* 
          openlog("FIREROBOTS-NETWORK", LOG_PID, LOG_USER);
@@ -250,7 +249,7 @@ STATIC void sysErrParam(char *msg, va_list *ap)
 /* ----------------------------------------------------------------------------
  * @brief	 проверяем размер файла log.name если nrow = maxrow то log.name
  *		 сохраняем c именем log.oldname. Создаем пустой файл c 
- *		 именем log.name  
+ *		 именем log.name  + сбрасываем счетчик кол-во строк nrow
  */
 int bo_isBigLogSize(int *nrow, int maxrow, char *name, char *oldname)
 {
@@ -262,7 +261,7 @@ int bo_isBigLogSize(int *nrow, int maxrow, char *name, char *oldname)
 				errnoTxt = strerror(errno);
 				sysErr("isBigLogSize() errno[%s]\n name=%s"\
 					" \noldname= %s\n nrow = %d\n maxrow = %d\n", 
-					errnoTxt, name,	oldname, nrow, maxrow);
+					errnoTxt, name,	oldname, *nrow, maxrow);
 				ans = -1;
 			} else *nrow = 0;
 		} else {

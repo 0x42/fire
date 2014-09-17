@@ -14,21 +14,39 @@ extern void bo_setLogParam(char *fname, char *oldfname, int nrow, int maxrow);
 void bo_log_writeNullMsg()
 {
 	char *msg = NULL;
-	int ans = bo_log(msg);
+	char *f = "test.log";
+	char *f_old = "test_old.log";
+	int ans = -1;
+	bo_setLogParam(f, f_old, 0, 10);
+	ans = bo_log(msg);
+	remove(f);
+	bo_resetLogInit();
 	TEST_ASSERT_EQUAL(1, ans);
 }
 
 void bo_log_writeEmptyMsg()
 {
 	char *msg = "";
-	int ans = bo_log(msg);
+	char *f = "test.log";
+	char *f_old = "test_old.log";
+	int ans = -1;
+	bo_setLogParam(f, f_old, 0, 10);
+	ans = bo_log(msg);
+	remove(f);
+	bo_resetLogInit();
 	TEST_ASSERT_EQUAL(1, ans);
 }
 
 void bo_log_writeOneChar()
 {
 	char *msg = "a";
-	int ans = bo_log(msg);
+	char *f = "test.log";
+	char *f_old = "test_old.log";
+	int ans = -1;
+	bo_setLogParam(f, f_old, 0, 10);
+	ans = bo_log(msg);
+	remove(f);
+	bo_resetLogInit();
 	TEST_ASSERT_EQUAL(1, ans);
 }
 
