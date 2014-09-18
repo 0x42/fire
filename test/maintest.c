@@ -12,6 +12,7 @@
 #include "unity/src/unity.h"
 #include "../src/log/logging.h"
 #include "../src/log/robolog.h"
+#include "../src/tools/linkedlist.h"
 
 extern void bo_log_writeNullMsg();
 extern void bo_log_writeOneChar();
@@ -34,6 +35,9 @@ extern void test_borobLog();
 extern void test_borobLog1000();
 extern void test_borobLog10000();
 
+extern void initdel_test();
+extern void crt_lliststress_test();
+
 int main(int argc, char** argv)
 {
 	RUN_TEST(bo_log_writeNullMsg, 14);
@@ -51,6 +55,8 @@ int main(int argc, char** argv)
 	RUN_TEST(test_borobLog, 10);
 	RUN_TEST(test_borobLog1000, 22);
 	RUN_TEST(test_borobLog10000, 43);
+	RUN_TEST(initdel_test, 8);
+	RUN_TEST(crt_lliststress_test, 22);
 	return 0;
 }
 

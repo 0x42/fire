@@ -1,10 +1,10 @@
 #ifndef LOGGING_H
 #define LOGGING_H
 /* отключаем static на время тестирования*/
-#define STATIC static
-#define SYSERRFILE "/dev/log"
-//#define STATIC 
-//#define SYSERRFILE "sys.err"
+//#define STATIC static
+//#define SYSERRFILE "/dev/log"
+#define STATIC 
+#define SYSERRFILE "sys.err"
 
 #include <stdio.h>
 #include <string.h>

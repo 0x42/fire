@@ -103,6 +103,7 @@ int bo_log(char *msg, ...)
  * @msg		текст с параметрами
  * @ap		указатель на параметры 
  * @errTxt	если произошла ошибка возвращает текст errno в errTxt
+ *		освобождать не надо тк результат из errno 
  * @return	>0 = ok; <0 = error 
  */
 STATIC int wrtLog(char *msg, va_list *ap, char *errTxt)
