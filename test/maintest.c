@@ -40,6 +40,7 @@ extern void crt_lliststress_test();
 
 int main(int argc, char** argv)
 {
+	
 	RUN_TEST(bo_log_writeNullMsg, 14);
 	RUN_TEST(bo_log_writeEmptyMsg, 21);
 	RUN_TEST(bo_log_writeOneChar, 28);
