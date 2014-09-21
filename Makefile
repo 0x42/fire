@@ -73,13 +73,16 @@ check2:
 	$(CC) $(INC_DIR) $(INC_DIR_TEST) $(CFLAGS) $(SRC_TT1) -o $(OBJ_TT1)
 	$(CC) $(INC_DIR) $(INC_DIR_TEST) $(CFLAGS) $(SRC_TT)  -o $(OBJ_TT)
 	$(CC) $(LDFLAGS) $(OBJ5) $(OBJ_TT1) $(OBJ_TT) -o $(TARGET_T1)
-	echo "SIMPLE RUN TEST"
-	$(TARGET_T1)
 # перем окр в прилож испол др набор функций для работы с паммятью
 # выявляет двойной free() на один указ и однобайтовое перепол буфера
 # находит ошибки переполнения буфера в случае вызова free на эту
-# область памяти
-#MALLOC_CHECK_=1 $(TARGET_T1)
+# область памяти; программа mtrace позволяет прочитать файл трассировки
+# чтобы найти место где программа упала 
+#$ MALLOC_CHECK_=2 gdb <имя программы> -> run -> where
+	MALLOC_CHECK_=2 $(TARGET_T1) 
+	echo "MEM TEST 2"
+	MALLOC_TRACE=trace.log $(TARGET_T1)
+	mtrace $(TARGET_T1) trace.log
 	
 clean:
 	rm build/*.o
