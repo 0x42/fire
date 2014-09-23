@@ -24,13 +24,13 @@ static struct {
 /* -1 struct log - не иниц-на; 1 - инициал-на*/
 static int logInit = -1;
 /* ----------------------------------------------------------------------------
- * @brief		устанав поля struct log
+ * @brief		иниц struct log
  * @param fname		назв тек лог файла
  * @param oldfname	старый лог файл
  * @param nrow		текущ кол-во строк
  * @param maxrow	макс кол-во строк
  */
-STATIC void bo_setLogParam(char *fname, char *oldfname, int nrow, int maxrow)
+void bo_setLogParam(char *fname, char *oldfname, int nrow, int maxrow)
 {
 	log.pid = getpid();
 	log.name = fname;
@@ -109,7 +109,7 @@ int bo_log(char *msg, ...)
 STATIC int wrtLog(char *msg, va_list *ap, char *errTxt)
 {
 	int ans = 1;
-	char timeBuf[30] = {0};
+	char timeBuf[40] = {0};
 	FILE *file = NULL;
 	/* проверка чтобы в логе сохр послед 1000 записей */
 	if(bo_isBigLogSize(&log.nrow, log.maxrow, log.name, log.oldname) > 0) {
@@ -203,7 +203,7 @@ STATIC int readNRow(const char *fname)
 STATIC void sysErr(char *msg, ...) 
 {
 	FILE *file = NULL;
-	char timeBuf[30] = {0};
+	char timeBuf[40] = {0};
 	va_list ap;
 	bo_getTimeNow(timeBuf, sizeof(timeBuf));
 /* 
@@ -232,7 +232,7 @@ STATIC void sysErr(char *msg, ...)
 STATIC void sysErrParam(char *msg, va_list *ap)
 {
 	FILE *file = NULL;
-	char timeBuf[30] = {0};
+	char timeBuf[40] = {0};
 	file = fopen(SYSERRFILE, "a+");
 	bo_getTimeNow(timeBuf, sizeof(timeBuf));
 	if(file) {
@@ -311,18 +311,28 @@ void bo_getTimeNow(char *timeStr, int sizeBuf)
 {
 	struct tm *ptr = NULL;
 	time_t lt;
-
-	if(sizeBuf < 30) {
+	int micro = 0;
+	struct timeval tval;
+	char buffer[30];
+	if(sizeBuf < 40) {
 		/*не пишем лог тк ошибка возможна только на этапе кодирования*/
 		printf("getTimeNow() - ERROR - массив не достаточного размера\n");
 		return;
 	}
 	/*возвр текущ время системы*/
-	lt = time(NULL);
+//	lt = time(NULL);
+	if(gettimeofday(&tval, NULL) == -1) {
+		lt = time(NULL);
+	} else {
+		lt = tval.tv_sec;
+		micro = tval.tv_usec/1000;
+	}
+
 	/*преобразует в структуру tm */
 	ptr = localtime(&lt);
-	if(strftime(timeStr, sizeBuf, "%d-%m-%Y %H:%M:%S", ptr) == 0)
+	if(strftime(buffer, sizeBuf, "%d-%m-%Y %H:%M:%S ", ptr) == 0)
 		/*не пишем лог тк ошибка возможна только на этапе кодирования*/
-		printf("getTimeNow() - ERROR - массив не достаточного размера\n"); 
+		printf("getTimeNow() - ERROR - массив не достаточного размера\n");
+	sprintf(timeStr, "%s%d ", buffer, micro);
 }
 /* [0x42] */

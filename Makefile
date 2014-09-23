@@ -69,10 +69,11 @@ check:
 
 check2:
 	echo "MEMORY - TEST "
+	$(CC) $(INC_DIR) $(INC_DIR_TEST) $(CFLAGS) $(SRC_T1) -o $(OBJ_T1)
 	$(CC) $(INC_DIR) $(CFLAGS) $(SRC5) -o $(OBJ5)
 	$(CC) $(INC_DIR) $(INC_DIR_TEST) $(CFLAGS) $(SRC_TT1) -o $(OBJ_TT1)
 	$(CC) $(INC_DIR) $(INC_DIR_TEST) $(CFLAGS) $(SRC_TT)  -o $(OBJ_TT)
-	$(CC) $(LDFLAGS) $(OBJ5) $(OBJ_TT1) $(OBJ_TT) -o $(TARGET_T1)
+	$(CC) $(LDFLAGS) $(OBJ_T1) $(OBJ5) $(OBJ_TT1) $(OBJ_TT) -o $(TARGET_T1)
 # перем окр в прилож испол др набор функций для работы с паммятью
 # выявляет двойной free() на один указ и однобайтовое перепол буфера
 # находит ошибки переполнения буфера в случае вызова free на эту

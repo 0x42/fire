@@ -11,12 +11,16 @@
 #include <errno.h>
 #include <syslog.h>
 #include <time.h>
+
 #include <unistd.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <sys/time.h>
 #include "../tools/dbgout.h"
 
 int bo_log(char *msg, ...);
+
+void bo_setLogParam(char *fname, char *oldfname, int nrow, int maxrow);
 
 void bo_resetLogInit();
 
