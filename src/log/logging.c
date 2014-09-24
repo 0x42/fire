@@ -1,6 +1,7 @@
 #include "logging.h"
 
 /* -------------------------------------------------------------------------- */
+
 STATIC void sysErr(char *msg, ...);
 STATIC void sysErrParam(char *msg, va_list *ap);
 STATIC void bo_setLogParam(char *fname, char *oldfname, int nrow, int maxrow);
