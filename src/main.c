@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include "log/logging.h"
 #include "tools/dbgout.h"
+#include "nettcp/bo_net.h"
 
 int main(int argc, char **argv)
 {

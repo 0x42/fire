@@ -5,8 +5,6 @@
  */
 int initServerSock()
 {
-	int sock = 0;
-	int ans = 1;
 	struct sockaddr_in saddr;
 	int port = 8888;
 	/* PF_INET - интернет сокет IP4 
@@ -25,12 +23,11 @@ int initServerSock()
 		/* address ip4 */
 		saddr.sin_addr.s_addr = INADDR_ANY;
 		if(bind(sock, (struct sockaddr *) &saddr, sizeof(saddr)) == -1) {
-			ans = -1;
-		} else {
-			ans = sock;
-		} 
+			close(sock);
+			sock = -1;
+		}
 	}
-	return ans;
+	return sock;
 }
 /* ----------------------------------------------------------------------------
  * @brief	слушаем сокет sock, как только приходит коннект возвр сокет 
@@ -41,7 +38,7 @@ int waitConnect(int sock, int *clientfd)
 {
 	int ans = 1;
 	int queue_len = 2;
-	if(listen(sock, 2) == -1) ans = -1;
+	if(listen(sock, queue_len) == -1) ans = -1;
 	else {
 	/// Wait and Accept connection
 		*clientfd = accept(sock, NULL, NULL);
