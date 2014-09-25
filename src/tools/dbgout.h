@@ -1,6 +1,6 @@
 #ifndef DBGOUT_H
 #define DBGOUY_H
-
+#define BO_BDG
 #include <stdarg.h>
 #include <stdio.h>
 

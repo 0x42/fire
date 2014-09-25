@@ -9,7 +9,7 @@ CC = gcc
 INC_DIR      = -Isrc/log -Isrc/tools -Isrc/nettcp -I/usr/local/arm-elf/include
 INC_DIR_TEST = -Itest/unity/src
 
-CFLAGS  = -g -Wall -c
+CFLAGS  = -Wall -c
 
 LDFLAGS = 
 #LDFLAGS = -Wl, -elf2flt
@@ -49,12 +49,12 @@ OBJ_TT = build/mainmem.o
 OBJ_TT1 = build/mempool_test.o
 
 default:
-	$(CC) $(INC_DIR) $(CFLAGS) $(SRC1) -o $(OBJ1)
-	$(CC) $(INC_DIR) $(CFLAGS) $(SRC2) -o $(OBJ2)
-	$(CC) $(INC_DIR) $(CFLAGS) $(SRC3) -o $(OBJ3)
-	$(CC) $(INC_DIR) $(CFLAGS) $(SRC6) -o $(OBJ6)
-	$(CC) $(INC_DIR) $(CFLAGS) $(SRC)  -o $(OBJ)
-	$(CC) $(LDFLAGS) $(OBJ1) $(OBJ2) $(OBJ3) $(OBJ6) $(OBJ) -o $(TARGET)
+	$(CC) $(CFLAGS) $(INC_DIR) $(SRC1) -o $(OBJ1)
+	$(CC) $(CFLAGS) $(INC_DIR) $(SRC2) -o $(OBJ2)
+	$(CC) $(CFLAGS) $(INC_DIR) $(SRC3) -o $(OBJ3)
+#$(CC) $(CFLAGS) $(INC_DIR) $(SRC6) -o $(OBJ6)
+	$(CC) $(CFLAGS) $(INC_DIR) $(SRC)  -o $(OBJ)
+	$(CC) $(LDFLAGS) $(OBJ1) $(OBJ2) $(OBJ3) $(OBJ) -o $(TARGET)
 	
 check:
 	$(CC) $(INC_DIR) $(CFLAGS) $(SRC1) -o $(OBJ1)

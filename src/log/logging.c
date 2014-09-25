@@ -1,14 +1,20 @@
 #include "logging.h"
 
 /* -------------------------------------------------------------------------- */
-
-STATIC void sysErr(char *msg, ...);
-STATIC void sysErrParam(char *msg, va_list *ap);
-STATIC void bo_setLogParam(char *fname, char *oldfname, int nrow, int maxrow);
-STATIC int wrtLog(char *msg, va_list *ap, char *errTxt);
-STATIC int log_fprintf(FILE *f, char *timeBuf, va_list *ap, char *msg);
-STATIC int readNRow(const char *fname);
-STATIC int delOldFile(char *fname);
+//void sysErr(char *msg, ...);
+//void sysErrParam(char *msg, va_list *ap);
+//void bo_setLogParam(char *fname, char *oldfname, int nrow, int maxrow);
+//int wrtLog(char *msg, va_list *ap, char *errTxt);
+//int log_fprintf(FILE *f, char *timeBuf, va_list *ap, char *msg);
+//int readNRow(const char *fname);
+//int delOldFile(char *fname);
+BO_STATIC void sysErr(char *msg, ...);
+BO_STATIC void sysErrParam(char *msg, va_list *ap);
+BO_STATIC void bo_setLogParam(char *fname, char *oldfname, int nrow, int maxrow);
+BO_STATIC int wrtLog(char *msg, va_list *ap, char *errTxt);
+BO_STATIC int log_fprintf(FILE *f, char *timeBuf, va_list *ap, char *msg);
+BO_STATIC int readNRow(const char *fname);
+BO_STATIC int delOldFile(char *fname);
 /* ---------------------------------------------------------------------------- 
  */
 static struct {
@@ -50,7 +56,7 @@ void bo_resetLogInit()
 /* ----------------------------------------------------------------------------
  * @brief		иниц-ия struct log получение имени файла для логирования
  */
-STATIC void loggingINIT()
+BO_STATIC void loggingINIT()
 {
 	dbgout("loggingINIT run\n");
 	/* получ-ие pid процесса*/
@@ -107,7 +113,7 @@ int bo_log(char *msg, ...)
  *		освобождать не надо тк результат из errno 
  * @return	>0 = ok; <0 = error 
  */
-STATIC int wrtLog(char *msg, va_list *ap, char *errTxt)
+BO_STATIC int wrtLog(char *msg, va_list *ap, char *errTxt)
 {
 	int ans = 1;
 	char timeBuf[40] = {0};
@@ -142,7 +148,7 @@ STATIC int wrtLog(char *msg, va_list *ap, char *errTxt)
  * @param msg		сообщение возм испол %s--строка %d-число %f - double 
  * @return		-1 error; >0 - ok
  */
-STATIC int log_fprintf(FILE *f,  char *timeBuf, va_list *ap, char *msg)
+BO_STATIC int log_fprintf(FILE *f,  char *timeBuf, va_list *ap, char *msg)
 {
 	int ans = 1;
 	char *p = 0, *sval = 0;
@@ -181,7 +187,7 @@ STATIC int log_fprintf(FILE *f,  char *timeBuf, va_list *ap, char *msg)
  * @return	возвр. кол-во строк в fname файле ecли файл не сущест.
  *		или не удалось открыть возв 0
  */
-STATIC int readNRow(const char *fname) 
+BO_STATIC int readNRow(const char *fname) 
 {
 	int nrow = 0;
 	FILE *file = fopen(fname, "r");
@@ -201,7 +207,7 @@ STATIC int readNRow(const char *fname)
  * @param funcName	имя функции в которой произошла ошибка
  * @param msg		причина ошибки 
  */
-STATIC void sysErr(char *msg, ...) 
+BO_STATIC void sysErr(char *msg, ...) 
 {
 	FILE *file = NULL;
 	char timeBuf[40] = {0};
@@ -230,7 +236,7 @@ STATIC void sysErr(char *msg, ...)
 	}
 }
 
-STATIC void sysErrParam(char *msg, va_list *ap)
+BO_STATIC void sysErrParam(char *msg, va_list *ap)
 {
 	FILE *file = NULL;
 	char timeBuf[40] = {0};
@@ -277,7 +283,7 @@ int bo_isBigLogSize(int *nrow, int maxrow, char *name, char *oldname)
  * @param fname		имя файла для удаления
  * @return		-1 error; 1 ок
  */
-STATIC int delOldFile(char *fname) 
+BO_STATIC int delOldFile(char *fname) 
 {
 	int err = -1;
 	char *errTxt = NULL;
