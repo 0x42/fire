@@ -1,5 +1,5 @@
-#ifndef LOGGING_H
-#define LOGGING_H
+#ifndef BOLOGGING_H
+#define BOLOGGING_H
 /* отключаем static на время тестирования*/
 /* #define STATIC static */
 /* #define SYSERRFILE "/dev/log" */
@@ -18,13 +18,13 @@
 #include <sys/time.h>
 #include "../tools/dbgout.h"
 
-int bo_log(char *msg, ...);
+int  bo_log(char *msg, ...);
 
 void bo_setLogParam(char *fname, char *oldfname, int nrow, int maxrow);
 
 void bo_resetLogInit();
 
-int bo_isBigLogSize(int *nrow, int maxrow, char *name, char *oldname);
+int  bo_isBigLogSize(int *nrow, int maxrow, char *name, char *oldname);
 
 void bo_getTimeNow(char *buf, int size);
 

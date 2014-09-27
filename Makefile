@@ -6,8 +6,9 @@ TARGET_T1 = build/test2
 #CC = arm-elf-gcc
 CC = gcc
 
-INC_DIR      = -Isrc/log -Isrc/tools -Isrc/nettcp -I/usr/local/arm-elf/include
-INC_DIR_TEST = -Itest/unity/src
+#INC_DIR      = -Isrc/log -Isrc/tools -Isrc/nettcp -I/usr/local/arm-elf/include
+INC_DIR		= -Isrc/log -Isrc/tools -Isrc/nettcp
+INC_DIR_TEST	= -Itest/unity/src
 
 CFLAGS  = -g -Wall -c
 
@@ -16,7 +17,7 @@ LDFLAGS =
 
 SRC    = src/main.c
 SRC1   = src/tools/dbgout.c
-SRC2   = src/log/logging.c
+SRC2   = src/log/bologging.c
 SRC3   = src/log/robolog.c
 SRC4   = src/tools/linkedlist.c
 SRC5   = src/tools/bmempool.c
@@ -33,7 +34,7 @@ SRC_TT1 = test/mempool_test.c
 
 OBJ    = build/main.o
 OBJ1   = build/dbgout.o
-OBJ2   = build/logging.o
+OBJ2   = build/bologging.o
 OBJ3   = build/robolog.o
 OBJ4   = build/linkedlist.o
 OBJ5   = build/bmempool.o	

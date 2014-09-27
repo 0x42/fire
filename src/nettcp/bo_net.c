@@ -12,20 +12,16 @@ int initServerSock()
 	 * SOCK_DGRAM  - дейтагр(UDP)
 	 */
 	int sock = socket(AF_INET, SOCK_STREAM, 0);
-	if(sock == -1) {
-		ans = -1;
-	} else {
-		memset(&saddr, 0, sizeof(struct sockaddr_in));
-		/*Семейство протокола ip4*/
-		saddr.sin_family = AF_INET;
-		/* порт */
-		saddr.sin_port = htons(port);
-		/* address ip4 */
-		saddr.sin_addr.s_addr = INADDR_ANY;
-		if(bind(sock, (struct sockaddr *) &saddr, sizeof(saddr)) == -1) {
-			close(sock);
-			sock = -1;
-		}
+	memset(&saddr, 0, sizeof(struct sockaddr_in));
+	/*Семейство протокола ip4*/
+	saddr.sin_family = AF_INET;
+	/* порт */
+	saddr.sin_port = htons(port);
+	/* address ip4 */
+	saddr.sin_addr.s_addr = INADDR_ANY;
+	if(bind(sock, (struct sockaddr *) &saddr, sizeof(saddr)) == -1) {
+		close(sock);
+		sock = -1;
 	}
 	return sock;
 }
