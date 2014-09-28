@@ -26,8 +26,12 @@ void dbgout(char *msg, ...)
 					printf("%f", dval);
 					break;
 				case 's':
-					for(sval = va_arg(ap, char *); *sval; sval++) {
-						putchar(*sval);
+					sval = va_arg(ap, char *);
+					if(sval == NULL) printf("null");
+					else  {
+						for(; *sval; sval++) {
+							putchar(*sval);
+						}
 					}
 					break;
 				default:
