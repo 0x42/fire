@@ -31,8 +31,11 @@ static struct {
  *		GETFIFO - забрать запрос из FIFO
  */
 static char *PacketStatusTxt[] = {"FIFOERR", "READHEAD", "SET", "GET", "QUIT"};
-static enum PacketStatus       {FIFOERR=0, READHEAD,      SET,              GET,              QUIT} packetStatus;
-static void(*statusTable[])() = {fifoError,    fifoReadHead, fifoSetData, fifoGetData};
+static enum PacketStatus {FIFOERR=0, READHEAD, SET, GET, QUIT} packetStatus;
+static void(*statusTable[])() = {fifoError, fifoReadHead, fifoSetData, fifoGetData};
+struct ParamStatus {
+	int clientfd;
+};
 /* ----------------------------------------------------------------------------
  * @brief		Запуск сервера FIFO
  *			request: SET|GET|DEL|ASK
@@ -183,6 +186,7 @@ static void fifoReadPacket(int clientSock)
 	 packetStatus = QUIT;
  }
  /* ---------------------------------------------------------------------------
+  * @brief		
   */
  static void fifoError()
  {

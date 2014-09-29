@@ -327,7 +327,7 @@ void bo_getTimeNow(char *timeStr, int sizeBuf)
 		lt = time(NULL);
 	} else {
 		lt = tval.tv_sec;
-		micro = tval.tv_usec/1000;
+		micro = tval.tv_usec;
 	}
 
 	/*преобразует в структуру tm */

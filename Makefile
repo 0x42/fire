@@ -6,15 +6,9 @@ TARGET_T1 = build/test2
 #CC = arm-elf-gcc
 CC = gcc
 
-<<<<<<< HEAD
-INC_DIR      = -Isrc/log -Isrc/tools -Isrc/nettcp -Iusr/local/include
-#-I/usr/local/arm-elf/include
-INC_DIR_TEST = -Itest/unity/src
-=======
 #INC_DIR      = -Isrc/log -Isrc/tools -Isrc/nettcp -I/usr/local/arm-elf/include
 INC_DIR		= -Isrc/log -Isrc/tools -Isrc/nettcp
 INC_DIR_TEST	= -Itest/unity/src
->>>>>>> 742ef0c33635951f02e6e6a779935b48fb5e19c0
 
 CFLAGS  = -g -Wall -c
 
