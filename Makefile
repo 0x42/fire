@@ -6,9 +6,15 @@ TARGET_T1 = build/test2
 #CC = arm-elf-gcc
 CC = gcc
 
+<<<<<<< HEAD
 INC_DIR      = -Isrc/log -Isrc/tools -Isrc/nettcp -Iusr/local/include
 #-I/usr/local/arm-elf/include
 INC_DIR_TEST = -Itest/unity/src
+=======
+#INC_DIR      = -Isrc/log -Isrc/tools -Isrc/nettcp -I/usr/local/arm-elf/include
+INC_DIR		= -Isrc/log -Isrc/tools -Isrc/nettcp
+INC_DIR_TEST	= -Itest/unity/src
+>>>>>>> 742ef0c33635951f02e6e6a779935b48fb5e19c0
 
 CFLAGS  = -g -Wall -c
 
@@ -22,6 +28,7 @@ SRC3   = src/log/robolog.c
 SRC4   = src/tools/linkedlist.c
 SRC5   = src/tools/bmempool.c
 SRC6   = src/nettcp/bo_net.c
+SRC7   = src/nettcp/bo_net_fifo_server.c
 
 SRC_T  = test/maintest.c
 SRC_T1 = test/unity/src/unity.c
@@ -39,6 +46,7 @@ OBJ3   = build/robolog.o
 OBJ4   = build/linkedlist.o
 OBJ5   = build/bmempool.o	
 OBJ6   = build/bo_net.o
+OBJ7   = build/bo_net_fifo_server.o
 
 OBJ_T  = build/maintest.o 
 OBJ_T1 = build/unity.o
@@ -54,8 +62,9 @@ default:
 	$(CC) $(INC_DIR) $(CFLAGS) $(SRC2) -o $(OBJ2)
 	$(CC) $(INC_DIR) $(CFLAGS) $(SRC3) -o $(OBJ3)
 	$(CC) $(INC_DIR) $(CFLAGS) $(SRC6) -o $(OBJ6)
+	$(CC) $(INC_DIR) $(CFLAGS) $(SRC7) -o $(OBJ7)	
 	$(CC) $(INC_DIR) $(CFLAGS) $(SRC)  -o $(OBJ)
-	$(CC) $(LDFLAGS) $(OBJ1) $(OBJ2) $(OBJ6) $(OBJ) -o $(TARGET)
+	$(CC) $(LDFLAGS) $(OBJ1) $(OBJ2) $(OBJ3) $(OBJ6) $(OBJ7) $(OBJ) -o $(TARGET)
 	
 check:
 	$(CC) $(INC_DIR) $(CFLAGS) $(SRC1) -o $(OBJ1)
@@ -92,4 +101,3 @@ check2:
 clean:
 	rm build/*.o
 	rm $(TARGET)
-	rm *.err

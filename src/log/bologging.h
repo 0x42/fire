@@ -1,10 +1,9 @@
-#ifndef __BOLOGGING_H
-#define __BOLOGGING_H
-/*
-#define STATIC static
-#define SYSERRFILE "/dev/log"
- */
-#define STATIC 
+#ifndef BOLOGGING_H
+#define BOLOGGING_H
+/* отключаем static на время тестирования*/
+/* #define STATIC static */
+/* #define SYSERRFILE "/dev/log" */
+#define STATIC
 #define SYSERRFILE "sys.err"
 
 #include <stdio.h>
@@ -22,13 +21,13 @@
 /* #define STATIC static */
 
 
-int bo_log(char *msg, ...);
+int  bo_log(char *msg, ...);
 
 void bo_setLogParam(char *fname, char *oldfname, int nrow, int maxrow);
 
 void bo_resetLogInit();
 
-int bo_isBigLogSize(int *nrow, int maxrow, char *name, char *oldname);
+int  bo_isBigLogSize(int *nrow, int maxrow, char *name, char *oldname);
 
 void bo_getTimeNow(char *timeStr, int sizeBuf);
 

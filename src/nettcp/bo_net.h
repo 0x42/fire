@@ -6,12 +6,16 @@
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#include <errno.h>
 
-int bo_initServerSock();
+/* инициализация сокета */
+int bo_initServSock(unsigned int port, char **errTxt);
 
-int bo_listen(int sock, int queue_len);
+/* делает сокет пассивным */
+int bo_setListenSock(unsigned int sockfd, unsigned int queue_len, char **errTxt);
 
-int bo_waitConnect(int sock, int *clientfd);
+/* ожидание коннекта */
+int bo_waitConnect(int sock, int *clientfd, char **errTxt);
 
 #endif	/* BO_NET_H */
 

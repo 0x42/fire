@@ -1,13 +1,14 @@
 #include "bologging.h"
 /* -------------------------------------------------------------------------- */
- void sysErr(char *msg, ...);
- void sysErrParam(char *msg, va_list *ap);
- void bo_setLogParam(char *fname, char *oldfname, int nrow, int maxrow);
- void bo_getTimeNow(char *timeStr, int sizeBuf);
- int wrtLog(char *msg, va_list *ap, char *errTxt);
- int log_fprintf(FILE *f, char *timeBuf, va_list *ap, char *msg);
- int readNRow(const char *fname);
- int delOldFile(char *fname);
+
+STATIC void sysErr(char *msg, ...);
+STATIC void sysErrParam(char *msg, va_list *ap);
+STATIC void bo_setLogParam(char *fname, char *oldfname, int nrow, int maxrow);
+STATIC int wrtLog(char *msg, va_list *ap, char **errTxt);
+STATIC int log_fprintf(FILE *f, char *timeBuf, va_list *ap, char *msg);
+STATIC int readNRow(const char *fname);
+STATIC int delOldFile(char *fname);
+
 /* ---------------------------------------------------------------------------- 
  */
 static struct {
@@ -69,7 +70,7 @@ void bo_resetLogInit()
  */
 int bo_log(char *msg, ...)
 {
-	char *errTxt = "";
+	char *errTxt = NULL;
 	int err = 0, ans = 0;
 	/* указывает на очередной безымян-ый аргумент */
 	va_list ap; 
@@ -81,7 +82,7 @@ int bo_log(char *msg, ...)
 	va_start(ap, msg);
 	if(logInit < 0) loggingINIT();
 	if(logInit) {
-		if(wrtLog(msg, &ap, errTxt) < 0) err = 1;
+		if(wrtLog(msg, &ap, &errTxt) < 0) err = 1;
 	} else {
 		errTxt = "bo_log() can't run loggingINIT()";
 		err = 1;
@@ -105,7 +106,8 @@ int bo_log(char *msg, ...)
  *		освобождать не надо тк результат из errno 
  * @return	>0 = ok; <0 = error 
  */
- int wrtLog(char *msg, va_list *ap, char *errTxt)
+
+STATIC int wrtLog(char *msg, va_list *ap, char **errTxt)
 {
 	int ans = 1;
 	char timeBuf[40] = {0};
@@ -116,16 +118,16 @@ int bo_log(char *msg, ...)
 		bo_getTimeNow(timeBuf, sizeof(timeBuf));
 		if(file) {
 			if(log_fprintf(file, timeBuf, ap, msg) < 0) {
-				errTxt = strerror(errno);
+				*errTxt = strerror(errno);
 				ans = -1;
 			} else log.nrow++;
 
 			if(fclose(file) < 0) {
-				errTxt = strerror(errno);
+				*errTxt = strerror(errno);
 				ans = -1;
 			}
 		} else {
-			errTxt = strerror(errno);
+			*errTxt = strerror(errno);
 			ans = -1;
 		}
 	} else {
