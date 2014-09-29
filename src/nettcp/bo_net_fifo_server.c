@@ -2,14 +2,16 @@
 #include "../log/bologging.h"
 #include "bo_net.h"
 
+struct ParamSt;
 static int readConfig();
 static int fifoServStart();
 static void fifoServWork(int sockfdMain);
 static void fifoReadPacket();
-static void fifoReadHead();
-static void fifoError();
-static void fifoSetData();
-static void fifoGetData();
+static void fifoReadHead(struct ParamSt *param);
+static void fifoError(struct ParamSt *param);
+static void fifoQuit(struct ParamSt *param);
+static void fifoSetData(struct ParamSt *param);
+static void fifoGetData(struct ParamSt *param);
 /* ----------------------------------------------------------------------------
  * @port	- порт накотором висит слуш сокет
  * @queue_len	- кол-во необр запросов в очереди, при перепол вохзвращает 
@@ -32,8 +34,14 @@ static struct {
  */
 static char *PacketStatusTxt[] = {"FIFOERR", "READHEAD", "SET", "GET", "QUIT"};
 static enum PacketStatus {FIFOERR=0, READHEAD, SET, GET, QUIT} packetStatus;
-static void(*statusTable[])() = {fifoError, fifoReadHead, fifoSetData, fifoGetData};
-struct ParamStatus {
+static void(*statusTable[])(struct ParamSt *) = {
+	fifoError, 
+	fifoReadHead, 
+	fifoSetData, 
+	fifoGetData,
+	fifoQuit};
+struct ParamSt {
+	int packetLen;
 	int clientfd;
 };
 /* ----------------------------------------------------------------------------
@@ -129,12 +137,13 @@ static void fifoServWork(int sockfdMain)
  */
 static void fifoReadPacket(int clientSock)
 {
+	struct ParamSt param;
 	packetStatus = READHEAD;
 	int stop = -1;
 	while(stop == -1) {
 		printf("status = %s\n", PacketStatusTxt[packetStatus]);
 		if(packetStatus == QUIT) break;
-		statusTable[packetStatus]();
+		statusTable[packetStatus](&param);
 	}
 }
  /* ---------------------------------------------------------------------------
@@ -143,9 +152,9 @@ static void fifoReadPacket(int clientSock)
   * @client		сокет соот-ий текущ соед-ию
   * @return		[1] = ok, [-1] = error
   */
- static void fifoReadHead()
+ static void fifoReadHead(struct ParamSt *param)
  {
-	 printf("%s -> fifoReadHead()\n", PacketStatusTxt[packetStatus]);
+	printf("%s -> fifoReadHead()\n", PacketStatusTxt[packetStatus]);
 	int headSize = 3;
 	char buf[headSize];
 	int  count = 0;
@@ -155,13 +164,13 @@ static void fifoReadPacket(int clientSock)
 		/* MSG_PEEK после чтения данных с сокета их копия 
 		 * остается в очереди если на сокет не придет не одного байта то 
 		 * заблокируемся надолго */
-		count = recv(fifoconf.clientfd, buf, headSize, MSG_PEEK);
+		count = recv(param->clientfd, buf, headSize, MSG_PEEK);
 		if(count == 3)  break;
 		usleep(100000);
 		exec++;
 	}
 	memset(buf, 0, headSize);
-	count = recv(fifoconf.clientfd, buf, headSize, 0);
+	count = recv(param->clientfd, buf, headSize, 0);
 	if(count == 3) {
 		if(strstr(buf, "SET")) packetStatus = SET;
 		else if(strstr(buf, "GET")) packetStatus= GET;
@@ -171,16 +180,20 @@ static void fifoReadPacket(int clientSock)
  }
  /* ---------------------------------------------------------------------------
   * @brief		читаем длину запроса, его тело и кладем в FIFO
+  * @param		ParamSt {packetLen = кол-во символов опред длину пакета
+  *				 clientfd = сокет клиента}
   */
- static void fifoSetData()
- {
-	 printf("fifoSetData()\n");
-	 packetStatus = QUIT;
+ static void fifoSetData(struct ParamSt *param)
+ { 
+	 int length = 0;
+	printf("fifoSetData()\n");
+	length = readPacketLength(param);
+	packetStatus = QUIT;
  }
  /* ---------------------------------------------------------------------------
   * @brief		снимаем со стека 1 запрос и отправляем клиенту
   */
- static void fifoGetData()
+ static void fifoGetData(struct ParamSt *param)
  {
 	 printf("fifoGetData()\n" );
 	 packetStatus = QUIT;
@@ -188,8 +201,12 @@ static void fifoReadPacket(int clientSock)
  /* ---------------------------------------------------------------------------
   * @brief		
   */
- static void fifoError()
+ static void fifoError(struct ParamSt *param)
  {
 	 printf("fifoERROR() \n" );
 	 packetStatus = QUIT;
  }
+ /* ---------------------------------------------------------------------------
+  * @brief		empty function
+  */
+ static void fifoQuit(struct ParamSt *param) { }
