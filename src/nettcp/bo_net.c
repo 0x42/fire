@@ -3,7 +3,7 @@
  * @brief		откр сокет
  * @return		возвращает socket или -1 вслучае ошибки 
  */
-int initServerSock()
+int bo_initServerSock()
 {
 	struct sockaddr_in saddr;
 	int port = 8888;
@@ -12,9 +12,7 @@ int initServerSock()
 	 * SOCK_DGRAM  - дейтагр(UDP)
 	 */
 	int sock = socket(AF_INET, SOCK_STREAM, 0);
-	if(sock == -1) {
-		ans = -1;
-	} else {
+	if(sock != -1) {
 		memset(&saddr, 0, sizeof(struct sockaddr_in));
 		/*Семейство протокола ip4*/
 		saddr.sin_family = AF_INET;
@@ -29,20 +27,27 @@ int initServerSock()
 	}
 	return sock;
 }
+
+int bo_listen(int sock, int queue_len)
+{
+	int ans = 1;
+	ans = listen(sock, queue_len);
+	return ans;
+}
 /* ----------------------------------------------------------------------------
  * @brief	слушаем сокет sock, как только приходит коннект возвр сокет 
  *		связ с клиентом clientfd;
  * @return	1 - ok; -1 - error
  */
-int waitConnect(int sock, int *clientfd)
+int bo_waitConnect(int sock, int *clientfd)
 {
 	int ans = 1;
 	int queue_len = 2;
-	if(listen(sock, queue_len) == -1) ans = -1;
-	else {
+//	if(listen(sock, queue_len) == -1) ans = -1;
+//	else {
 	/// Wait and Accept connection
 		*clientfd = accept(sock, NULL, NULL);
 		if(*clientfd == -1) ans = -1;
-	}
+//	}
 	return ans;
 }

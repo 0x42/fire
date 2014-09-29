@@ -1,5 +1,5 @@
-#ifndef BO_NET_H
-#define	BO_NET_H
+#ifndef __BO_NET_H
+#define	__BO_NET_H
 
 #include <stdio.h>
 #include <string.h>
@@ -7,9 +7,11 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
-int initServerSock();
+int bo_initServerSock();
 
-int waitConnect(int sock, int *clientfd);
+int bo_listen(int sock, int queue_len);
+
+int bo_waitConnect(int sock, int *clientfd);
 
 #endif	/* BO_NET_H */
 

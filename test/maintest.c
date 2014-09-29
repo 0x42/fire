@@ -10,7 +10,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "unity/src/unity.h"
-#include "../src/log/logging.h"
+#include "../src/log/bologging.h"
 #include "../src/log/robolog.h"
 #include "../src/tools/linkedlist.h"
 

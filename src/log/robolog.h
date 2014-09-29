@@ -5,7 +5,7 @@
 #ifndef ROBOLOG_H
 #define	ROBOLOG_H
 #include <stdio.h>
-#include "logging.h"
+#include "bologging.h"
 
 void bo_robLogInit(char *fname, char *foldname, int row, int maxrow);
 
