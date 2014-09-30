@@ -2,16 +2,19 @@
 #include "../log/bologging.h"
 #include "bo_net.h"
 
+extern unsigned int boCharToInt(unsigned char *buf);
+
 struct ParamSt;
 static int readConfig();
 static int fifoServStart();
 static void fifoServWork(int sockfdMain);
-static void fifoReadPacket();
+static void fifoReadPacket(int sockfd);
 static void fifoReadHead(struct ParamSt *param);
 static void fifoError(struct ParamSt *param);
 static void fifoQuit(struct ParamSt *param);
 static void fifoSetData(struct ParamSt *param);
 static void fifoGetData(struct ParamSt *param);
+static unsigned int readPacketLength(struct ParamSt *param);
 /* ----------------------------------------------------------------------------
  * @port	- порт накотором висит слуш сокет
  * @queue_len	- кол-во необр запросов в очереди, при перепол вохзвращает 
@@ -117,13 +120,12 @@ static void fifoServWork(int sockfdMain)
 	int stop = 1;
 	int countErr  = 0;
 	char *errTxt = NULL;
+	int clientfd = 0;
 	bo_log("%s%s %d", " INFO ", " START LOOP", sockfdMain);
 	while(stop == 1) {
-		if(bo_waitConnect(sockfdMain, &fifoconf.clientfd, &errTxt) == 1) {
+		if(bo_waitConnect(sockfdMain, &clientfd, &errTxt) == 1) {
 			countErr = 0;
-			fifoReadPacket();
-			close(fifoconf.clientfd);
-			fifoconf.clientfd = 0;
+			fifoReadPacket(clientfd);
 		} else {
 			countErr++;
 			bo_log("%s%s errno[%s]", " ERROR ", 
@@ -138,13 +140,15 @@ static void fifoServWork(int sockfdMain)
 static void fifoReadPacket(int clientSock)
 {
 	struct ParamSt param;
+	param.clientfd = clientSock;
 	packetStatus = READHEAD;
 	int stop = -1;
 	while(stop == -1) {
-		printf("status = %s\n", PacketStatusTxt[packetStatus]);
+		dbgout("status = %s\n", PacketStatusTxt[packetStatus]);
 		if(packetStatus == QUIT) break;
 		statusTable[packetStatus](&param);
 	}
+	close(param.clientfd);
 }
  /* ---------------------------------------------------------------------------
   * @brief		чтение заголовка запроса
@@ -160,10 +164,9 @@ static void fifoReadPacket(int clientSock)
 	int  count = 0;
 	int exec = 0;
 	/*  в течение 1 сек ждем прихода headSize байт */
-	while(exec != 10) {
+	while(exec != 100) {
 		/* MSG_PEEK после чтения данных с сокета их копия 
-		 * остается в очереди если на сокет не придет не одного байта то 
-		 * заблокируемся надолго */
+		 * остается в очереди */
 		count = recv(param->clientfd, buf, headSize, MSG_PEEK);
 		if(count == 3)  break;
 		usleep(100000);
@@ -171,6 +174,8 @@ static void fifoReadPacket(int clientSock)
 	}
 	memset(buf, 0, headSize);
 	count = recv(param->clientfd, buf, headSize, 0);
+	dbgout("fifoReadHead()->HEAD[%s] count=%d", buf, count);
+	if(count == -1) dbgout("errno[%s]", strerror(errno));
 	if(count == 3) {
 		if(strstr(buf, "SET")) packetStatus = SET;
 		else if(strstr(buf, "GET")) packetStatus= GET;
@@ -185,9 +190,12 @@ static void fifoReadPacket(int clientSock)
   */
  static void fifoSetData(struct ParamSt *param)
  { 
-	 int length = 0;
+	unsigned int length = 0;
+	unsigned char *body;
 	printf("fifoSetData()\n");
 	length = readPacketLength(param);
+	printf("length = %d\n", length);
+	readPacketBody(param);
 	packetStatus = QUIT;
  }
  /* ---------------------------------------------------------------------------
@@ -210,3 +218,30 @@ static void fifoReadPacket(int clientSock)
   * @brief		empty function
   */
  static void fifoQuit(struct ParamSt *param) { }
+ /* ---------------------------------------------------------------------------
+  * @brief	читаем длину пакета
+  * @return	[0] - ошибка, [>0] - длина сообщения
+  */
+ static unsigned int readPacketLength(struct ParamSt *param)
+ {
+	 int sock = param->clientfd;
+	 char buf[2] = {0};
+	 int count = 0;
+	 int exec = 0;
+	 unsigned int ans = 0;
+	 /* в течение 1 сек ждем прихода 2byte опред длину сообщения*/
+	 while(exec != 10) {
+		 count = recv(sock, buf, 2, MSG_PEEK); 
+		 if(count == 2) break;
+		 usleep(100000);
+		 exec++;
+	 }
+	 count = recv(sock, buf, 2, 0);
+	 if(count == 2) {
+		 /*b1b2 -> b1 - старший байт
+		  *	   b2 - младший байт
+ 		  */
+		 ans = boCharToInt((unsigned char *)buf);
+	 }
+	 return ans;
+ }

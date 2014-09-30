@@ -92,7 +92,6 @@ int bo_log(char *msg, ...)
 		sysErrParam(msg, &ap);
 		ans = -1;
 	} else ans = 1;
-	
 	/* очистка */
 	va_end(ap);
 	return ans;

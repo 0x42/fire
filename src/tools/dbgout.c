@@ -43,3 +43,28 @@ void dbgout(char *msg, ...)
 	}
 }
 
+/* ----------------------------------------------------------------------------
+   *(ans)   - старший байт
+ * *(ans+1) - младший байт
+ *  */
+void boIntToChar(unsigned int x, unsigned char *ans)
+{
+	unsigned int a = 0;
+	a = x >> 8;
+	a = a & 0xFF;
+	*ans = (char)a;
+	a = x & 0xFF;
+	*(ans + 1) = (char)a;
+}
+
+unsigned int boCharToInt(unsigned char *buf) 
+{
+	unsigned int x = 0;
+	x = x | buf[0];
+	x = x << 8;
+	x = x & 0xFF00;
+	x = x | buf[1];
+	/*делаем маску выделяем последние 2 байта*/
+	x = x & 0xFFFF;
+	return x;
+}

@@ -27,6 +27,16 @@ int startSock()
 	return ans;
 }
 
+void boIntToChar(unsigned int x, unsigned char *ans)
+{
+	unsigned int a = 0;
+	a = x >> 8;
+	a = a & 0xFF;
+	*ans = (char)a;
+	a = x & 0xFF;
+	*(ans + 1) = (char)a;
+}
+
 int main(int argc, char** argv)
 {
 	printf("START TCP CLIENT TO 127.0.0.1:8888\n");
@@ -36,6 +46,8 @@ int main(int argc, char** argv)
 	char H1[1] = "H";
 	char H2[3] = "GET";
 	char H3[3] = "SET";
+	char len[2] = {0};
+	unsigned char msg[] = {0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF};
 	int p;
 	if((sock = startSock()) != -1) {
 		printf("socket created ...\n");
@@ -53,7 +65,15 @@ int main(int argc, char** argv)
 						if(p) send(sock, (void*)H2, sizeof(H2), 0);
 						else {
 							p = strstr(buf, "SET");
-							if(p) send(sock, (void*)H3, sizeof(H3), 0);
+							if(p) {
+								send(sock, (void*)H3, sizeof(H3), 0);
+								printf("HEAD - ok");
+								boIntToChar(sizeof(msg), len);
+								send(sock, (void*)len, sizeof(2), 0);
+								printf("LEN - ok");
+								send(sock, (void *)msg, sizeof(msg), 0);
+								printf("BODY - ok");
+							}
 							else {
 								p = strstr(buf, "q");
 								if(p) {
