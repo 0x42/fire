@@ -1,3 +1,5 @@
+#include <stdlib.h>
+#include <string.h>
 #include "../tools/dbgout.h"
 #include "../log/bologging.h"
 #include "bo_net.h"
@@ -15,6 +17,7 @@ static void fifoQuit(struct ParamSt *param);
 static void fifoSetData(struct ParamSt *param);
 static void fifoGetData(struct ParamSt *param);
 static unsigned int readPacketLength(struct ParamSt *param);
+static unsigned char *readPacketBody(struct ParamSt *param, unsigned int length);
 /* ----------------------------------------------------------------------------
  * @port	- порт накотором висит слуш сокет
  * @queue_len	- кол-во необр запросов в очереди, при перепол вохзвращает 
@@ -160,7 +163,7 @@ static void fifoReadPacket(int clientSock)
  {
 	printf("%s -> fifoReadHead()\n", PacketStatusTxt[packetStatus]);
 	int headSize = 3;
-	char buf[headSize];
+	char buf[headSize + 1];
 	int  count = 0;
 	int exec = 0;
 	/*  в течение 1 сек ждем прихода headSize байт */
@@ -174,6 +177,7 @@ static void fifoReadPacket(int clientSock)
 	}
 	memset(buf, 0, headSize);
 	count = recv(param->clientfd, buf, headSize, 0);
+	buf[headSize] = '\0';
 	dbgout("fifoReadHead()->HEAD[%s] count=%d", buf, count);
 	if(count == -1) dbgout("errno[%s]", strerror(errno));
 	if(count == 3) {
@@ -191,11 +195,20 @@ static void fifoReadPacket(int clientSock)
  static void fifoSetData(struct ParamSt *param)
  { 
 	unsigned int length = 0;
+	int i = 0;
 	unsigned char *body;
 	printf("fifoSetData()\n");
 	length = readPacketLength(param);
 	printf("length = %d\n", length);
-	readPacketBody(param);
+	body = readPacketBody(param, length);
+	if(body != NULL) {
+		for(i = 0; i < length; i++) {
+			printf(" i:%d [%02x]\n", i, *(body + i));
+		}
+		free(body);
+	} else {
+		printf("body == NULL \n");
+	}
 	packetStatus = QUIT;
  }
  /* ---------------------------------------------------------------------------
@@ -245,3 +258,76 @@ static void fifoReadPacket(int clientSock)
 	 }
 	 return ans;
  }
+ /* ---------------------------------------------------------------------------
+  * @brief	читаем тело пакета
+  * @length	длина пакета
+  */
+ static unsigned char *readPacketBody(struct ParamSt *param, unsigned int length)
+ {
+	 unsigned char *msg = NULL;
+	 int sock = param->clientfd;
+	 size_t count = 0;
+	 int sizeBuf = 10;
+	 int exec = 0;
+	 int N = 0;
+	 char buf[10] = {0};
+	 unsigned char *msgBuf = malloc(length * sizeof(unsigned char));
+	 if(msgBuf == NULL) {
+		 dbgout("readPacketBody() malloc error length[%d]", length);
+		 goto exit;
+	 }
+	 msg = msgBuf;
+	 while(exec != 10) {
+		 if(N == length) break;
+		 count = recv(sock, buf, sizeBuf, 0);
+		 if(count < 0) {
+			 dbgout("readPacketBody() errno[%s]\n", strerror(errno));
+			 free(msg);
+			 msg = NULL;
+			 goto exit;
+		 }
+		 if(count == length) {
+			 memcpy((msg + N), buf, count);
+			 N += count;
+			 break;
+		 } else if(count > length) {
+			 free(msg);
+			 msg = NULL;
+			 goto exit;
+		 } else if( (count < length) & (count > 0)) {
+			 memcpy((msg + N), buf, count);
+		 }
+		 N += count;
+		 usleep(100000);
+		 exec++;
+	 }
+	 if(N != length) {
+		 free(msg);
+		 msg = NULL;
+	 }
+	 exit:
+	 return msg;
+ }
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
