@@ -3,6 +3,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <sys/socket.h>
+#include <netinet/tcp.h>
 #include <unistd.h>
 #include <string.h>
 #include <errno.h>
@@ -70,6 +71,75 @@ void t100(int sock)
 	printf("BODY - ok\n");
 }
 
+void tbigdelay(int sock)
+{
+	printf("отправка 1 байта 100 раз c задержкой");
+	char len[2] = {0};
+	char *head = "SET";
+	char *A = "A";
+	int it = 0;
+	int msgSize = 100;
+	int exec = -1;
+	exec = send(sock, (void*)head, 3, 0);
+	if(exec == -1) goto error;
+	printf("HEAD - ok\n");
+	boIntToChar(msgSize, len);
+	exec = send(sock, (void*)len, 2, 0);
+	if(exec == -1) goto error;
+	printf("LEN - ok\n");
+	int i = 0;
+	for(; it < 100; it++) {
+		printf(".");
+		i++;
+		if(i == 10) {
+			printf(" delay 1 sec \n"); i = 0;
+			sleep(10);
+		}
+		exec = send(sock, (void*)A, 1, 0);
+		if(exec == -1) goto error;
+	}
+	if(exec == -1) {
+		error:
+		printf("t100 errno[%s]", strerror(errno));
+	}
+	printf("BODY - ok\n");
+}
+
+void talot(int sock)
+{
+	printf(" длина 10 отправка 2x9 ");
+	char len[2] = {0};
+	char *head = "SET";
+	char *A = "AAAAAAAAA";
+	int exec = -1;
+	exec = send(sock, (void*)head, 3, 0);
+	if(exec == -1) goto error;
+	printf("HEAD - ok\n");
+
+	boIntToChar(10, len);
+	exec = send(sock, (void*)len, 2, 0);
+	if(exec == -1) goto error;
+	printf("LEN - ok\n");
+
+	int i = 0;
+	int tcp_delay = 1;
+	int e = setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &tcp_delay, sizeof(tcp_delay));
+	if (e == -1) {
+		printf("setsockopt errno[%s]\n", strerror(errno));
+		return;
+	}
+	exec = send(sock, (void*)A, 9, 0);
+	if(exec == -1) goto error;
+	exec = send(sock, (void*)A, 9, 0);
+	if(exec == -1) goto error;
+	
+	if(exec == -1) {
+		error:
+		printf("t100 errno[%s]", strerror(errno));
+	}
+	printf("BODY - ok\n");
+}
+
 void t6(int sock)
 {
 	char *head = "SET";
@@ -109,12 +179,16 @@ int main(int argc, char** argv)
 			printf("connect to 127.0.0.1 - ok\n");
 			int flag = -1;
 			while(flag == -1) {
-				printf("select msg [H1, T100, T6, q]\n");
+				printf("select msg [H1, T100, TBD, TAL, T6, q]\n");
 				scanf("%s", buf);
 				p = strstr(buf, "H1");
 				if(p) send(sock, (void *) H1, sizeof(H1), 0);
 				p = strstr(buf, "T100");
 				if(p) t100(sock);
+				p = strstr(buf, "TBD");
+				if(p) tbigdelay(sock);
+				p = strstr(buf, "TAL");
+				if(p) talot(sock);
 				p = strstr(buf, "T6");
 				if(p) t6(sock);
 				p = strstr(buf, "q");

@@ -7,8 +7,6 @@
 
 extern void bo_fifo_main();
 
-
-
 int main(int argc, char **argv)
 {
 	dbgout("START -> %s\n", *argv);

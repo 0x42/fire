@@ -142,10 +142,14 @@ static void fifoServWork(int sockfdMain)
  */
 static void fifoReadPacket(int clientSock)
 {
+	int stop = -1;
 	struct ParamSt param;
+	struct timeval tval;
 	param.clientfd = clientSock;
 	packetStatus = READHEAD;
-	int stop = -1;
+	tval.tv_sec = 0;
+	tval.tv_usec = 100000;
+	setsockopt(clientSock, SOL_SOCKET, SO_RCVTIMEO, &tval, sizeof(tval));
 	while(stop == -1) {
 		dbgout("status = %s\n", PacketStatusTxt[packetStatus]);
 		if(packetStatus == QUIT) break;
@@ -200,11 +204,14 @@ static void fifoReadPacket(int clientSock)
 	printf("fifoSetData()\n");
 	length = readPacketLength(param);
 	printf("length = %d\n", length);
+	printf(" <-- start read body\n");
 	body = readPacketBody(param, length);
+	printf(" <-- end read body\n");
 	if(body != NULL) {
-		for(i = 0; i < length; i++) {
-			printf(" i:%d [%02x]\n", i, *(body + i));
-		}
+		printf(" ... get body ... \n");
+//		for(i = 0; i < length; i++) {
+//			printf(" i:%d [%02x]\n", i, *(body + i));
+//		}
 		free(body);
 	} else {
 		printf("body == NULL \n");
@@ -268,7 +275,6 @@ static void fifoReadPacket(int clientSock)
 	 int sock = param->clientfd;
 	 size_t count = 0;
 	 int sizeBuf = 10;
-	 int exec = 0;
 	 int N = 0;
 	 char buf[10] = {0};
 	 unsigned char *msgBuf = malloc(length * sizeof(unsigned char));
@@ -277,10 +283,12 @@ static void fifoReadPacket(int clientSock)
 		 goto exit;
 	 }
 	 msg = msgBuf;
-	 while(exec != 10) {
+	 while(1) {
 		 if(N == length) break;
 		 count = recv(sock, buf, sizeBuf, 0);
+
 		 if(count < 0) {
+			 if((errno == EWOULDBLOCK) | (errno == EAGAIN)) printf("timeout\n"); 
 			 dbgout("readPacketBody() errno[%s]\n", strerror(errno));
 			 free(msg);
 			 msg = NULL;
@@ -298,8 +306,7 @@ static void fifoReadPacket(int clientSock)
 			 memcpy((msg + N), buf, count);
 		 }
 		 N += count;
-		 usleep(100000);
-		 exec++;
+		printf("N = %d, count = %d\n", N, (int)count);
 	 }
 	 if(N != length) {
 		 free(msg);
