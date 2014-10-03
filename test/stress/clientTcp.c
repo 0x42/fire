@@ -111,6 +111,7 @@ void talot(int sock)
 	char len[2] = {0};
 	char *head = "SET";
 	char *A = "AAAAAAAAA";
+	char AB[] = "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB";
 	int exec = -1;
 	exec = send(sock, (void*)head, 3, 0);
 	if(exec == -1) goto error;
@@ -130,7 +131,8 @@ void talot(int sock)
 	}
 	exec = send(sock, (void*)A, 9, 0);
 	if(exec == -1) goto error;
-	exec = send(sock, (void*)A, 9, 0);
+	usleep(10000);
+	exec = send(sock, (void*)AB, sizeof(AB), 0);
 	if(exec == -1) goto error;
 	
 	if(exec == -1) {
@@ -162,6 +164,12 @@ void t6(int sock)
 	printf("BODY - ok\n");
 }
 
+void t2t(int sock)
+{
+	t100(sock);
+	tbigdelay(sock);
+}
+
 int main(int argc, char** argv)
 {
 	printf("START TCP CLIENT TO 127.0.0.1:8888\n");
@@ -187,6 +195,8 @@ int main(int argc, char** argv)
 				if(p) t100(sock);
 				p = strstr(buf, "TBD");
 				if(p) tbigdelay(sock);
+				p = strstr(buf, "T2T");
+				if(p) t2t(sock);
 				p = strstr(buf, "TAL");
 				if(p) talot(sock);
 				p = strstr(buf, "T6");
