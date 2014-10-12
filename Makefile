@@ -3,8 +3,8 @@ TARGET_T  = build/test1
 TARGET_T1 = build/test2 
 
 
-#CC = arm-elf-gcc
-CC = gcc
+CC = arm-elf-gcc
+#CC = gcc
 
 #INC_DIR      = -Isrc/log -Isrc/tools -Isrc/nettcp -I/usr/local/arm-elf/include
 INC_DIR		= -Isrc/log -Isrc/tools -Isrc/nettcp
@@ -12,8 +12,8 @@ INC_DIR_TEST	= -Itest/unity/src
 
 CFLAGS  = -g -Wall -c
 
-LDFLAGS = 
-#LDFLAGS = -Wl, -elf2flt
+#LDFLAGS = 
+LDFLAGS = -Wl, -elf2flt
 
 SRC    = src/main.c
 SRC1   = src/tools/dbgout.c
@@ -23,6 +23,7 @@ SRC4   = src/tools/linkedlist.c
 SRC5   = src/tools/bmempool.c
 SRC6   = src/nettcp/bo_net.c
 SRC7   = src/nettcp/bo_net_fifo_server.c
+SRC8   = src/nettcp/bo_fifo.c
 
 SRC_T  = test/maintest.c
 SRC_T1 = test/unity/src/unity.c
@@ -41,6 +42,7 @@ OBJ4   = build/linkedlist.o
 OBJ5   = build/bmempool.o	
 OBJ6   = build/bo_net.o
 OBJ7   = build/bo_net_fifo_server.o
+OBJ8   = build/bo_fifo.o
 
 OBJ_T  = build/maintest.o 
 OBJ_T1 = build/unity.o
@@ -57,8 +59,14 @@ default:
 	$(CC) $(INC_DIR) $(CFLAGS) $(SRC3) -o $(OBJ3)
 	$(CC) $(INC_DIR) $(CFLAGS) $(SRC6) -o $(OBJ6)
 	$(CC) $(INC_DIR) $(CFLAGS) $(SRC7) -o $(OBJ7)	
+	$(CC) $(INC_DIR) $(CFLAGS) $(SRC8) -o $(OBJ8)	
+
 	$(CC) $(INC_DIR) $(CFLAGS) $(SRC)  -o $(OBJ)
-	$(CC) $(LDFLAGS) $(OBJ1) $(OBJ2) $(OBJ3) $(OBJ6) $(OBJ7) $(OBJ) -o $(TARGET)
+	$(CC) $(LDFLAGS) $(OBJ1) $(OBJ2) $(OBJ3) $(OBJ6) $(OBJ7) \
+	      $(OBJ8) $(OBJ) -o $(TARGET)
+runtrace:
+	MALLOC_TRACE=trace.log $(TARGET)
+	mtrace $(TARGET) trace.log
 	
 check:
 	$(CC) $(INC_DIR) $(CFLAGS) $(SRC1) -o $(OBJ1)
@@ -71,7 +79,8 @@ check:
 	$(CC) $(INC_DIR) $(INC_DIR_TEST) $(CFLAGS) $(SRC_T3) -o $(OBJ_T3)
 	$(CC) $(INC_DIR) $(INC_DIR_TEST) $(CFLAGS) $(SRC_T4) -o $(OBJ_T4)
 	$(CC) $(INC_DIR_TEST) $(INC_DIR) $(CFLAGS) $(SRC_T)  -o $(OBJ_T)
-	$(CC) $(LDFLAGS) $(OBJ1) $(OBJ2) $(OBJ3) $(OBJ4) $(OBJ_T1) $(OBJ_T2) $(OBJ_T3) $(OBJ_T4) $(OBJ_T) -o $(TARGET_T)
+	$(CC) $(LDFLAGS) $(OBJ1) $(OBJ2) $(OBJ3) $(OBJ4) $(OBJ_T1) $(OBJ_T2) \ 
+	$(OBJ_T3) $(OBJ_T4) $(OBJ_T) -o $(TARGET_T)
 	$(TARGET_T)
 
 check2:

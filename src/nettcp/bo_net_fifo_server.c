@@ -3,6 +3,7 @@
 #include "../tools/dbgout.h"
 #include "../log/bologging.h"
 #include "bo_net.h"
+#include "bo_fifo.h"
 
 extern unsigned int boCharToInt(unsigned char *buf);
 
@@ -10,21 +11,26 @@ struct ParamSt;
 static int readConfig();
 static int fifoServStart();
 static void fifoServWork(int sockfdMain);
-static void fifoReadPacket(int sockfd);
+static void fifoReadPacket(int clientSock, unsigned char *buffer, int bufSize, 
+			   int *endPr);
 static void fifoReadHead(struct ParamSt *param);
-static void fifoError(struct ParamSt *param);
 static void fifoQuit(struct ParamSt *param);
 static void fifoSetData(struct ParamSt *param);
 static void fifoGetData(struct ParamSt *param);
 static void fifoAnsErr(struct ParamSt *param);
 static void fifoAnsOk(struct ParamSt *param);
+static void fifoAnsNo(struct ParamSt *param);
+static void fifoAddToFIFO(struct ParamSt *param);
+static void fifoDelHead(struct ParamSt *param);
+static void fifoEnd(struct ParamSt *param);
 static unsigned int readPacketLength(struct ParamSt *param);
-static unsigned char *readPacketBody(struct ParamSt *param, unsigned int length);
+static int readPacketBody(struct ParamSt *param, unsigned int length);
+static int sendAllData(int sock, unsigned char *buf, int len);
 /* ----------------------------------------------------------------------------
  * @port	- порт накотором висит слуш сокет
  * @queue_len	- кол-во необр запросов в очереди, при перепол вохзвращает 
  *		  клиенту ECONREFUSED <-(0x42:уточнить?)
- * @fifo_len	- размер FIFO запросо для 485
+ * @fifo_len	- размер FIFO запросо для 485  <-(0x42:не нужное поле, удалить?)
  * @clientfd	- дескриптор сокета от устан соед с клиентом
  */
 static struct {
@@ -40,20 +46,31 @@ static struct {
  *		SETFIFO - установить запрос в FIFO
  *		GETFIFO - забрать запрос из FIFO
  */
-static char *PacketStatusTxt[] = {"FIFOERR", "READHEAD", "SET", "GET", "QUIT", 
-"ANSERR", "ANSOK"};
-static enum PacketStatus {FIFOERR=0, READHEAD, SET, GET, QUIT, ANSERR, ANSOK} packetStatus;
+static char *PacketStatusTxt[] = {"READHEAD", "SET", "GET", "QUIT", 
+"ANSERR", "ANSOK", "ANSNO", "ADDFIFO", "DEL"};
+static enum PacketStatus {READHEAD = 0, SET, GET, QUIT, ANSERR, ANSOK, 
+	ANSNO, ADDFIFO, DEL, END} packetStatus;
 static void(*statusTable[])(struct ParamSt *) = {
-	fifoError, 
 	fifoReadHead, 
 	fifoSetData, 
 	fifoGetData,
 	fifoQuit,
 	fifoAnsErr,
-	fifoAnsOk};
+	fifoAnsOk,
+	fifoAnsNo,
+	fifoAddToFIFO,
+	fifoDelHead,
+	fifoEnd};
+/* @packetLen		длина запроса для FIFO
+ * @clientfd		сокет 
+ * @buffer		буффер с запросом для FIFO
+ * @bufSize		размер буффера
+ */
 struct ParamSt {
 	int packetLen;
 	int clientfd;
+	unsigned char *buffer;
+	int bufSize;
 };
 /* ----------------------------------------------------------------------------
  * @brief		Запуск сервера FIFO
@@ -63,11 +80,15 @@ struct ParamSt {
 void bo_fifo_main()
 {
 	int sock = 0;
+	int fifoSize = 100;
 	bo_log("%s%s", " INFO ", "START serverfifo");
 	/*read config file*/
 	if(readConfig() == 1) {
 		if( (sock = fifoServStart()) != -1) {
-			fifoServWork(sock);
+			if(bo_initFIFO(fifoSize) == 1) {
+				fifoServWork(sock); 
+				bo_delFIFO();
+			}
 			if(close(sock) == -1) {
 				bo_log("%s%s errno[%s]", 
 					" ERROR ",
@@ -129,38 +150,63 @@ static void fifoServWork(int sockfdMain)
 	int countErr  = 0;
 	char *errTxt = NULL;
 	int clientfd = 0;
-	bo_log("%s%s %d", " INFO ", " START LOOP", sockfdMain);
+	/* размер ячейки в FIFO */
+	int bufferSize = BO_FIFO_ITEM_VAL;
+	unsigned char *buffer1 = NULL;
+	bo_log("%s%s", " INFO ", " RUN ");
+	/* создаем буфер */
+	buffer1 = (unsigned char *)malloc(bufferSize);
+	if(buffer1 == NULL) {
+		bo_log("%s%s", " ERROR ", "fifoServWork() can't create buffer1");
+		return;
+	}
 	while(stop == 1) {
 		if(bo_waitConnect(sockfdMain, &clientfd, &errTxt) == 1) {
 			countErr = 0;
-			fifoReadPacket(clientfd);
+			fifoReadPacket(clientfd, buffer1, bufferSize, &stop);
 		} else {
 			countErr++;
 			bo_log("%s%s errno[%s]", " ERROR ", 
 				"fifoServWork()", errTxt);
 			if(countErr == 10) stop = -1;
 		}
-	} 
+	}
+	free(buffer1);
  }
  /* ---------------------------------------------------------------------------
-  * @brief		читаем пакет
- */
-static void fifoReadPacket(int clientSock)
+  * @brief		читаем пакет и пишем/забираем/удаляем в/из FIFO
+  * @clientSock		дескриптор сокета(клиента
+  * @buffer		буфер в который пишем данные. 
+  * @bufSize		bufSize = BO_FIFO_ITEM_VAL(bo_fifo.h)
+  * @endPr		флаг прекращ работы сервера и заверш программы
+  */
+static void fifoReadPacket(int clientSock, unsigned char *buffer, int bufSize,
+			int *endPr)
 {
 	int stop = -1;
 	struct ParamSt param;
 	struct timeval tval;
 	param.clientfd = clientSock;
+	param.buffer = buffer;
+	param.bufSize = bufSize;
 	packetStatus = READHEAD;
+	/* 100 мсек*/
 	tval.tv_sec = 0;
 	tval.tv_usec = 100000;
+	/* устан максимальное время ожидания одного пакета */
 	setsockopt(clientSock, SOL_SOCKET, SO_RCVTIMEO, &tval, sizeof(tval));
+	dbgout("\n> ----------	CONNECT ---------------- <\n");
 	while(stop == -1) {
 		dbgout("\n>>>AVTOMAT STATUS = %s\n", PacketStatusTxt[packetStatus]);
 		if(packetStatus == QUIT) break;
+		if(packetStatus == END) {
+			*endPr = -1;
+			break;
+		}
 		statusTable[packetStatus](&param);
 	}
 	close(param.clientfd);
+	dbgout("\n> ----------- END CONNECT ------------ <\n");
 }
  /* ---------------------------------------------------------------------------
   * @brief		чтение заголовка запроса
@@ -170,7 +216,6 @@ static void fifoReadPacket(int clientSock)
   */
  static void fifoReadHead(struct ParamSt *param)
  {
-	printf("%s -> fifoReadHead()\n", PacketStatusTxt[packetStatus]);
 	int headSize = 3;
 	char buf[headSize + 1];
 	int  count = 0;
@@ -191,10 +236,12 @@ static void fifoReadPacket(int clientSock)
 	if(count == -1) dbgout("errno[%s]", strerror(errno));
 	if(count == 3) {
 		if(strstr(buf, "SET")) packetStatus = SET;
-		else if(strstr(buf, "GET")) packetStatus= GET;
-		else packetStatus = QUIT;
+		else if(strstr(buf, "GET")) packetStatus = GET;
+		else if(strstr(buf, "DEL")) packetStatus = DEL;
+		else if(strstr(buf, "END")) packetStatus = END;
+		else packetStatus = ANSERR;
 	} else {
-		packetStatus = QUIT;
+		packetStatus = ANSERR;
 	}
  }
  /* ---------------------------------------------------------------------------
@@ -205,66 +252,122 @@ static void fifoReadPacket(int clientSock)
  static void fifoSetData(struct ParamSt *param)
  { 
 	unsigned int length = 0;
-	int i = 0;
-	int br = 0;
-	unsigned char *body = NULL;
+	int flag = -1;
 	length = readPacketLength(param);
-	if(length > 0) body = readPacketBody(param, length);
-	if(body != NULL) {
-		printf(" ... get body ... \n");
-		for(i = 0; i < length; i++) {
-			br++; 
-			if(br < 30) { printf("%02x", *(body + i));} 
-		}
-		printf("\n");
-		free(body);
-		packetStatus = ANSOK;
+	if((length > 0) & (length <= param->bufSize)) {
+		flag = readPacketBody(param, length);
+	}
+	if(flag == 1) {
+		param->packetLen = length;
+		packetStatus = ADDFIFO;
 	} else {
-		printf("body == NULL \n");
+		bo_log("fifoSetData() body == NULL or length[%d] > bufSize[%d]\n", 
+			length, param->bufSize);
 		packetStatus = ANSERR;
 	}
  }
  /* ---------------------------------------------------------------------------
   * @brief		снимаем со стека 1 запрос и отправляем клиенту
+  * status -> READHEAD |   вслучае успеной отправки ждем ответ от клиента
+  *             QUIT   |   если возникла ошибка при передаче
+  *			   если стек пустой отправляем " NO" и выходим
   */
  static void fifoGetData(struct ParamSt *param)
  {
-	 printf("fifoGetData()\n" );
-	 packetStatus = QUIT;
+	int exec = -1;
+	unsigned char len[2] = {0};
+	unsigned char head[3] = "VAL";
+	unsigned char headNO[3] = " NO"; 
+	boIntToChar(param->packetLen, len);
+	dbgout("fifo free item=%d\n", bo_getFree());
+	param->packetLen = bo_getFIFO(param->buffer, param->bufSize);
+	if(param->packetLen > 0) {
+		exec = sendAllData(param->clientfd, head, 3);
+		if(exec == -1) goto exit;
+		exec = sendAllData(param->clientfd, len, 2);
+		if(exec == -1) goto exit;
+		exec = sendAllData(param->clientfd, param->buffer, 
+			param->packetLen);
+	} else {
+		exec = sendAllData(param->clientfd, headNO, 3);
+		goto exit;
+	}
+	if(exec == -1) {
+		exit:
+		packetStatus = QUIT;
+	} else {
+		packetStatus = READHEAD;
+	}
+	return;
  }
  /* ---------------------------------------------------------------------------
-  * @brief		
-  */
- static void fifoError(struct ParamSt *param)
- {
-	 printf("fifoERROR() \n" );
-	 packetStatus = QUIT;
- }
- /* ---------------------------------------------------------------------------
-  * @brief		empty function
+  * @brief		empty functions
   */
  static void fifoQuit(struct ParamSt *param) { }
+ static void fifoEnd(struct ParamSt *param) { }
  /* ---------------------------------------------------------------------------
   * @brief		send answer " OK"
   */
  static void fifoAnsOk(struct ParamSt *param)
  {
-	 int sock = param->clientfd;
-	 char msg[] = " OK";
-	 int count = send(sock, msg, sizeof(msg), 0);
-	 if(count != sizeof(msg)) packetStatus = FIFOERR;
-	 else packetStatus = QUIT;
+	int sock = param->clientfd;
+	unsigned char msg[] = " OK";
+	sendAllData(sock, msg, 3);
+	packetStatus = QUIT;
  }
-  /* ---------------------------------------------------------------------------
+ /* ---------------------------------------------------------------------------
+  * @brief		отправляем ответ " NO" (нет данных в очереди)
+  */
+ static void fifoAnsNo(struct ParamSt *param)
+ {
+	 int sock = param->clientfd;
+	 unsigned char msg[] = " NO";
+	 sendAllData(sock, msg, 3);
+	 packetStatus = QUIT;
+ }
+  /* --------------------------------------------------------------------------
   * @brief		send answer "ERR"
   */
  static void fifoAnsErr(struct ParamSt *param)
  {
-	 int sock = param->clientfd;
-	 char msg[] = "ERR";
-	 int count = send(sock, msg, sizeof(msg), 0);
-	 if(count != sizeof(msg)) packetStatus = FIFOERR;
-	 else packetStatus = QUIT;
+	int sock = param->clientfd;
+	unsigned char msg[] = "ERR";
+	sendAllData(sock, msg, sizeof(msg));
+	packetStatus = QUIT;
+ }
+ /* ---------------------------------------------------------------------------
+  * @brief	добавляем данные в FIFO
+  */
+ static void fifoAddToFIFO(struct ParamSt *param)
+ {
+	int flag = -1;
+	int i = 0;
+	dbgout("--- --- fifoAddToFIFO len%d val:\n", param->packetLen);
+	for(; i < param->packetLen; i++) {
+		printf(" 0x%02x", param->buffer[i]);
+	}
+	printf("\n");
+	
+	dbgout("fifo free item = %d\n", bo_getFree());
+	
+	flag = bo_addFIFO(param->buffer, param->packetLen);
+	if(flag == -1) {
+		packetStatus = ANSERR;
+	} else {
+		packetStatus = ANSOK;
+	}
+ }
+ /* ---------------------------------------------------------------------------
+  * @brief		отправляем сообщение OK если сообщ отправ то удал Head
+  * status -> QUIT			
+  */
+ static void fifoDelHead(struct ParamSt *param)
+ {
+	int exec = -1;
+	unsigned char msg[3] = " OK";
+	exec = sendAllData(param->clientfd, msg, sizeof(msg));
+	if(exec != -1) bo_delHead();
+	packetStatus = QUIT;
  }
  /* ---------------------------------------------------------------------------
   * @brief	читаем длину пакета
@@ -272,80 +375,88 @@ static void fifoReadPacket(int clientSock)
   */
  static unsigned int readPacketLength(struct ParamSt *param)
  {
-	 int sock = param->clientfd;
-	 char buf[2] = {0};
-	 int count = 0;
-	 unsigned int ans = 0;
-	 /* в течение 1 сек ждем прихода 2byte опред длину сообщения*/
+	int sock = param->clientfd;
+	char buf[2] = {0};
+	int count = 0;
+	unsigned int ans = 0;
+	/* ждем прихода 2byte опред длину сообщения*/
 	count = recv(sock, buf, 2, 0); 
-	 if(count == 2) {
-		 /*b1b2 -> b1 - старший байт
-		  *	   b2 - младший байт
- 		  */
-		 ans = boCharToInt((unsigned char *)buf);
-	 }
-	 return ans;
+	if(count == 2) {
+		/*b1b2 -> b1 - старший байт
+		 *	  b2 - младший байт
+ 		 */
+		ans = boCharToInt((unsigned char *)buf);
+	}
+	return ans;
  }
  /* ---------------------------------------------------------------------------
   * @brief	читаем тело пакета
   * @length	длина пакета
+  * @return	[-1] - ERROR [1] - OK
   */
- static unsigned char *readPacketBody(struct ParamSt *param, unsigned int length)
+ static int readPacketBody(struct ParamSt *param,
+	 unsigned int length)
  {
-	 unsigned char *msg = NULL;
-	 unsigned char *ptr_poz = NULL;
-	 int sock = param->clientfd;
-	 size_t count = 0;
-	 int sizeBuf = 10;
-	 int N = 0;
-	 char buf[10] = {0};
-	 unsigned char *msgBuf = malloc(length * sizeof(unsigned char));
-	 if(msgBuf == NULL) {
-		 dbgout("readPacketBody() malloc error length[%d]", length);
-		 goto exit;
-	 }
-	 msg = msgBuf;
-	 ptr_poz = msg;
-	 while(1) {
-		 if(N == length) break;
-		 count = recv(sock, buf, sizeBuf, 0);
-//		printf("N = %d, count = %d len=%d\n", N, (int)count, length);
-		 if((N + count) > length) {
-			 free(msg);
-			 msg = NULL;
-			 goto exit;
-		 }
-		 if(count < 0) {
-			 if((errno == EWOULDBLOCK) | (errno == EAGAIN)) printf("timeout\n"); 
-			 dbgout("readPacketBody() errno[%s]\n", strerror(errno));
-			 free(msg);
-			 msg = NULL;
-			 goto exit;
-		 }
-		 if(count == length) {
-			 memcpy(ptr_poz, buf, count);
-			 N += count;
-			 break;
-		 } else if(count > length) {
-			 free(msg);
-			 msg = NULL;
-			 goto exit;
-		 } else if( (count < length) & (count > 0)) {
-			 memcpy(ptr_poz, buf, count);
-		 }
-		 N += count;
-		 ptr_poz = msg + N;
-
-	 }
-	 if(N != length) {
-		 free(msg);
-		 msg = NULL;
-	 }
-	 exit:
-	 return msg;
+	int ans = 1;
+	unsigned char *ptr_poz = NULL;
+	int sock = param->clientfd;
+	size_t count = 0;
+	int sizeBuf = 256;
+	int N = 0;
+	char buf[256] = {0};
+	ptr_poz = param->buffer;
+	while(1) {
+		if(N == length) break;
+		count = recv(sock, buf, sizeBuf, 0);
+		if((N + count) > length) {
+			ans = -1;
+			goto exit;
+		}
+		if(count < 0) {
+			if((errno == EWOULDBLOCK) | (errno == EAGAIN)) 
+				printf("timeout\n"); 
+			dbgout("readPacketBody() errno[%s]\n", strerror(errno));
+			ans = -1;
+			goto exit;
+		}
+		if(count == length) {
+			memcpy(ptr_poz, buf, count);
+			N += count;
+			break;
+		} else if(count > length) {
+			ans = -1;
+			goto exit;
+		} else if( (count < length) & (count > 0)) {
+			memcpy(ptr_poz, buf, count);
+		}
+		N += count;
+		ptr_poz = param->buffer + N;
+	}
+	if(N != length) {
+		ans = -1;
+	}
+	exit:
+	return ans;
  }
- 
- 
+ /* ---------------------------------------------------------------------------
+  * @brief		отправляет данные 
+  * @buf		данные которые будут отправлены
+  * @len		размер отправл данных
+  * @return		[-1] - ERROR [>0] - кол отпр байт
+  */
+ static int sendAllData(int sock, unsigned char *buf, int len)
+ {
+	int count = 0;   /* колв-во отправл байт за один send*/
+	int allSend = 0; /* кол-во всего отправл байт*/
+	unsigned char *ptr = buf;
+	int n = len; 
+	while(allSend < len) {
+		count = send(sock, ptr + allSend, n - allSend, 0);
+		if(count == -1) break;
+		allSend += count;
+	}
+	return (count == -1 ? -1 : allSend);
+ }
  
  
  
