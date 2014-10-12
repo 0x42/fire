@@ -172,12 +172,13 @@ TOHT *cfg_sections(TOHT *ht, TOHT *sect)
  * @ht:  Таблица с данными конфигурации.
  * @out: Указатель на открытый файл для сохранения данных конфигурации.
  *
-*/ 
+*/
 void cfg_save(TOHT *ht, FILE *out)
 {
 	TOHT *sect;
 	int i, j;
 	int slen;
+	char s[CFG_LSIZE+1];
 
 	if (ht == NULL || out == NULL) return;
 
@@ -188,18 +189,19 @@ void cfg_save(TOHT *ht, FILE *out)
 		for (i=0; i<sect->n; i++) {
 			/** Новая секция */
 			fprintf(out, "\n[%s]\n", sect->val[i]);
-			slen  = (int)strlen(sect->val[i]);
+			slen = (int)strlen(sect->val[i]) + 1;
+			sprintf(s, "%s:", sect->val[i]);
 			
 			for (j=0; j<ht->size; j++) {
 
 				if (ht->key[j] == NULL) continue;
 
-				if (!strncmp(ht->key[j], sect->val[i], slen)) {
+				if (!strncmp(ht->key[j], s, slen)) {
 					/** Если значение key=value
 					 * принадлежит секции */
 					fprintf(out,
 						"%s = %s\n",
-						ht->key[j]+slen+1,
+						ht->key[j] + slen,
 						ht->val[j] ? ht->val[j] : "");
 				}
 			}
