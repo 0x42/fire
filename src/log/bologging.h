@@ -3,7 +3,7 @@
 /* отключаем static на время тестирования*/
 /* #define STATIC static */
 /* #define SYSERRFILE "/dev/log" */
-#define BO_STATIC 
+#define STATIC 
 #define SYSERRFILE "sys.err"
 
 #include <stdio.h>
@@ -11,11 +11,6 @@
 #include <string.h>
 #include <errno.h>
 #include <syslog.h>
-<<<<<<< HEAD:src/log/logging.h
-#include <time.h>
-#include <sys/types.h>
-=======
->>>>>>> fcb5fcba917ff5bd22527c157ae07b2297664648:src/log/bologging.h
 #include <unistd.h>
 #include <time.h>
 #include <sys/stat.h>

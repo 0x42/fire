@@ -1,21 +1,5 @@
 #include "bologging.h"
 /* -------------------------------------------------------------------------- */
-<<<<<<< HEAD:src/log/logging.c
-//void sysErr(char *msg, ...);
-//void sysErrParam(char *msg, va_list *ap);
-//void bo_setLogParam(char *fname, char *oldfname, int nrow, int maxrow);
-//int wrtLog(char *msg, va_list *ap, char *errTxt);
-//int log_fprintf(FILE *f, char *timeBuf, va_list *ap, char *msg);
-//int readNRow(const char *fname);
-//int delOldFile(char *fname);
-BO_STATIC void sysErr(char *msg, ...);
-BO_STATIC void sysErrParam(char *msg, va_list *ap);
-BO_STATIC void bo_setLogParam(char *fname, char *oldfname, int nrow, int maxrow);
-BO_STATIC int wrtLog(char *msg, va_list *ap, char *errTxt);
-BO_STATIC int log_fprintf(FILE *f, char *timeBuf, va_list *ap, char *msg);
-BO_STATIC int readNRow(const char *fname);
-BO_STATIC int delOldFile(char *fname);
-=======
 
 STATIC void sysErr(char *msg, ...);
 STATIC void sysErrParam(char *msg, va_list *ap);
@@ -25,7 +9,6 @@ STATIC int log_fprintf(FILE *f, char *timeBuf, va_list *ap, char *msg);
 STATIC int readNRow(const char *fname);
 STATIC int delOldFile(char *fname);
 
->>>>>>> fcb5fcba917ff5bd22527c157ae07b2297664648:src/log/bologging.c
 /* ---------------------------------------------------------------------------- 
  */
 static struct {
@@ -67,11 +50,8 @@ void bo_resetLogInit()
 /* ----------------------------------------------------------------------------
  * @brief		иниц-ия struct log получение имени файла для логирования
  */
-<<<<<<< HEAD:src/log/logging.c
-BO_STATIC void loggingINIT()
-=======
- void loggingINIT()
->>>>>>> fcb5fcba917ff5bd22527c157ae07b2297664648:src/log/bologging.c
+
+void loggingINIT()
 {
 	/* получ-ие pid процесса*/
 	log.pid = getpid();
@@ -126,12 +106,9 @@ int bo_log(char *msg, ...)
  *		освобождать не надо тк результат из errno 
  * @return	>0 = ok; <0 = error 
  */
-<<<<<<< HEAD:src/log/logging.c
-BO_STATIC int wrtLog(char *msg, va_list *ap, char *errTxt)
-=======
+
 
 STATIC int wrtLog(char *msg, va_list *ap, char **errTxt)
->>>>>>> fcb5fcba917ff5bd22527c157ae07b2297664648:src/log/bologging.c
 {
 	int ans = 1;
 	char timeBuf[40] = {0};
@@ -166,11 +143,7 @@ STATIC int wrtLog(char *msg, va_list *ap, char **errTxt)
  * @param msg		сообщение возм испол %s--строка %d-число %f - double 
  * @return		-1 error; >0 - ok
  */
-<<<<<<< HEAD:src/log/logging.c
-BO_STATIC int log_fprintf(FILE *f,  char *timeBuf, va_list *ap, char *msg)
-=======
  int log_fprintf(FILE *f,  char *timeBuf, va_list *ap, char *msg)
->>>>>>> fcb5fcba917ff5bd22527c157ae07b2297664648:src/log/bologging.c
 {
 	int ans = 1;
 	char *p = 0, *sval = 0;
@@ -209,11 +182,8 @@ BO_STATIC int log_fprintf(FILE *f,  char *timeBuf, va_list *ap, char *msg)
  * @return	возвр. кол-во строк в fname файле ecли файл не сущест.
  *		или не удалось открыть возв 0
  */
-<<<<<<< HEAD:src/log/logging.c
-BO_STATIC int readNRow(const char *fname) 
-=======
- int readNRow(const char *fname) 
->>>>>>> fcb5fcba917ff5bd22527c157ae07b2297664648:src/log/bologging.c
+
+ int readNRow(const char *fname)
 {
 	int nrow = 0;
 	FILE *file = fopen(fname, "r");
@@ -233,11 +203,7 @@ BO_STATIC int readNRow(const char *fname)
  * @param funcName	имя функции в которой произошла ошибка
  * @param msg		причина ошибки 
  */
-<<<<<<< HEAD:src/log/logging.c
-BO_STATIC void sysErr(char *msg, ...) 
-=======
  void sysErr(char *msg, ...) 
->>>>>>> fcb5fcba917ff5bd22527c157ae07b2297664648:src/log/bologging.c
 {
 	FILE *file = NULL;
 	char timeBuf[40] = {0};
@@ -266,11 +232,8 @@ BO_STATIC void sysErr(char *msg, ...)
 	}
 }
 
-<<<<<<< HEAD:src/log/logging.c
-BO_STATIC void sysErrParam(char *msg, va_list *ap)
-=======
- void sysErrParam(char *msg, va_list *ap)
->>>>>>> fcb5fcba917ff5bd22527c157ae07b2297664648:src/log/bologging.c
+ 
+void sysErrParam(char *msg, va_list *ap)
 {
 	FILE *file = NULL;
 	char timeBuf[40] = {0};
@@ -317,11 +280,7 @@ int bo_isBigLogSize(int *nrow, int maxrow, char *name, char *oldname)
  * @param fname		имя файла для удаления
  * @return		-1 error; 1 ок
  */
-<<<<<<< HEAD:src/log/logging.c
-BO_STATIC int delOldFile(char *fname) 
-=======
- int delOldFile(char *fname) 
->>>>>>> fcb5fcba917ff5bd22527c157ae07b2297664648:src/log/bologging.c
+int delOldFile(char *fname)
 {
 	int err = -1;
 	char *errTxt = NULL;

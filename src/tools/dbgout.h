@@ -1,11 +1,7 @@
 #ifndef DBGOUT_H
-<<<<<<< HEAD
-#define DBGOUY_H
-#define BO_BDG
-=======
 #define DBGOUT_H
 
->>>>>>> fcb5fcba917ff5bd22527c157ae07b2297664648
+
 #include <stdarg.h>
 #include <stdio.h>
 
