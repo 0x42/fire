@@ -3,7 +3,7 @@
 #include <dirent.h>
 #include <sys/stat.h>
 #include "unity/src/unity.h"
-#include "../src/log/logging.h"
+#include "../src/log/bologging.h"
 
 extern int readNRow(const char *fname);
 extern int writeNRow(FILE *f, char *s, int n);

@@ -39,6 +39,24 @@ static void *mem_reorg(void *ptr, int size, size_t st)
 }
 
 /**
+ * str_dup - Дублирование строки 
+ * @dstr: Дубликат исходной строки
+ * @return   Указатель на новую строку.
+ *
+ * Это аналог функции strdup().
+*/
+static char *str_dup(const char *str)
+{
+	char *dstr;
+	
+	if (!str) return NULL;
+	dstr = (char*)malloc(strlen(str)+1);
+	if (dstr) strcpy(dstr, str);
+	
+	return dstr;
+}
+
+/**
  * ht_hash - Вычислить хэш-ключ для строки.
  * @key: Строка символов.
  *
@@ -104,7 +122,7 @@ static int modify_value(TOHT *ht, const char *key, const char *val)
 		/* Нашли значение: изменить и выйти */
 		if (ht->val[i] != NULL)
 			free(ht->val[i]);
-		ht->val[i] = val ? strdup(val) : NULL;
+		ht->val[i] = val ? str_dup(val) : NULL;
 		return 0;
 	}
 	return 1;
@@ -122,6 +140,7 @@ static int modify_value(TOHT *ht, const char *key, const char *val)
 static int add_value(TOHT *ht, const char *key, const char *val)
 {
 	unsigned hash = ht_hash(key);
+	int i;
 	
 	/* Если количество записей достигло максимального размера таблицы */
 	if (ht->n == ht->size) {
@@ -136,9 +155,17 @@ static int add_value(TOHT *ht, const char *key, const char *val)
 		ht->size += HT_MINSIZE;
 	}
 
-	ht->key[ht->n] = strdup(key);
-	ht->val[ht->n] = val ? strdup(val) : NULL;
-	ht->hash[ht->n] = hash;
+	/* Поиск первого пустого слота для ключа */	
+	i = ht->n;
+	if (ht->key[i] != NULL) {
+		for (i=0; i<ht->size; i++) {
+			if (ht->key[i] == NULL) break;
+		}
+	}
+
+	ht->key[i] = str_dup(key);
+	ht->val[i] = val ? str_dup(val) : NULL;
+	ht->hash[i] = hash;
 	ht->n++;
 	return 0;
 }

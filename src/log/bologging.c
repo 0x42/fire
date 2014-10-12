@@ -1,6 +1,6 @@
-#include "logging.h"
-
+#include "bologging.h"
 /* -------------------------------------------------------------------------- */
+<<<<<<< HEAD:src/log/logging.c
 //void sysErr(char *msg, ...);
 //void sysErrParam(char *msg, va_list *ap);
 //void bo_setLogParam(char *fname, char *oldfname, int nrow, int maxrow);
@@ -15,6 +15,17 @@ BO_STATIC int wrtLog(char *msg, va_list *ap, char *errTxt);
 BO_STATIC int log_fprintf(FILE *f, char *timeBuf, va_list *ap, char *msg);
 BO_STATIC int readNRow(const char *fname);
 BO_STATIC int delOldFile(char *fname);
+=======
+
+STATIC void sysErr(char *msg, ...);
+STATIC void sysErrParam(char *msg, va_list *ap);
+STATIC void bo_setLogParam(char *fname, char *oldfname, int nrow, int maxrow);
+STATIC int wrtLog(char *msg, va_list *ap, char **errTxt);
+STATIC int log_fprintf(FILE *f, char *timeBuf, va_list *ap, char *msg);
+STATIC int readNRow(const char *fname);
+STATIC int delOldFile(char *fname);
+
+>>>>>>> fcb5fcba917ff5bd22527c157ae07b2297664648:src/log/bologging.c
 /* ---------------------------------------------------------------------------- 
  */
 static struct {
@@ -56,9 +67,12 @@ void bo_resetLogInit()
 /* ----------------------------------------------------------------------------
  * @brief		иниц-ия struct log получение имени файла для логирования
  */
+<<<<<<< HEAD:src/log/logging.c
 BO_STATIC void loggingINIT()
+=======
+ void loggingINIT()
+>>>>>>> fcb5fcba917ff5bd22527c157ae07b2297664648:src/log/bologging.c
 {
-	dbgout("loggingINIT run\n");
 	/* получ-ие pid процесса*/
 	log.pid = getpid();
 	/* ЧИТАТЬ С КОНФ ФАЙЛА*/
@@ -77,7 +91,7 @@ BO_STATIC void loggingINIT()
  */
 int bo_log(char *msg, ...)
 {
-	char *errTxt = "";
+	char *errTxt = NULL;
 	int err = 0, ans = 0;
 	/* указывает на очередной безымян-ый аргумент */
 	va_list ap; 
@@ -89,7 +103,7 @@ int bo_log(char *msg, ...)
 	va_start(ap, msg);
 	if(logInit < 0) loggingINIT();
 	if(logInit) {
-		if(wrtLog(msg, &ap, errTxt) < 0) err = 1;
+		if(wrtLog(msg, &ap, &errTxt) < 0) err = 1;
 	} else {
 		errTxt = "bo_log() can't run loggingINIT()";
 		err = 1;
@@ -99,7 +113,6 @@ int bo_log(char *msg, ...)
 		sysErrParam(msg, &ap);
 		ans = -1;
 	} else ans = 1;
-	
 	/* очистка */
 	va_end(ap);
 	return ans;
@@ -113,7 +126,12 @@ int bo_log(char *msg, ...)
  *		освобождать не надо тк результат из errno 
  * @return	>0 = ok; <0 = error 
  */
+<<<<<<< HEAD:src/log/logging.c
 BO_STATIC int wrtLog(char *msg, va_list *ap, char *errTxt)
+=======
+
+STATIC int wrtLog(char *msg, va_list *ap, char **errTxt)
+>>>>>>> fcb5fcba917ff5bd22527c157ae07b2297664648:src/log/bologging.c
 {
 	int ans = 1;
 	char timeBuf[40] = {0};
@@ -124,16 +142,16 @@ BO_STATIC int wrtLog(char *msg, va_list *ap, char *errTxt)
 		bo_getTimeNow(timeBuf, sizeof(timeBuf));
 		if(file) {
 			if(log_fprintf(file, timeBuf, ap, msg) < 0) {
-				errTxt = strerror(errno);
+				*errTxt = strerror(errno);
 				ans = -1;
 			} else log.nrow++;
 
 			if(fclose(file) < 0) {
-				errTxt = strerror(errno);
+				*errTxt = strerror(errno);
 				ans = -1;
 			}
 		} else {
-			errTxt = strerror(errno);
+			*errTxt = strerror(errno);
 			ans = -1;
 		}
 	} else {
@@ -148,7 +166,11 @@ BO_STATIC int wrtLog(char *msg, va_list *ap, char *errTxt)
  * @param msg		сообщение возм испол %s--строка %d-число %f - double 
  * @return		-1 error; >0 - ok
  */
+<<<<<<< HEAD:src/log/logging.c
 BO_STATIC int log_fprintf(FILE *f,  char *timeBuf, va_list *ap, char *msg)
+=======
+ int log_fprintf(FILE *f,  char *timeBuf, va_list *ap, char *msg)
+>>>>>>> fcb5fcba917ff5bd22527c157ae07b2297664648:src/log/bologging.c
 {
 	int ans = 1;
 	char *p = 0, *sval = 0;
@@ -187,7 +209,11 @@ BO_STATIC int log_fprintf(FILE *f,  char *timeBuf, va_list *ap, char *msg)
  * @return	возвр. кол-во строк в fname файле ecли файл не сущест.
  *		или не удалось открыть возв 0
  */
+<<<<<<< HEAD:src/log/logging.c
 BO_STATIC int readNRow(const char *fname) 
+=======
+ int readNRow(const char *fname) 
+>>>>>>> fcb5fcba917ff5bd22527c157ae07b2297664648:src/log/bologging.c
 {
 	int nrow = 0;
 	FILE *file = fopen(fname, "r");
@@ -207,7 +233,11 @@ BO_STATIC int readNRow(const char *fname)
  * @param funcName	имя функции в которой произошла ошибка
  * @param msg		причина ошибки 
  */
+<<<<<<< HEAD:src/log/logging.c
 BO_STATIC void sysErr(char *msg, ...) 
+=======
+ void sysErr(char *msg, ...) 
+>>>>>>> fcb5fcba917ff5bd22527c157ae07b2297664648:src/log/bologging.c
 {
 	FILE *file = NULL;
 	char timeBuf[40] = {0};
@@ -236,7 +266,11 @@ BO_STATIC void sysErr(char *msg, ...)
 	}
 }
 
+<<<<<<< HEAD:src/log/logging.c
 BO_STATIC void sysErrParam(char *msg, va_list *ap)
+=======
+ void sysErrParam(char *msg, va_list *ap)
+>>>>>>> fcb5fcba917ff5bd22527c157ae07b2297664648:src/log/bologging.c
 {
 	FILE *file = NULL;
 	char timeBuf[40] = {0};
@@ -283,7 +317,11 @@ int bo_isBigLogSize(int *nrow, int maxrow, char *name, char *oldname)
  * @param fname		имя файла для удаления
  * @return		-1 error; 1 ок
  */
+<<<<<<< HEAD:src/log/logging.c
 BO_STATIC int delOldFile(char *fname) 
+=======
+ int delOldFile(char *fname) 
+>>>>>>> fcb5fcba917ff5bd22527c157ae07b2297664648:src/log/bologging.c
 {
 	int err = -1;
 	char *errTxt = NULL;
@@ -321,6 +359,7 @@ void bo_getTimeNow(char *timeStr, int sizeBuf)
 	int micro = 0;
 	struct timeval tval;
 	char buffer[30];
+	
 	if(sizeBuf < 40) {
 		/*не пишем лог тк ошибка возможна только на этапе кодирования*/
 		printf("getTimeNow() - ERROR - массив не достаточного размера\n");
@@ -332,7 +371,7 @@ void bo_getTimeNow(char *timeStr, int sizeBuf)
 		lt = time(NULL);
 	} else {
 		lt = tval.tv_sec;
-		micro = tval.tv_usec/1000;
+		micro = tval.tv_usec;
 	}
 
 	/*преобразует в структуру tm */

@@ -1,11 +1,16 @@
 #include <stdio.h>
-#include "log/logging.h"
+#include <stdlib.h>
+#include "log/bologging.h"
 #include "tools/dbgout.h"
 //#include "nettcp/bo_net.h"
+
+
+extern void bo_fifo_main();
 
 int main(int argc, char **argv)
 {
 	dbgout("START -> %s\n", *argv);
+<<<<<<< HEAD
 	bo_log("%s%s", " INFO ", "START");
 //	int sock = initServerSock();
 //	int client_sock = 0;
@@ -28,6 +33,9 @@ int main(int argc, char **argv)
 //	}
 	//writeSysLog("main", "test error", "write error");
 	bo_log("%s%s", " INFO ", "END");
+=======
+	bo_fifo_main();
+>>>>>>> fcb5fcba917ff5bd22527c157ae07b2297664648
 	dbgout("END\n");
 	return 0;
 }
