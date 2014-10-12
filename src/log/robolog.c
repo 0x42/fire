@@ -31,7 +31,7 @@ int bo_robLog(char *msg)
 	int ans = 1;
 	char *errTxt = NULL;
 	FILE *file = NULL;
-	char timeBuf[30] = {0};
+	char timeBuf[40] = {0};
 	if(bo_isBigLogSize(&robolog.nrow, robolog.maxrow, robolog.name, 
 		robolog.oldname) > 0) {
 		file = fopen(robolog.name, "a+");

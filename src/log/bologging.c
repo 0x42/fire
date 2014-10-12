@@ -362,7 +362,7 @@ void bo_getTimeNow(char *timeStr, int sizeBuf)
 	
 	if(sizeBuf < 40) {
 		/*не пишем лог тк ошибка возможна только на этапе кодирования*/
-		printf("getTimeNow() - ERROR - массив не достаточного размера\n");
+		printf("bo_getTimeNow() - ERROR - массив не достаточного размера\n");
 		return;
 	}
 	/*возвр текущ время системы*/
@@ -378,7 +378,7 @@ void bo_getTimeNow(char *timeStr, int sizeBuf)
 	ptr = localtime(&lt);
 	if(strftime(buffer, sizeBuf, "%d-%m-%Y %H:%M:%S ", ptr) == 0)
 		/*не пишем лог тк ошибка возможна только на этапе кодирования*/
-		printf("getTimeNow() - ERROR - массив не достаточного размера\n");
+		printf("bo_getTimeNow() - ERROR - массив не достаточного размера\n");
 	sprintf(timeStr, "%s%d ", buffer, micro);
 }
 /* [0x42] */
