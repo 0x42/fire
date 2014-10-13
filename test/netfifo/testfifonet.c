@@ -196,9 +196,9 @@ TEST(fifo, sendSETL10MSG10)
 	buf = getMSG(&sock, &bufSize);
 	if(buf != NULL) {
 		if(msgSize == bufSize) {
+			ans = -1;
 			for(i = 0; i < msgSize; i++) {
-				printf("%c", buf[i]);
-				if(msg2[i] != buf[i]) goto error;
+				if(msg[i] != buf[i]) goto error;
 			}
 			ans = 1;
 		}
