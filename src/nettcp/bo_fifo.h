@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <string.h>
 
+
 int bo_initFIFO(int size);
 
 int bo_addFIFO(unsigned char *obj, int size);

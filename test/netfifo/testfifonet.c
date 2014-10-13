@@ -7,6 +7,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <errno.h>
+#include "../../src/nettcp/bo_net.h"
 #include "../../src/nettcp/bo_fifo.h"
 #include "../../src/tools/ocrc.h"
 
@@ -74,7 +75,7 @@ TEST(fifo, sendOneByte)
 			if(exec != -1)	{
 				exec = recv(sock, buf, sizeof(buf), 0);
 				if(exec > 0) {
-					int p = strstr(buf, "ERR");
+					char *p = strstr(buf, "ERR");
 					if(p) ans = 1;
 				} else {
 					printf("not get ERR");
@@ -115,7 +116,7 @@ int sendMSG(unsigned char *msg, int msgSize, int length)
 			if(exec == -1)	{ printf("send msg err\n"); goto error;}
 			exec = recv(sock, buf, sizeof(buf), 0);
 			if(exec > 0) {
-				int p = strstr(buf, "OK");
+				char *p = strstr(buf, "OK");
 				if(p) ans = 1;
 			} else {
 				printf("send() err[%s]\n", strerror(errno)); 
@@ -146,6 +147,11 @@ unsigned char *getMSG(int *s, int *retLength)
 	} else {
 		if (connect(sock, (struct sockaddr *) &saddr, 
 		sizeof(struct sockaddr)) == 0) {
+			struct timeval tval;
+			tval.tv_sec = 0;
+			tval.tv_usec = 100000;
+			/* устан максимальное время ожидания одного пакета */
+			setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tval, sizeof(tval));
 			*s = sock;
 			int count = send(sock, head, 3, 0);
 			if(count != 3) goto exit;
@@ -158,12 +164,7 @@ unsigned char *getMSG(int *s, int *retLength)
 				*retLength = length;
 				buf = (unsigned char *)malloc(length);
 				if(buf == NULL) goto exit;
-				total = 0;
-				while(total < length) {
-					count = recv(sock, buf+total, length-total, 0);
-					if(count < 0) goto exit;
-					total += count;
-				}
+				bo_recvAllData(sock, buf, length);
 			} else {
 				buf = (unsigned char *)malloc(3);
 				memcpy(buf, h, 3);
@@ -187,15 +188,17 @@ TEST(fifo, sendSETL10MSG10)
 	int bufSize = 0;
 	int msgSize = 10;
 	unsigned char *msg = "AAAAAAAAAA";
+	char *msg2 = "AAAAAAAAAB";
 	unsigned char *buf = NULL;
 	unsigned char STA[4] = {0};
-	ans = sendMSG(msg, msgSize, msgSize);
+	ans = bo_sendDataFIFO("127.0.0.1", 8888, msg, msgSize);
 	if(ans != 1) goto error;
 	buf = getMSG(&sock, &bufSize);
 	if(buf != NULL) {
 		if(msgSize == bufSize) {
 			for(i = 0; i < msgSize; i++) {
-				if(msg[i] != buf[i]) goto error;
+				printf("%c", buf[i]);
+				if(msg2[i] != buf[i]) goto error;
 			}
 			ans = 1;
 		}
@@ -203,7 +206,7 @@ TEST(fifo, sendSETL10MSG10)
 	exec = send(sock, "DEL", 3, 0);
 	if(exec == -1) {
 		exec = recv(sock, STA, 3, 0);
-		STA[4] = "\0";
+		STA[4] = '\0';
 		if(exec != -1) printf("STA = %s\n", STA);
 		ans = 0; 
 	}
@@ -249,7 +252,8 @@ TEST(fifo, sendSETL10MSG23)
 	printf("sendSETL10MSG23() ... \n");
 	int ans = 0;
 	int sock = startSock();
-	int exec = 0, p = 0;
+	int exec = 0;
+	char *p;
 	int tcp_delay = 1;
 	char *head = "SET";
 	unsigned char *msg = "AAAAA AAAAA AAAAA AAAAA"; 
@@ -275,7 +279,7 @@ TEST(fifo, sendSETL10MSG23)
 			if(exec == -1)	{ printf("send msg err\n"); goto error;}
 			if(exec < 23) { printf("cant send all msg\n"); goto error;}
 			exec = recv(sock, buf, sizeof(buf), 0);
-			buf[4] = "\0";
+			buf[4] = '\0';
 			printf("STA = %s\n", buf);
 			if(exec > 0) {
 				p = strstr(buf, "ERR");
@@ -316,7 +320,7 @@ TEST(fifo, sendOnlyHead)
 			if(exec == -1)	{ printf("send head err\n"); goto error;}
 			exec = recv(sock, buf, sizeof(buf), 0);
 			if(exec > 0) {
-				int p = strstr(buf, "ERR");
+				char *p = strstr(buf, "ERR");
 				if(p) ans = 1;
 			} else {printf("send() err[%s]\n", strerror(errno)); goto error;}
 		} else {
@@ -362,7 +366,7 @@ TEST(fifo, sendSETL10240MSG10240)
 			
 			exec = recv(sock, buf, sizeof(buf), 0);
 			if(exec > 0) {
-				int p = strstr(buf, "OK");
+				char *p = strstr(buf, "OK");
 				if(p) ans = 1;
 			} else {printf("send() err[%s]\n", strerror(errno)); goto error;}
 		} else {

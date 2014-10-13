@@ -17,6 +17,8 @@ SRC1 = \
     ../netfifo/test_runners/all_tests.c \
     ../netfifo/testfifonet.c \
     ../../src/nettcp/bo_fifo.c \
+    ../../src/nettcp/bo_net.c \
+    ../../src/log/bologging.c \
     ../../src/tools/ocrc.c
 
 INC_DIRS = -Isrc -I$(UNITY_ROOT)/src -I$(UNITY_ROOT)/extras/fixture/src \

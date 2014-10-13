@@ -25,12 +25,11 @@ static void fifoDelHead(struct ParamSt *param);
 static void fifoEnd(struct ParamSt *param);
 static unsigned int readPacketLength(struct ParamSt *param);
 static int readPacketBody(struct ParamSt *param, unsigned int length);
-static int sendAllData(int sock, unsigned char *buf, int len);
 /* ----------------------------------------------------------------------------
  * @port	- порт накотором висит слуш сокет
  * @queue_len	- кол-во необр запросов в очереди, при перепол вохзвращает 
  *		  клиенту ECONREFUSED <-(0x42:уточнить?)
- * @fifo_len	- размер FIFO запросо для 485  <-(0x42:не нужное поле, удалить?)
+ * @fifo_len	- размер FIFO для хран запросов 485  
  * @clientfd	- дескриптор сокета от устан соед с клиентом
  */
 static struct {
@@ -63,8 +62,8 @@ static void(*statusTable[])(struct ParamSt *) = {
 	fifoEnd};
 /* @packetLen		длина запроса для FIFO
  * @clientfd		сокет 
- * @buffer		буффер с запросом для FIFO
- * @bufSize		размер буффера
+ * @buffer		буфер с запросом для FIFO
+ * @bufSize		размер буфера
  */
 struct ParamSt {
 	int packetLen;
@@ -80,12 +79,11 @@ struct ParamSt {
 void bo_fifo_main()
 {
 	int sock = 0;
-	int fifoSize = 100;
 	bo_log("%s%s", " INFO ", "START serverfifo");
 	/*read config file*/
 	if(readConfig() == 1) {
 		if( (sock = fifoServStart()) != -1) {
-			if(bo_initFIFO(fifoSize) == 1) {
+			if(bo_initFIFO(fifoconf.fifo_len) == 1) {
 				fifoServWork(sock); 
 				bo_delFIFO();
 			}
@@ -97,7 +95,7 @@ void bo_fifo_main()
 			}
 		}
 	} else {
-		bo_log("%s%s", " ERROR ", " readConfid() can't run server fifo");
+		bo_log("%s%s", " ERROR ", " readConfig() can't run server fifo");
 	}
 	bo_log("%s%s", " INFO ", "END	serverfifo");
 };
@@ -109,13 +107,12 @@ void bo_fifo_main()
  {
 	fifoconf.port = 8888;
 	fifoconf.queue_len = 20;
-	fifoconf.fifo_len = 1000;
+	fifoconf.fifo_len = 100;
 	return 1;
  };
 /* ----------------------------------------------------------------------------
  * @brief		запуск слушающего сокета
- * @sock		присваивается дескр сокета вслучае успеха  
- * @return		[sockfd] - ok; [-1] - error
+ * @return		[sockfd] - сокет; [-1] - error
  */ 
  static int fifoServStart()
  {
@@ -163,6 +160,8 @@ static void fifoServWork(int sockfdMain)
 	while(stop == 1) {
 		if(bo_waitConnect(sockfdMain, &clientfd, &errTxt) == 1) {
 			countErr = 0;
+			/* передаем флаг stop. Ф-ия может поменять его на -1
+			   если придет пакет END */
 			fifoReadPacket(clientfd, buffer1, bufferSize, &stop);
 		} else {
 			countErr++;
@@ -175,7 +174,7 @@ static void fifoServWork(int sockfdMain)
  }
  /* ---------------------------------------------------------------------------
   * @brief		читаем пакет и пишем/забираем/удаляем в/из FIFO
-  * @clientSock		дескриптор сокета(клиента
+  * @clientSock		дескриптор сокета(клиента)
   * @buffer		буфер в который пишем данные. 
   * @bufSize		bufSize = BO_FIFO_ITEM_VAL(bo_fifo.h)
   * @endPr		флаг прекращ работы сервера и заверш программы
@@ -282,14 +281,14 @@ static void fifoReadPacket(int clientSock, unsigned char *buffer, int bufSize,
 	dbgout("fifo free item=%d\n", bo_getFree());
 	param->packetLen = bo_getFIFO(param->buffer, param->bufSize);
 	if(param->packetLen > 0) {
-		exec = sendAllData(param->clientfd, head, 3);
+		exec = bo_sendAllData(param->clientfd, head, 3);
 		if(exec == -1) goto exit;
-		exec = sendAllData(param->clientfd, len, 2);
+		exec = bo_sendAllData(param->clientfd, len, 2);
 		if(exec == -1) goto exit;
-		exec = sendAllData(param->clientfd, param->buffer, 
+		exec = bo_sendAllData(param->clientfd, param->buffer, 
 			param->packetLen);
 	} else {
-		exec = sendAllData(param->clientfd, headNO, 3);
+		exec = bo_sendAllData(param->clientfd, headNO, 3);
 		goto exit;
 	}
 	if(exec == -1) {
@@ -312,7 +311,7 @@ static void fifoReadPacket(int clientSock, unsigned char *buffer, int bufSize,
  {
 	int sock = param->clientfd;
 	unsigned char msg[] = " OK";
-	sendAllData(sock, msg, 3);
+	bo_sendAllData(sock, msg, 3);
 	packetStatus = QUIT;
  }
  /* ---------------------------------------------------------------------------
@@ -320,10 +319,10 @@ static void fifoReadPacket(int clientSock, unsigned char *buffer, int bufSize,
   */
  static void fifoAnsNo(struct ParamSt *param)
  {
-	 int sock = param->clientfd;
-	 unsigned char msg[] = " NO";
-	 sendAllData(sock, msg, 3);
-	 packetStatus = QUIT;
+	int sock = param->clientfd;
+	unsigned char msg[] = " NO";
+	bo_sendAllData(sock, msg, 3);
+	packetStatus = QUIT;
  }
   /* --------------------------------------------------------------------------
   * @brief		send answer "ERR"
@@ -332,7 +331,7 @@ static void fifoReadPacket(int clientSock, unsigned char *buffer, int bufSize,
  {
 	int sock = param->clientfd;
 	unsigned char msg[] = "ERR";
-	sendAllData(sock, msg, sizeof(msg));
+	bo_sendAllData(sock, msg, sizeof(msg));
 	packetStatus = QUIT;
  }
  /* ---------------------------------------------------------------------------
@@ -365,7 +364,7 @@ static void fifoReadPacket(int clientSock, unsigned char *buffer, int bufSize,
  {
 	int exec = -1;
 	unsigned char msg[3] = " OK";
-	exec = sendAllData(param->clientfd, msg, sizeof(msg));
+	exec = bo_sendAllData(param->clientfd, msg, sizeof(msg));
 	if(exec != -1) bo_delHead();
 	packetStatus = QUIT;
  }
@@ -414,7 +413,7 @@ static void fifoReadPacket(int clientSock, unsigned char *buffer, int bufSize,
 		}
 		if(count < 0) {
 			if((errno == EWOULDBLOCK) | (errno == EAGAIN)) 
-				printf("timeout\n"); 
+				dbgout("timeout\n"); 
 			dbgout("readPacketBody() errno[%s]\n", strerror(errno));
 			ans = -1;
 			goto exit;
@@ -438,25 +437,7 @@ static void fifoReadPacket(int clientSock, unsigned char *buffer, int bufSize,
 	exit:
 	return ans;
  }
- /* ---------------------------------------------------------------------------
-  * @brief		отправляет данные 
-  * @buf		данные которые будут отправлены
-  * @len		размер отправл данных
-  * @return		[-1] - ERROR [>0] - кол отпр байт
-  */
- static int sendAllData(int sock, unsigned char *buf, int len)
- {
-	int count = 0;   /* колв-во отправл байт за один send*/
-	int allSend = 0; /* кол-во всего отправл байт*/
-	unsigned char *ptr = buf;
-	int n = len; 
-	while(allSend < len) {
-		count = send(sock, ptr + allSend, n - allSend, 0);
-		if(count == -1) break;
-		allSend += count;
-	}
-	return (count == -1 ? -1 : allSend);
- }
+
  
  
  
