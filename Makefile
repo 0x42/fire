@@ -24,6 +24,7 @@ SRC5   = src/tools/bmempool.c
 SRC6   = src/nettcp/bo_net.c
 SRC7   = src/nettcp/bo_net_fifo_server.c
 SRC8   = src/nettcp/bo_fifo.c
+SRC9   = src/nettcp/bo_net_get.c
 
 SRC_T  = test/maintest.c
 SRC_T1 = test/unity/src/unity.c
@@ -43,6 +44,7 @@ OBJ5   = build/bmempool.o
 OBJ6   = build/bo_net.o
 OBJ7   = build/bo_net_fifo_server.o
 OBJ8   = build/bo_fifo.o
+OBJ9   = build/bo_net_get.o
 
 OBJ_T  = build/maintest.o 
 OBJ_T1 = build/unity.o
@@ -60,10 +62,11 @@ default:
 	$(CC) $(INC_DIR) $(CFLAGS) $(SRC6) -o $(OBJ6)
 	$(CC) $(INC_DIR) $(CFLAGS) $(SRC7) -o $(OBJ7)	
 	$(CC) $(INC_DIR) $(CFLAGS) $(SRC8) -o $(OBJ8)	
+	$(CC) $(INC_DIR) $(CFLAGS) $(SRC9) -o $(OBJ9)	
 
 	$(CC) $(INC_DIR) $(CFLAGS) $(SRC)  -o $(OBJ)
 	$(CC) $(LDFLAGS) $(OBJ1) $(OBJ2) $(OBJ3) $(OBJ6) $(OBJ7) \
-	      $(OBJ8) $(OBJ) -o $(TARGET)
+	      $(OBJ8) $(OBJ9) $(OBJ) -o $(TARGET)
 runtrace:
 	MALLOC_TRACE=trace.log $(TARGET)
 	mtrace $(TARGET) trace.log

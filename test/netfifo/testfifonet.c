@@ -189,12 +189,12 @@ TEST(fifo, sendSETL10MSG10)
 	int msgSize = 10;
 	unsigned char *msg = "AAAAAAAAAA";
 	char *msg2 = "AAAAAAAAAB";
-	unsigned char *buf = NULL;
+	unsigned char buf[1200] = {0};
 	unsigned char STA[4] = {0};
 	ans = bo_sendDataFIFO("127.0.0.1", 8888, msg, msgSize);
 	if(ans != 1) goto error;
-	buf = getMSG(&sock, &bufSize);
-	if(buf != NULL) {
+	exec = bo_recvDataFIFO("127.0.0.1", 8888, buf, 1200);
+	if(exec > 0) {
 		if(msgSize == bufSize) {
 			ans = -1;
 			for(i = 0; i < msgSize; i++) {
@@ -202,17 +202,8 @@ TEST(fifo, sendSETL10MSG10)
 			}
 			ans = 1;
 		}
-	}
-	exec = send(sock, "DEL", 3, 0);
-	if(exec == -1) {
-		exec = recv(sock, STA, 3, 0);
-		STA[4] = '\0';
-		if(exec != -1) printf("STA = %s\n", STA);
-		ans = 0; 
-	}
-	close(sock);
+	} else ans = -1;
 	error:
-	if(buf != NULL) free(buf);
 	TEST_ASSERT_EQUAL(1, ans);
 }
 /* ----------------------------------------------------------------------------

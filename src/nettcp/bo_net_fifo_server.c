@@ -277,9 +277,11 @@ static void fifoReadPacket(int clientSock, unsigned char *buffer, int bufSize,
 	unsigned char len[2] = {0};
 	unsigned char head[3] = "VAL";
 	unsigned char headNO[3] = " NO"; 
-	boIntToChar(param->packetLen, len);
-	dbgout("fifo free item=%d\n", bo_getFree());
 	param->packetLen = bo_getFIFO(param->buffer, param->bufSize);
+	boIntToChar(param->packetLen, len);
+	
+	dbgout("fifo free item=%d\n", bo_getFree());
+	dbgout("param->packetLen=%d\n", param->packetLen);
 	if(param->packetLen > 0) {
 		exec = bo_sendAllData(param->clientfd, head, 3);
 		if(exec == -1) goto exit;

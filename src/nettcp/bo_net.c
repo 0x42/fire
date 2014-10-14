@@ -88,7 +88,7 @@ int bo_sendDataFIFO(char *ip, unsigned int port,
 {
 	struct sockaddr_in saddr;
 	struct timeval tval;
-	int ans = -1;
+	int ans  = -1;
 	int sock = -1;
 	int exec = -1;
 	char *head = "SET";
@@ -112,7 +112,7 @@ int bo_sendDataFIFO(char *ip, unsigned int port,
 			if(exec == -1) goto error;
 			exec = bo_sendAllData(sock, (unsigned char*)data, dataSize);
 			if(exec == -1) goto error;
-			exec = bo_recvAllData(sock, buf, 3);
+			exec = bo_recvAllData(sock, (unsigned char*)buf, 3);
 			if(exec == -1) goto error;
 			else {
 				ok = strstr(buf, "OK");
@@ -138,65 +138,6 @@ int bo_sendDataFIFO(char *ip, unsigned int port,
 			dataSize);
 	}
 	return ans;
-}
-/* ----------------------------------------------------------------------------
- * @brief	устанав соед с узлом -> отпр GET -> ждем ответ [VAL,LEN,DATA]|NO ->
- *		отправл DEL -> ждем ответа OK
- * @return	[-1] - error; [>= 0] - recv data length  
- */
-int bo_recvDataFIFO(char *ip, unsigned int port, char *buf, int bufSize)
-{
-	int dataLen = -1;
-	struct sockaddr_in saddr;
-	struct timeval tval;
-	int sock = -1;
-	int exec = -1;
-	char *head = "GET";
-	unsigned char len[2] = {0};
-	int length = 0;
-	char buf[4] = {0};
-	char *ok = NULL;
-	sock = bo_crtSock(ip, port, &saddr);
-	/* 100 мсек*/
-	tval.tv_sec = 0;
-	tval.tv_usec = 100000;
-	if(sock != -1) {
-		/* устан максимальное время ожидания одного пакета */
-		setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tval, sizeof(tval));
-		if(connect(sock, 
-			  (struct sockaddr *) &saddr, 
-			   sizeof(struct sockaddr)) == 0) {
-			exec = bo_sendAllData(sock, head, 3);
-			if(exec == -1) goto error;
-			exec = bo_recvAllData(sock, len, 2);
-			if(exec == -1) goto error;
-			length = boCharToInt(len);
-			if(length <= bufSize) {
-				exec = bo_recvAllData(sock, buf, length);
-				if(exec == -1) goto error;
-
-			} else {
-				bo_log("bo_recvDataFIFO() bufSize=%d dataSize=%d", 
-					bufSize, 
-					length);
-			}
-		} else {
-			error:
-			bo_log("bo_recvDataFIFO() errno[%s]\n ip[%s]\nport[%d]\nsize[%d]", 
-			strerror(errno),
-			ip,
-			port,
-			dataSize);
-		}
-		close(sock);
-	} else {
-		bo_log("bo_recvDataFIFO() errno[%s]\n ip[%s]\nport[%d]\nsize[%d]", 
-			strerror(errno),
-			ip,
-			port,
-			dataSize);
-	}
-	return dataLen;
 }
 /* ----------------------------------------------------------------------------
  * @brief	созд сокет 
@@ -236,13 +177,14 @@ int bo_crtSock(char *ip, unsigned int port, struct sockaddr_in *saddr)
  /* ---------------------------------------------------------------------------
   * @brief		
   */
- int bo_recvAllData(int sock, char *buf, int size)
+ int bo_recvAllData(int sock, unsigned char *buf, int size)
  {
 	int count = 0;
 	int exec = 1;
 	int n = size;
 	int all = 0;
 	while(all < size) {
+		printf("all[%d] size[%d]", all, size);
 		count = recv(sock, buf + all, n - all, 0);
 		if(count < 1) { 
 			if(all != size) exec = -1;
