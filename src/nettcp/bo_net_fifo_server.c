@@ -4,6 +4,7 @@
 #include "../log/bologging.h"
 #include "bo_net.h"
 #include "bo_fifo.h"
+#include "../tools/ocfg.h"
 
 extern unsigned int boCharToInt(unsigned char *buf);
 
@@ -24,7 +25,7 @@ static void fifoAddToFIFO(struct ParamSt *param);
 static void fifoDelHead(struct ParamSt *param);
 static void fifoEnd(struct ParamSt *param);
 static unsigned int readPacketLength(struct ParamSt *param);
-static int readPacketBody(struct ParamSt *param, unsigned int length);
+
 /* ----------------------------------------------------------------------------
  * @port	- порт накотором висит слуш сокет
  * @queue_len	- кол-во необр запросов в очереди, при перепол вохзвращает 
@@ -38,6 +39,7 @@ static struct {
 	int fifo_len; 
 	int clientfd;
 } fifoconf = {0};
+
 /* ----------------------------------------------------------------------------
  * @brief		состояние сервера
  *		ERR - ошибка
@@ -47,8 +49,10 @@ static struct {
  */
 static char *PacketStatusTxt[] = {"READHEAD", "SET", "GET", "QUIT", 
 "ANSERR", "ANSOK", "ANSNO", "ADDFIFO", "DEL"};
+
 static enum PacketStatus {READHEAD = 0, SET, GET, QUIT, ANSERR, ANSOK, 
 	ANSNO, ADDFIFO, DEL, END} packetStatus;
+	
 static void(*statusTable[])(struct ParamSt *) = {
 	fifoReadHead, 
 	fifoSetData, 
@@ -59,7 +63,9 @@ static void(*statusTable[])(struct ParamSt *) = {
 	fifoAnsNo,
 	fifoAddToFIFO,
 	fifoDelHead,
-	fifoEnd};
+	fifoEnd
+};
+
 /* @packetLen		длина запроса для FIFO
  * @clientfd		сокет 
  * @buffer		буфер с запросом для FIFO
@@ -71,17 +77,20 @@ struct ParamSt {
 	unsigned char *buffer;
 	int bufSize;
 };
+
 /* ----------------------------------------------------------------------------
  * @brief		Запуск сервера FIFO
  *			request: SET|GET|DEL|ASK
  *			response: OK|ERR|
  */
-void bo_fifo_main()
+void bo_fifo_main(int n, char **argv)
 {
 	int sock = 0;
+	TOHT *cfg = NULL;
 	bo_log("%s%s", " INFO ", "START serverfifo");
+	
 	/*read config file*/
-	if(readConfig() == 1) {
+	if(readConfig(cfg, n, argv) == 1) {
 		if( (sock = fifoServStart()) != -1) {
 			if(bo_initFIFO(fifoconf.fifo_len) == 1) {
 				fifoServWork(sock); 
@@ -97,19 +106,49 @@ void bo_fifo_main()
 	} else {
 		bo_log("%s%s", " ERROR ", " readConfig() can't run server fifo");
 	}
+	
+	if(cfg != NULL) cfg_free(cfg);
+	
 	bo_log("%s%s", " INFO ", "END	serverfifo");
 };
 /* ----------------------------------------------------------------------------
  * @brief		Читаем данные с конфиг файла
  * @return		[1] - ok; [-1] - error
  */
- static int readConfig()
- {
-	fifoconf.port = 8888;
-	fifoconf.queue_len = 20;
-	fifoconf.fifo_len = 100;
+static int readConfig(TOHT *cfg, int n, char **argv)
+{
+	int defP = 8888, defQ = 20, defF = 100;
+	char *fileName	= NULL;
+	char *f_log	= "moxa_serv.log";
+	char *f_log_old = "moxa_serv.log(old)";
+	int  nrow = 0;
+	int  maxrow = 1000;
+	fifoconf.port      = defP;
+	fifoconf.queue_len = defQ;
+	fifoconf.fifo_len  = defF;
+	
+	if(n == 2) {
+		fileName = *(argv + 1);
+		bo_log("%s config[%s]", " INFO ", fileName);
+		cfg = cfg_load(fileName);
+		if(cfg != NULL) {
+			fifoconf.port      = cfg_getint(cfg, "sock:port", defP);
+			fifoconf.queue_len = cfg_getint(cfg, "sock:queue_len", defQ);
+			fifoconf.fifo_len  = cfg_getint(cfg, "fifo:len", defF);
+			
+			f_log	  = cfg_getstring(cfg, "log:file", f_log);
+			f_log_old = cfg_getstring(cfg, "log:file_old", f_log_old);
+			maxrow    = cfg_getint(cfg, "log:maxrow", maxrow);
+		} else {
+			bo_log(" WARNING error[%s] %s", 
+				"can't read config file",
+				"start with default config");
+		}
+	} else {
+		bo_log("%s", " WARNING start with default config");
+	}
 	return 1;
- };
+};
 /* ----------------------------------------------------------------------------
  * @brief		запуск слушающего сокета
  * @return		[sockfd] - сокет; [-1] - error
@@ -209,37 +248,29 @@ static void fifoReadPacket(int clientSock, unsigned char *buffer, int bufSize,
 }
  /* ---------------------------------------------------------------------------
   * @brief		чтение заголовка запроса
-  *			SET|GET|DEL|ASK|ERR
+  *			SET|GET|DEL|END
   * @client		сокет соот-ий текущ соед-ию
   * @return		[1] = ok, [-1] = error
   */
  static void fifoReadHead(struct ParamSt *param)
  {
-	int headSize = 3;
-	char buf[headSize + 1];
-	int  count = 0;
+	int bufSize = 3;
+	char buf[bufSize + 1];
 	int exec = 0;
-	/*  в течение 1 сек ждем прихода headSize байт */
-	while(exec != 100) {
-		/* MSG_PEEK после чтения данных с сокета их копия 
-		 * остается в очереди */
-		count = recv(param->clientfd, buf, headSize, MSG_PEEK);
-		if(count == 3)  break;
-		usleep(100000);
-		exec++;
+	buf[bufSize] = '\0';
+	exec = bo_recvAllData(param->clientfd, (unsigned char *)buf, bufSize, 3);
+	if(exec == -1) {
+		bo_log("fifoReadHead() errno[%s]", strerror(errno));
 	}
-	memset(buf, 0, headSize);
-	count = recv(param->clientfd, buf, headSize, 0);
-	buf[headSize] = '\0';
-	dbgout("fifoReadHead()->HEAD[%s] count=%d", buf, count);
-	if(count == -1) dbgout("errno[%s]", strerror(errno));
-	if(count == 3) {
+	if(exec == 3) {
+		dbgout("fifoReadHead()->HEAD[%s] exec=%d", buf, exec);
 		if(strstr(buf, "SET")) packetStatus = SET;
 		else if(strstr(buf, "GET")) packetStatus = GET;
 		else if(strstr(buf, "DEL")) packetStatus = DEL;
 		else if(strstr(buf, "END")) packetStatus = END;
 		else packetStatus = ANSERR;
 	} else {
+		if(exec > 0 ) dbgout("fifoReadHead()->HEAD[%s] exec=%d", buf, exec);
 		packetStatus = ANSERR;
 	}
  }
@@ -252,16 +283,26 @@ static void fifoReadPacket(int clientSock, unsigned char *buffer, int bufSize,
  { 
 	unsigned int length = 0;
 	int flag = -1;
+	int count = 0;
 	length = readPacketLength(param);
 	if((length > 0) & (length <= param->bufSize)) {
-		flag = readPacketBody(param, length);
+		count = bo_recvAllData(param->clientfd, 
+				       param->buffer,
+			               param->bufSize,
+				       length);
+		if((count > 0) & (count == length)) flag = 1; 
+		else {
+			bo_log("fifoSetData() count[%d]!=length[%d]", count, length);
+		}
+	} else {
+		bo_log("fifoSetData() bad length[%d] ", 
+			length, 
+			param->bufSize);
 	}
 	if(flag == 1) {
 		param->packetLen = length;
 		packetStatus = ADDFIFO;
 	} else {
-		bo_log("fifoSetData() body == NULL or length[%d] > bufSize[%d]\n", 
-			length, param->bufSize);
 		packetStatus = ANSERR;
 	}
  }
@@ -296,6 +337,7 @@ static void fifoReadPacket(int clientSock, unsigned char *buffer, int bufSize,
 	if(exec == -1) {
 		exit:
 		packetStatus = QUIT;
+		bo_log("fifoGetData() errno[%s]", strerror(errno));
 	} else {
 		packetStatus = READHEAD;
 	}
@@ -309,33 +351,42 @@ static void fifoReadPacket(int clientSock, unsigned char *buffer, int bufSize,
  /* ---------------------------------------------------------------------------
   * @brief		send answer " OK"
   */
- static void fifoAnsOk(struct ParamSt *param)
- {
+static void fifoAnsOk(struct ParamSt *param)
+{
+	int exec = -1; 
 	int sock = param->clientfd;
 	unsigned char msg[] = " OK";
-	bo_sendAllData(sock, msg, 3);
 	packetStatus = QUIT;
- }
+
+	exec = bo_sendAllData(sock, msg, 3);
+	if(exec == -1) bo_log("fifoAnsOk() errno[%s]", strerror(errno)); 
+}
  /* ---------------------------------------------------------------------------
   * @brief		отправляем ответ " NO" (нет данных в очереди)
   */
- static void fifoAnsNo(struct ParamSt *param)
- {
+static void fifoAnsNo(struct ParamSt *param)
+{
+	int exec = -1; 
 	int sock = param->clientfd;
 	unsigned char msg[] = " NO";
-	bo_sendAllData(sock, msg, 3);
 	packetStatus = QUIT;
- }
-  /* --------------------------------------------------------------------------
-  * @brief		send answer "ERR"
-  */
- static void fifoAnsErr(struct ParamSt *param)
- {
+		
+	exec = bo_sendAllData(sock, msg, 3);
+	if(exec == -1) bo_log("fifoAnsNo() errno[%s]", strerror(errno));
+}
+/* --------------------------------------------------------------------------
+ * @brief		send answer "ERR"
+ */
+static void fifoAnsErr(struct ParamSt *param)
+{
+	int exec = -1;
 	int sock = param->clientfd;
 	unsigned char msg[] = "ERR";
-	bo_sendAllData(sock, msg, sizeof(msg));
 	packetStatus = QUIT;
- }
+	
+	exec = bo_sendAllData(sock, msg, sizeof(msg));
+	if(exec == -1) bo_log("fifoAnsErr() errno[%s]", strerror(errno));
+}
  /* ---------------------------------------------------------------------------
   * @brief	добавляем данные в FIFO
   */
@@ -372,21 +423,22 @@ static void fifoReadPacket(int clientSock, unsigned char *buffer, int bufSize,
  }
  /* ---------------------------------------------------------------------------
   * @brief	читаем длину пакета
-  * @return	[0] - ошибка, [>0] - длина сообщения
+  * @return	[-1] - ошибка, [>0] - длина сообщения
   */
  static unsigned int readPacketLength(struct ParamSt *param)
  {
 	int sock = param->clientfd;
-	char buf[2] = {0};
+	unsigned char buf[2] = {0};
 	int count = 0;
-	unsigned int ans = 0;
-	/* ждем прихода 2byte опред длину сообщения*/
-	count = recv(sock, buf, 2, 0); 
+	unsigned int ans = -1;
+	/* ждем прихода 2byte опред длину сообщения */
+	count = bo_recvAllData(sock, buf, 2, 2); 
 	if(count == 2) {
 		/*b1b2 -> b1 - старший байт
 		 *	  b2 - младший байт
  		 */
-		ans = boCharToInt((unsigned char *)buf);
+		ans = boCharToInt(buf);
+		printf("readPacketLength() length = %d\n", ans);
 	}
 	return ans;
  }
@@ -394,7 +446,7 @@ static void fifoReadPacket(int clientSock, unsigned char *buffer, int bufSize,
   * @brief	читаем тело пакета
   * @length	длина пакета
   * @return	[-1] - ERROR [1] - OK
-  */
+  
  static int readPacketBody(struct ParamSt *param,
 	 unsigned int length)
  {
@@ -439,7 +491,7 @@ static void fifoReadPacket(int clientSock, unsigned char *buffer, int bufSize,
 	exit:
 	return ans;
  }
-
+*/
  
  
  

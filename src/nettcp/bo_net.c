@@ -112,7 +112,7 @@ int bo_sendDataFIFO(char *ip, unsigned int port,
 			if(exec == -1) goto error;
 			exec = bo_sendAllData(sock, (unsigned char*)data, dataSize);
 			if(exec == -1) goto error;
-			exec = bo_recvAllData(sock, (unsigned char*)buf, 3);
+			exec = bo_recvAllData(sock, (unsigned char*)buf, 3, 3);
 			if(exec == -1) goto error;
 			else {
 				ok = strstr(buf, "OK");
@@ -175,22 +175,21 @@ int bo_crtSock(char *ip, unsigned int port, struct sockaddr_in *saddr)
 	return (count == -1 ? -1 : allSend);
  }
  /* ---------------------------------------------------------------------------
-  * @brief		
+  * @brief		получаем данные размера length
+  * @return		[-1] - ERROR [count] - кол во пол данных	
   */
- int bo_recvAllData(int sock, unsigned char *buf, int size)
- {
+int bo_recvAllData(int sock, unsigned char *buf, int bufSize, int length)
+{
 	int count = 0;
 	int exec = 1;
-	int n = size;
 	int all = 0;
-	while(all < size) {
-		printf("all[%d] size[%d]", all, size);
-		count = recv(sock, buf + all, n - all, 0);
+	while(all < length) {
+		count = recv(sock, buf + all, bufSize - all, 0);
 		if(count < 1) { 
-			if(all != size) exec = -1;
+			if(all != length) exec = -1;
 			break;
 		}
 		all += count;
 	}
 	return ( exec == -1 ? -1 : all);
- }
+}

@@ -93,7 +93,7 @@ static void recvReadHead(struct Param *p)
 {	
 	int exec = -1;
 	char buf[3] = {0};
-	exec = bo_recvAllData(p->sock, (unsigned char *)buf, 3);
+	exec = bo_recvAllData(p->sock, (unsigned char *)buf, 3, 3);
 	if(exec == -1) {
 		bo_log("bo_net_get.c recvReadHead() errno[%s]", 
 			strerror(errno));
@@ -112,12 +112,12 @@ static void recvVal(struct Param *p)
 	int exec = -1;
 	int length = 0;
 	unsigned char len[2] = {0};
-	exec = bo_recvAllData(p->sock, len, 2);
+	exec = bo_recvAllData(p->sock, len, 2, 2);
 	if(exec == -1) goto error;
 	else {
 		length = boCharToInt(len);
 		if(length <= p->bufSize) {
-			exec = bo_recvAllData(p->sock, p->buf, length);
+			exec = bo_recvAllData(p->sock, p->buf, p->bufSize, length);
 			if(exec == -1) goto error;
 			else p->length = length;
 		} else {

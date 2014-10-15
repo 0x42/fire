@@ -5,7 +5,7 @@
 #include "nettcp/bo_net.h"
 #include "nettcp/bo_fifo.h"
 
-extern void bo_fifo_main();
+extern void bo_fifo_main(int n, char **argv);
 /* размер 1,1 Кб */
 
 void prBuf(char *buf, int s)
@@ -19,7 +19,7 @@ void prBuf(char *buf, int s)
 int main(int argc, char **argv)
 {
 	dbgout("START -> %s\n", *argv);
-	bo_fifo_main();
+	bo_fifo_main(argc, argv);
 	dbgout("END\n");
 	return 0;
 }
