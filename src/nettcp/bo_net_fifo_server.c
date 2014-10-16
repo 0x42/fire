@@ -9,21 +9,22 @@
 extern unsigned int boCharToInt(unsigned char *buf);
 
 struct ParamSt;
-static int readConfig();
-static int fifoServStart();
-static void fifoServWork(int sockfdMain);
-static void fifoReadPacket(int clientSock, unsigned char *buffer, int bufSize, 
-			   int *endPr);
-static void fifoReadHead(struct ParamSt *param);
-static void fifoQuit(struct ParamSt *param);
-static void fifoSetData(struct ParamSt *param);
-static void fifoGetData(struct ParamSt *param);
-static void fifoAnsErr(struct ParamSt *param);
-static void fifoAnsOk(struct ParamSt *param);
-static void fifoAnsNo(struct ParamSt *param);
-static void fifoAddToFIFO(struct ParamSt *param);
-static void fifoDelHead(struct ParamSt *param);
-static void fifoEnd(struct ParamSt *param);
+static void readConfig();
+static int  fifoServStart();
+static void fifoServWork	(int sockfdMain);
+static void fifoReadPacket	(int clientSock, unsigned char *buffer, 
+				 int bufSize, 
+				 int *endPr);
+static void fifoReadHead	(struct ParamSt *param);
+static void fifoQuit		(struct ParamSt *param);
+static void fifoSetData		(struct ParamSt *param);
+static void fifoGetData		(struct ParamSt *param);
+static void fifoAnsErr		(struct ParamSt *param);
+static void fifoAnsOk		(struct ParamSt *param);
+static void fifoAnsNo		(struct ParamSt *param);
+static void fifoAddToFIFO	(struct ParamSt *param);
+static void fifoDelHead		(struct ParamSt *param);
+static void fifoEnd		(struct ParamSt *param);
 static unsigned int readPacketLength(struct ParamSt *param);
 
 /* ----------------------------------------------------------------------------
@@ -53,6 +54,8 @@ static char *PacketStatusTxt[] = {"READHEAD", "SET", "GET", "QUIT",
 static enum PacketStatus {READHEAD = 0, SET, GET, QUIT, ANSERR, ANSOK, 
 	ANSNO, ADDFIFO, DEL, END} packetStatus;
 	
+/* массив содерж указатели на функции(возвращают void;
+ * аргумент у функций указ на struct ParamSt) */	
 static void(*statusTable[])(struct ParamSt *) = {
 	fifoReadHead, 
 	fifoSetData, 
@@ -87,35 +90,30 @@ void bo_fifo_main(int n, char **argv)
 {
 	int sock = 0;
 	TOHT *cfg = NULL;
-	bo_log("%s%s", " INFO ", "START serverfifo");
 	
-	/*read config file*/
-	if(readConfig(cfg, n, argv) == 1) {
-		if( (sock = fifoServStart()) != -1) {
-			if(bo_initFIFO(fifoconf.fifo_len) == 1) {
-				fifoServWork(sock); 
-				bo_delFIFO();
-			}
-			if(close(sock) == -1) {
-				bo_log("%s%s errno[%s]", 
-					" ERROR ",
-					"bo_fifo_main()->close()",
-					strerror(errno));
-			}
+	readConfig(cfg, n, argv);
+	bo_log("%s%s", " INFO ", "START moxa_serv");
+	if( (sock = fifoServStart()) != -1) {
+		if(bo_initFIFO(fifoconf.fifo_len) == 1) {
+			fifoServWork(sock); 
+			bo_delFIFO();
 		}
-	} else {
-		bo_log("%s%s", " ERROR ", " readConfig() can't run server fifo");
+		if(close(sock) == -1) {
+			bo_log("%s%s errno[%s]", 
+				" ERROR ",
+				"bo_fifo_main()->close()",
+				strerror(errno));
+		}
 	}
 	
 	if(cfg != NULL) cfg_free(cfg);
 	
-	bo_log("%s%s", " INFO ", "END	serverfifo");
+	bo_log("%s%s", " INFO ", "END	moxa_serv");
 };
 /* ----------------------------------------------------------------------------
  * @brief		Читаем данные с конфиг файла
- * @return		[1] - ok; [-1] - error
  */
-static int readConfig(TOHT *cfg, int n, char **argv)
+static void readConfig(TOHT *cfg, int n, char **argv)
 {
 	int defP = 8888, defQ = 20, defF = 100;
 	char *fileName	= NULL;
@@ -144,10 +142,10 @@ static int readConfig(TOHT *cfg, int n, char **argv)
 				"can't read config file",
 				"start with default config");
 		}
+		bo_setLogParam(f_log, f_log_old, nrow, maxrow);
 	} else {
 		bo_log("%s", " WARNING start with default config");
 	}
-	return 1;
 };
 /* ----------------------------------------------------------------------------
  * @brief		запуск слушающего сокета

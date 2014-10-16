@@ -1,4 +1,4 @@
-TARGET    = build/fire
+TARGET    = build/moxa_serv
 TARGET_T  = build/test1 
 TARGET_T1 = build/test2 
 
