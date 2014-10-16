@@ -329,30 +329,44 @@ TEST(fifo, send100MSGSET10)
 	int ans = 0;
 	int exec = 0;
 	char *head = "SET";
-	unsigned char *msg = "ABCDEFGHIJ"; 
-	unsigned char buf[10] = {0};
+	unsigned char *msg = "ABCDEFGHIJ123456789|"; 
+	unsigned char buf[20] = {0};
 	char len[2] = {0};
 	int NN = 0;
-	int sizeFIFO = 10;
+	int R = 0;
 	int i = 0;
-	boIntToChar(10, len);
-	while (NN < 100) {
-		exec = bo_sendDataFIFO("127.0.0.1", 8888, msg, 10);
-		if(exec == -1) goto error;
-		memset(buf, 0, 10);
-		exec = bo_recvDataFIFO("127.0.0.1", 8888, buf, 10);
-		for(i = 0; i < 10; i++) {
+	while (NN < 100000) {
+		printf(" =============\n NN = %d\n ============\n", NN);
+		exec = bo_sendDataFIFO("192.168.1.11", 8888, msg, 20);
+		if(exec == -1) {
+			printf("send error %s\n", strerror(errno));
+			goto error;
+		}
+		usleep(100);
+		memset(buf, 0, 20);
+		exec = bo_recvDataFIFO("127.0.0.1", 8888, buf, 20);
+		if(exec == -1) {
+			printf("recv error %s\n", strerror(errno)); 
+			goto error;
+		}
+		for(i = 0; i < 20; i++) {
 			if(msg[i] != buf[i]) {
 				printf("msg[%s]!=buf[%s]\n", msg, buf );
 				goto error;
 			}
 		}
 		NN++;
+		R++;
+		if(R == 5000) {
+			R = 0;
+			sleep(1);
+		}
 	}
 	exec = 1;
 	ans = 1;
-	error:
+	
 	if(exec == -1) {
+		error:
 		ans = -1;
 	}
 	TEST_ASSERT_EQUAL(1, ans);
@@ -367,13 +381,16 @@ TEST(fifo, addOneGetOne)
 	int flag = -1; 
 	int n, i;
 	if(bo_initFIFO(2) == 1) {
-		char msg[3] = "aaa";
+		char msg[10] = "abcdefighj";
 		char buf[10] = {0};
-		if(bo_addFIFO(msg, 3) == -1) goto exit;
+		if(bo_addFIFO(msg, 10) == -1) goto exit;
 		if((n = bo_getFIFO(buf, 10)) == -1) goto exit;
-		else if(n == 3) {
-			for(i = 0; i < 3; i++) {
-				if(buf[i] != msg[i]) goto exit;
+		else if(n == 10) {
+			for(i = 0; i < 10; i++) {
+				if(buf[i] != msg[i]) {
+					printf("buf[%s]!=msg[%s]\n", buf, msg);
+					goto exit;
+				}
 			}
 			flag = 1;
 		}
@@ -388,7 +405,7 @@ TEST(fifo, fifo2add3)
 	int flag = -1; 
 	int n, i;
 	if(bo_initFIFO(2) == 1) {
-		char msg[3] = "aaa";
+		char msg[3] = "abc";
 		char buf[10] = {0};
 		if(bo_addFIFO(msg, 3) == -1) goto exit;
 		if(bo_addFIFO(msg, 3) == -1) goto exit;
@@ -414,7 +431,7 @@ TEST(fifo, add100get100)
 	int flag = -1; 
 	int n, i, k, ln, j;
 	if(bo_initFIFO(7) == 1) {
-		char msg[3] = "abc";
+		char msg[] = "abc";
 		char buf[10] = {0};
 		k = 0; ln = 0;
 		for(i = 0; i < 100; i++) {
@@ -441,6 +458,42 @@ TEST(fifo, add100get100)
 				}
 				k = 0;
 			} else k++;
+		}
+		flag = 1;
+		bo_delFIFO();
+	}
+	exit:
+	TEST_ASSERT_EQUAL(1, flag);
+}
+
+TEST(fifo, addget100)
+{
+	printf("addget100() ...\n");
+	int flag = -1; 
+	int n, i, k, ln, j;
+	if(bo_initFIFO(100) == 1) {
+		char msg[10] = "abcdefikjh";
+		char buf[10] = {0};
+		k = 0; ln = 0;
+		for(i = 0; i < 100; i++) {
+			if(bo_addFIFO(msg, 10) == -1) {
+				if(bo_getFree() > 0) {
+					printf("can't add element free = %d\n", 
+						bo_getFree());
+					goto exit;
+				} 
+			}
+				if((n = bo_getFIFO(buf, 10)) == -1) {
+					printf("can't get element ");
+					goto exit;
+				} else if(n == 10) {
+					for(j = 0; j < 10; j++) {
+						if(buf[j] != msg[j]) {
+							printf(" buf[%s] != msg[%s]\n", buf, msg);
+							goto exit;
+						} 
+					}
+				}
 		}
 		flag = 1;
 		bo_delFIFO();

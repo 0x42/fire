@@ -87,7 +87,6 @@ int bo_sendDataFIFO(char *ip, unsigned int port,
 	char *data, unsigned int dataSize)
 {
 	struct sockaddr_in saddr;
-	struct timeval tval;
 	int ans  = -1;
 	int sock = -1;
 	int exec = -1;
@@ -95,13 +94,10 @@ int bo_sendDataFIFO(char *ip, unsigned int port,
 	unsigned char len[2] = {0};
 	char buf[4] = {0};
 	char *ok = NULL;
-	sock = bo_crtSock(ip, port, &saddr);
-	/* 100 мсек*/
-	tval.tv_sec = 0;
-	tval.tv_usec = 100000;
+	sock = bo_crtSock(ip, port, &saddr);	
 	if(sock != -1) {
 		/* устан максимальное время ожидания одного пакета */
-		setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tval, sizeof(tval));
+		bo_setTimerRcv(sock);
 		if(connect(sock, 
 			  (struct sockaddr *) &saddr, 
 			   sizeof(struct sockaddr)) == 0) {
@@ -123,7 +119,7 @@ int bo_sendDataFIFO(char *ip, unsigned int port,
 			}
 		} else {
 			error:
-			bo_log("bo_sendDataFIFO() errno[%s]\n ip[%s]\nport[%d]\nsize[%d]", 
+			bo_log("bo_sendDataFIFO() when exec connect:\n errno[%s]\n ip[%s]\nport[%d]\nsize[%d]", 
 			strerror(errno),
 			ip,
 			port,
@@ -131,7 +127,7 @@ int bo_sendDataFIFO(char *ip, unsigned int port,
 		}
 		close(sock);
 	} else {
-		bo_log("bo_sendDataFIFO() errno[%s]\n ip[%s]\nport[%d]\nsize[%d]", 
+		bo_log("bo_sendDataFIFO().bo_crtSock() errno[%s]\n ip[%s]\nport[%d]\nsize[%d]", 
 			strerror(errno),
 			ip,
 			port,
@@ -146,12 +142,22 @@ int bo_crtSock(char *ip, unsigned int port, struct sockaddr_in *saddr)
 {
 	int sock = -1;
 	struct in_addr servip;
+	int i = 1;
 	sock = socket(AF_INET, SOCK_STREAM, 0);
 	if(sock != -1) {
 		saddr->sin_family = AF_INET;
 		saddr->sin_port = htons(8888);
 		inet_aton(ip, &servip);
 		saddr->sin_addr.s_addr = servip.s_addr;
+		/* Позволяет ядру повторно использовать адрес сокета.
+		 * Можно запускать программу два раза подряд. Не ожидая пока 
+		 * истечет ограничение на повторное испол кортежа (ip, port)(2min)
+		 * SOL_SOCKET - указывает на установку опции обобщеного сокета
+		 * SO_REUSEADDR - опция которая подлежит изменению
+		 * &i - указатель на новое значение для опции
+		 */
+		i = 1;
+		setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &i, sizeof(i));
 	};
 	return sock;
 }
@@ -166,12 +172,23 @@ int bo_crtSock(char *ip, unsigned int port, struct sockaddr_in *saddr)
 	int count = 0;   /* кол-во отпр байт за один send*/
 	int allSend = 0; /* кол-во всего отправл байт*/
 	unsigned char *ptr = buf;
-	int n = len; 
+	int n = len;
+	/* for debug*/
+	unsigned char *ptr_deb = ptr;
+	int i = 0;
 	while(allSend < len) {
 		count = send(sock, ptr + allSend, n - allSend, 0);
 		if(count == -1) break;
+		/* info for debug*/
+		printf("bo_sendAllData() data:\n");
+		ptr_deb = ptr + allSend;
+		for(; i < count; i++) {
+			printf("%c", *(ptr_deb + i) );
+		}
+		/* end info debug*/
 		allSend += count;
 	}
+	printf("\n");
 	return (count == -1 ? -1 : allSend);
  }
  /* ---------------------------------------------------------------------------
@@ -183,13 +200,37 @@ int bo_recvAllData(int sock, unsigned char *buf, int bufSize, int length)
 	int count = 0;
 	int exec = 1;
 	int all = 0;
+	
+	unsigned char *ptr_deb = buf;
+	int i = 0;
 	while(all < length) {
 		count = recv(sock, buf + all, bufSize - all, 0);
 		if(count < 1) { 
 			if(all != length) exec = -1;
 			break;
 		}
+		/* info for debug */
+		printf("bo_recvAllData() data:\n");
+		ptr_deb = buf + all;
+		for(; i < count; i++) {
+			printf("%c", *(ptr_deb + i) );
+		}
+		/* end info debug*/
 		all += count;
 	}
+	printf("\n");
 	return ( exec == -1 ? -1 : all);
+}
+
+/* ----------------------------------------------------------------------------
+ * @brief		время ожид получения данных
+ */
+void bo_setTimerRcv(int sock)
+{
+	struct timeval tval;
+	/* 100 мсек*/
+	tval.tv_sec = 10;
+	tval.tv_usec = 100000;
+	/* устан максимальное время ожидания одного пакета */
+//	setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tval, sizeof(tval));
 }

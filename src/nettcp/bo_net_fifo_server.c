@@ -9,7 +9,9 @@
 extern unsigned int boCharToInt(unsigned char *buf);
 
 struct ParamSt;
-static void readConfig();
+static void readConfig(TOHT *cfg, int n, char **argv);
+static void readConfig2(TOHT *cfg, int n, char **argv);
+
 static int  fifoServStart();
 static void fifoServWork	(int sockfdMain);
 static void fifoReadPacket	(int clientSock, unsigned char *buffer, 
@@ -49,7 +51,7 @@ static struct {
  *		GETFIFO - забрать запрос из FIFO
  */
 static char *PacketStatusTxt[] = {"READHEAD", "SET", "GET", "QUIT", 
-"ANSERR", "ANSOK", "ANSNO", "ADDFIFO", "DEL"};
+"ANSERR", "ANSOK", "ANSNO", "ADDFIFO", "DEL", "END"};
 
 static enum PacketStatus {READHEAD = 0, SET, GET, QUIT, ANSERR, ANSOK, 
 	ANSNO, ADDFIFO, DEL, END} packetStatus;
@@ -96,7 +98,9 @@ void bo_fifo_main(int n, char **argv)
 	if( (sock = fifoServStart()) != -1) {
 		if(bo_initFIFO(fifoconf.fifo_len) == 1) {
 			fifoServWork(sock); 
+			dbgout("del fifo");
 			bo_delFIFO();
+			dbgout("after fifo");
 		}
 		if(close(sock) == -1) {
 			bo_log("%s%s errno[%s]", 
@@ -105,7 +109,7 @@ void bo_fifo_main(int n, char **argv)
 				strerror(errno));
 		}
 	}
-	
+	dbgout("free cfg\n");
 	if(cfg != NULL) cfg_free(cfg);
 	
 	bo_log("%s%s", " INFO ", "END	moxa_serv");
@@ -119,7 +123,7 @@ static void readConfig(TOHT *cfg, int n, char **argv)
 	char *fileName	= NULL;
 	char *f_log	= "moxa_serv.log";
 	char *f_log_old = "moxa_serv.log(old)";
-	int  nrow = 0;
+	int  nrow   = 0;
 	int  maxrow = 1000;
 	fifoconf.port      = defP;
 	fifoconf.queue_len = defQ;
@@ -127,7 +131,6 @@ static void readConfig(TOHT *cfg, int n, char **argv)
 	
 	if(n == 2) {
 		fileName = *(argv + 1);
-		bo_log("%s config[%s]", " INFO ", fileName);
 		cfg = cfg_load(fileName);
 		if(cfg != NULL) {
 			fifoconf.port      = cfg_getint(cfg, "sock:port", defP);
@@ -143,10 +146,26 @@ static void readConfig(TOHT *cfg, int n, char **argv)
 				"start with default config");
 		}
 		bo_setLogParam(f_log, f_log_old, nrow, maxrow);
+		bo_log("%s config[%s]", " INFO ", fileName);
 	} else {
 		bo_log("%s", " WARNING start with default config");
 	}
 };
+
+static void readConfig2(TOHT *cfg, int n, char **argv)
+{
+	int defP = 8888, defQ = 20, defF = 100;
+	char *fileName	= NULL;
+	char *f_log	= "moxa_serv.log";
+	char *f_log_old = "moxa_serv.log(old)";
+	int  nrow   = 0;
+	int  maxrow = 1000;
+	fifoconf.port      = defP;
+	fifoconf.queue_len = defQ;
+	fifoconf.fifo_len  = defF;
+	bo_setLogParam(f_log, f_log_old, nrow, maxrow);
+
+}
 /* ----------------------------------------------------------------------------
  * @brief		запуск слушающего сокета
  * @return		[sockfd] - сокет; [-1] - error
@@ -221,16 +240,12 @@ static void fifoReadPacket(int clientSock, unsigned char *buffer, int bufSize,
 {
 	int stop = -1;
 	struct ParamSt param;
-	struct timeval tval;
 	param.clientfd = clientSock;
 	param.buffer = buffer;
 	param.bufSize = bufSize;
 	packetStatus = READHEAD;
-	/* 100 мсек*/
-	tval.tv_sec = 0;
-	tval.tv_usec = 100000;
 	/* устан максимальное время ожидания одного пакета */
-	setsockopt(clientSock, SOL_SOCKET, SO_RCVTIMEO, &tval, sizeof(tval));
+	bo_setTimerRcv(clientSock);
 	dbgout("\n> ----------	CONNECT ---------------- <\n");
 	while(stop == -1) {
 		dbgout("\n>>>AVTOMAT STATUS = %s\n", PacketStatusTxt[packetStatus]);
@@ -299,6 +314,7 @@ static void fifoReadPacket(int clientSock, unsigned char *buffer, int bufSize,
 	}
 	if(flag == 1) {
 		param->packetLen = length;
+		bo_printFIFO();
 		packetStatus = ADDFIFO;
 	} else {
 		packetStatus = ANSERR;
@@ -313,14 +329,22 @@ static void fifoReadPacket(int clientSock, unsigned char *buffer, int bufSize,
  static void fifoGetData(struct ParamSt *param)
  {
 	int exec = -1;
+	int i = 0;
 	unsigned char len[2] = {0};
 	unsigned char head[3] = "VAL";
 	unsigned char headNO[3] = " NO"; 
+	
+	bo_printFIFO();
+
 	param->packetLen = bo_getFIFO(param->buffer, param->bufSize);
 	boIntToChar(param->packetLen, len);
 	
-	dbgout("fifo free item=%d\n", bo_getFree());
 	dbgout("param->packetLen=%d\n", param->packetLen);
+	printf("get from FIFO buf:");
+	for(i = 0; i < param->packetLen; i++) {
+		printf("%c ", *(param->buffer + i) );
+	}
+	printf("\n");
 	if(param->packetLen > 0) {
 		exec = bo_sendAllData(param->clientfd, head, 3);
 		if(exec == -1) goto exit;
@@ -394,12 +418,10 @@ static void fifoAnsErr(struct ParamSt *param)
 	int i = 0;
 	dbgout("--- --- fifoAddToFIFO len%d val:\n", param->packetLen);
 	for(; i < param->packetLen; i++) {
-		printf(" 0x%02x", param->buffer[i]);
+		printf("%c ", param->buffer[i]);
 	}
 	printf("\n");
-	
-	dbgout("fifo free item = %d\n", bo_getFree());
-	
+		
 	flag = bo_addFIFO(param->buffer, param->packetLen);
 	if(flag == -1) {
 		packetStatus = ANSERR;

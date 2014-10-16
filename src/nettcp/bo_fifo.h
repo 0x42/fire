@@ -1,10 +1,11 @@
 #ifndef BO_FIFO_H
 #define	BO_FIFO_H
-#define BO_FIFO_ITEM_VAL 1200
+#define BO_FIFO_ITEM_VAL 20
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 
+void bo_printFIFO();
 
 int bo_initFIFO(int size);
 

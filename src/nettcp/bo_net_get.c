@@ -153,13 +153,10 @@ static void recvEnd (struct Param *p) {}
 static int setConnect(char *ip, int port)
 {
 	int sock = -1;
-	struct timeval tval;
 	struct sockaddr_in saddr;
-	tval.tv_sec = 0;
-	tval.tv_usec = 100000;
 	sock = bo_crtSock(ip, port, &saddr);
 	if(sock > 0) {
-		setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tval, sizeof(tval));
+		bo_setTimerRcv(sock);
 		if(connect(sock, 
 			   (struct sockaddr *)&saddr, 
 			   sizeof(struct sockaddr)) != 0) {

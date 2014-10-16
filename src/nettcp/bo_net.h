@@ -35,6 +35,9 @@ int bo_sendAllData(int sock, unsigned char *buf, int len);
 /* получение данных */
 int bo_recvAllData(int sock, unsigned char *buf, int bufSize, int len);
 
+/* врем в течение кот ждем данные */
+void bo_setTimerRcv(int sock);
+
 #endif	/* BO_NET_H */
 
 /* 0x42 */
