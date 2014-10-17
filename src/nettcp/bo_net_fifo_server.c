@@ -10,7 +10,6 @@ extern unsigned int boCharToInt(unsigned char *buf);
 
 struct ParamSt;
 static void readConfig(TOHT *cfg, int n, char **argv);
-static void readConfig2(TOHT *cfg, int n, char **argv);
 
 static int  fifoServStart();
 static void fifoServWork	(int sockfdMain);
@@ -152,20 +151,6 @@ static void readConfig(TOHT *cfg, int n, char **argv)
 	}
 };
 
-static void readConfig2(TOHT *cfg, int n, char **argv)
-{
-	int defP = 8888, defQ = 20, defF = 100;
-	char *fileName	= NULL;
-	char *f_log	= "moxa_serv.log";
-	char *f_log_old = "moxa_serv.log(old)";
-	int  nrow   = 0;
-	int  maxrow = 1000;
-	fifoconf.port      = defP;
-	fifoconf.queue_len = defQ;
-	fifoconf.fifo_len  = defF;
-	bo_setLogParam(f_log, f_log_old, nrow, maxrow);
-
-}
 /* ----------------------------------------------------------------------------
  * @brief		запуск слушающего сокета
  * @return		[sockfd] - сокет; [-1] - error
@@ -462,56 +447,7 @@ static void fifoAnsErr(struct ParamSt *param)
 	}
 	return ans;
  }
- /* ---------------------------------------------------------------------------
-  * @brief	читаем тело пакета
-  * @length	длина пакета
-  * @return	[-1] - ERROR [1] - OK
-  
- static int readPacketBody(struct ParamSt *param,
-	 unsigned int length)
- {
-	int ans = 1;
-	unsigned char *ptr_poz = NULL;
-	int sock = param->clientfd;
-	size_t count = 0;
-	int sizeBuf = 256;
-	int N = 0;
-	char buf[256] = {0};
-	ptr_poz = param->buffer;
-	while(1) {
-		if(N == length) break;
-		count = recv(sock, buf, sizeBuf, 0);
-		if((N + count) > length) {
-			ans = -1;
-			goto exit;
-		}
-		if(count < 0) {
-			if((errno == EWOULDBLOCK) | (errno == EAGAIN)) 
-				dbgout("timeout\n"); 
-			dbgout("readPacketBody() errno[%s]\n", strerror(errno));
-			ans = -1;
-			goto exit;
-		}
-		if(count == length) {
-			memcpy(ptr_poz, buf, count);
-			N += count;
-			break;
-		} else if(count > length) {
-			ans = -1;
-			goto exit;
-		} else if( (count < length) & (count > 0)) {
-			memcpy(ptr_poz, buf, count);
-		}
-		N += count;
-		ptr_poz = param->buffer + N;
-	}
-	if(N != length) {
-		ans = -1;
-	}
-	exit:
-	return ans;
- }
-*/
+
  
  
  

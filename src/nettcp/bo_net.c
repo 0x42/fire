@@ -86,7 +86,6 @@ int bo_waitConnect(int sock, int *clientfd, char **errTxt)
 int bo_sendDataFIFO(char *ip, unsigned int port, 
 	char *data, unsigned int dataSize)
 {
-	struct sockaddr_in saddr;
 	int ans  = -1;
 	int sock = -1;
 	int exec = -1;
@@ -94,36 +93,28 @@ int bo_sendDataFIFO(char *ip, unsigned int port,
 	unsigned char len[2] = {0};
 	char buf[4] = {0};
 	char *ok = NULL;
-	sock = bo_crtSock(ip, port, &saddr);	
+	sock = bo_setConnect(ip, port);
 	if(sock != -1) {
-		/* устан максимальное время ожидания одного пакета */
-		bo_setTimerRcv(sock);
-		if(connect(sock, 
-			  (struct sockaddr *) &saddr, 
-			   sizeof(struct sockaddr)) == 0) {
-			boIntToChar(dataSize, len);
-			exec = bo_sendAllData(sock, (unsigned char*)head, 3);
-			if(exec == -1) goto error;
-			exec = bo_sendAllData(sock, len, 2);
-			if(exec == -1) goto error;
-			exec = bo_sendAllData(sock, (unsigned char*)data, dataSize);
-			if(exec == -1) goto error;
-			exec = bo_recvAllData(sock, (unsigned char*)buf, 3, 3);
-			if(exec == -1) goto error;
-			else {
-				ok = strstr(buf, "OK");
-				if(ok) ans = 1;
-				else {
-					bo_log("bo_sendDataFIFO() wait[OK] but recv[%s]", buf);
-				}
-			}
-		} else {
+		boIntToChar(dataSize, len);
+		exec = bo_sendAllData(sock, (unsigned char*)head, 3);
+		if(exec == -1) goto error;
+		exec = bo_sendAllData(sock, len, 2);
+		if(exec == -1) goto error;
+		exec = bo_sendAllData(sock, (unsigned char*)data, dataSize);
+		if(exec == -1) goto error;
+		exec = bo_recvAllData(sock, (unsigned char*)buf, 3, 3);
+		if(exec == -1) {
 			error:
-			bo_log("bo_sendDataFIFO() when exec connect:\n errno[%s]\n ip[%s]\nport[%d]\nsize[%d]", 
-			strerror(errno),
-			ip,
-			port,
-			dataSize);
+			bo_log("bo_sendDataFIFO() errno[%s]\n ip[%s]\nport[%d]\n", 
+				strerror(errno), ip, port);
+		} else {
+			ok = strstr(buf, "OK");
+			if(ok) ans = 1;
+			else {
+				bo_log("bo_sendDataFIFO() ip[%s] wait[OK] but recv[%s]", 
+					ip,  
+					buf);
+			}
 		}
 		close(sock);
 	} else {
@@ -135,6 +126,7 @@ int bo_sendDataFIFO(char *ip, unsigned int port,
 	}
 	return ans;
 }
+
 /* ----------------------------------------------------------------------------
  * @brief	созд сокет 
  */
@@ -146,7 +138,7 @@ int bo_crtSock(char *ip, unsigned int port, struct sockaddr_in *saddr)
 	sock = socket(AF_INET, SOCK_STREAM, 0);
 	if(sock != -1) {
 		saddr->sin_family = AF_INET;
-		saddr->sin_port = htons(8888);
+		saddr->sin_port = htons(port);
 		inet_aton(ip, &servip);
 		saddr->sin_addr.s_addr = servip.s_addr;
 		/* Позволяет ядру повторно использовать адрес сокета.
@@ -161,6 +153,46 @@ int bo_crtSock(char *ip, unsigned int port, struct sockaddr_in *saddr)
 	};
 	return sock;
 }
+
+/* ----------------------------------------------------------------------------
+ * @brief	создание сокета -> установка таймера на прием вход данных ->
+ *		установка соединения
+ * @return	[-1] error [sock>0] сокет
+ */
+int bo_setConnect(char *ip, int port)
+{
+	int sock = -1;
+	int n = 0;
+	int conSet = 0;
+	struct sockaddr_in saddr;
+	sock = bo_crtSock(ip, port, &saddr);
+	if(sock > 0) {
+		bo_setTimerRcv(sock);
+		while(n < 10) {
+			if(connect(sock, (struct sockaddr *)&saddr, 
+			   sizeof(struct sockaddr)) == 0) {
+				conSet = 1; 
+				break;
+			} else {
+				bo_log("bo_setConnect() n[%d] \nerrno[%s] ip[%s] \
+					port[%d] ",
+					n,
+					strerror(errno),
+					ip,
+					port);
+				n++;
+			}
+
+		}
+		if(conSet != 1) {
+			close(sock);
+			sock = -1;
+		}
+		
+	}
+	return sock;
+}
+
  /* ---------------------------------------------------------------------------
   * @brief		отправляет данные 
   * @buf		данные которые будут отправлены
@@ -232,5 +264,5 @@ void bo_setTimerRcv(int sock)
 	tval.tv_sec = 10;
 	tval.tv_usec = 100000;
 	/* устан максимальное время ожидания одного пакета */
-//	setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tval, sizeof(tval));
+	setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tval, sizeof(tval));
 }

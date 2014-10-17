@@ -27,8 +27,6 @@ static void recvNo	(struct Param *p);
 static void recvErr     (struct Param *p);
 static void recvEnd     (struct Param *p);
 
-static int setConnect(char *ip, int port);
-
 /* Возм - ые состояния КА */
 static enum Status {START=0, READHEAD, VAL, DEL, NO, ERR, END} status;
 
@@ -48,7 +46,7 @@ int bo_recvDataFIFO(char *ip, unsigned int port, unsigned char *buf, int bufSize
 	int ans  = -1;
 	int stop = 1;
 	int sock = -1;
-	sock = setConnect(ip, port);
+	sock = bo_setConnect(ip, port);
 	if(sock > 0) {
 		param.sock    = sock;
 		param.buf     = buf;
@@ -146,31 +144,5 @@ static void recvDel (struct Param *p)
 static void recvNo  (struct Param *p) {}
 static void recvErr (struct Param *p) {}
 static void recvEnd (struct Param *p) {}
-/* ----------------------------------------------------------------------------
- * @brief	устан соед-ие
- * @return      [-1] error; [>0] sock 
- */
-static int setConnect(char *ip, int port)
-{
-	int sock = -1;
-	struct sockaddr_in saddr;
-	sock = bo_crtSock(ip, port, &saddr);
-	if(sock > 0) {
-		bo_setTimerRcv(sock);
-		if(connect(sock, 
-			   (struct sockaddr *)&saddr, 
-			   sizeof(struct sockaddr)) != 0) {
-			bo_log("bo_net_get.c->setConnect() errno[%s]\n ip=%s \
-				port=%d",
-				strerror(errno),
-				ip,
-				port);
-			close(sock);
-			sock = -1;
-		}
-		
-	}
-	return sock;
-}
 
 /* 0x42 */

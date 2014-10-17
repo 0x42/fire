@@ -23,6 +23,9 @@ int bo_waitConnect(int sock, int *clientfd, char **errTxt);
 /* созд сокета */
 int bo_crtSock(char *ip, unsigned int port, struct sockaddr_in *addr);
 
+/* установка соединения*/
+int bo_setConnect(char *ip, int port);
+
 /* отправка данных в FIFO */
 int bo_sendDataFIFO(char *ip, unsigned int port, char *data, unsigned int size);
 

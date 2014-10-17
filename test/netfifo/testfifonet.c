@@ -337,7 +337,7 @@ TEST(fifo, send100MSGSET10)
 	int i = 0;
 	while (NN < 100000) {
 		printf(" =============\n NN = %d\n ============\n", NN);
-		exec = bo_sendDataFIFO("192.168.1.11", 8888, msg, 20);
+		exec = bo_sendDataFIFO("127.0.0.1", 8888, msg, 20);
 		if(exec == -1) {
 			printf("send error %s\n", strerror(errno));
 			goto error;
