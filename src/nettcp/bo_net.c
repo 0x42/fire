@@ -182,7 +182,7 @@ int bo_setConnect(char *ip, int port)
 					port);
 				n++;
 			}
-
+			usleep(100000);
 		}
 		if(conSet != 1) {
 			close(sock);
