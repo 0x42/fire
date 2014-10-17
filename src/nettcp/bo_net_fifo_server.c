@@ -224,6 +224,7 @@ static void fifoReadPacket(int clientSock, unsigned char *buffer, int bufSize,
 			int *endPr)
 {
 	int stop = -1;
+	int i = 1;
 	struct ParamSt param;
 	param.clientfd = clientSock;
 	param.buffer = buffer;
@@ -231,6 +232,7 @@ static void fifoReadPacket(int clientSock, unsigned char *buffer, int bufSize,
 	packetStatus = READHEAD;
 	/* устан максимальное время ожидания одного пакета */
 	bo_setTimerRcv(clientSock);
+	setsockopt(clientSock, SOL_SOCKET, SO_REUSEADDR, &i, sizeof(i));
 	dbgout("\n> ----------	CONNECT ---------------- <\n");
 	while(stop == -1) {
 		dbgout("\n>>>AVTOMAT STATUS = %s\n", PacketStatusTxt[packetStatus]);
