@@ -104,7 +104,7 @@ int bo_sendDataFIFO(char *ip, unsigned int port,
 		if(exec == -1) goto error;
 		exec = bo_recvAllData(sock, (unsigned char*)buf, 3, 3);
 		if(exec == -1) {
-			error:
+error:
 			bo_log("bo_sendDataFIFO() errno[%s]\n ip[%s]\nport[%d]\n", 
 				strerror(errno), ip, port);
 		} else {
@@ -116,7 +116,10 @@ int bo_sendDataFIFO(char *ip, unsigned int port,
 					buf);
 			}
 		}
-		close(sock);
+		if(close(sock) == -1) {
+			bo_log("bo_sendDataFIFO() when close socket errno[%s]\n ip[%s]\nport[%d]\n", 
+				strerror(errno), ip, port);
+		}
 	} else {
 		bo_log("bo_sendDataFIFO().bo_crtSock() errno[%s]\n ip[%s]\nport[%d]\nsize[%d]", 
 			strerror(errno),
@@ -254,6 +257,7 @@ int bo_recvAllData(int sock, unsigned char *buf, int bufSize, int length)
 	return ( exec == -1 ? -1 : all);
 }
 
+
 /* ----------------------------------------------------------------------------
  * @brief		время ожид получения данных
  */
@@ -261,8 +265,8 @@ void bo_setTimerRcv(int sock)
 {
 	struct timeval tval;
 	/* 100 мсек*/
-	tval.tv_sec = 10;
-	tval.tv_usec = 100000;
+	tval.tv_sec = 0;
+	tval.tv_usec = 500000;
 	/* устан максимальное время ожидания одного пакета */
 	setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tval, sizeof(tval));
 }

@@ -68,7 +68,10 @@ int bo_recvDataFIFO(char *ip, unsigned int port, unsigned char *buf, int bufSize
 			}
 			statusTable[status](&param);
 		}
-		close(sock);
+		if(close(sock)==-1) {
+			bo_log("bo_recvDataFIFO() when close socket errno[%s]\n ip[%s]\nport[%d]\n", 
+				strerror(errno), ip, port);
+		}
 	}
 	return ans;
 }

@@ -212,6 +212,24 @@ TEST(fifo, sendSETL10MSG10)
 	error:
 	TEST_ASSERT_EQUAL(1, ans);
 }
+TEST(fifo, sendONLYSETMSG10)
+{
+	printf("sendONLYSETL10MSG10() ... \n");
+	int ans = 0;
+	int i = 0;
+	int exec = 0;
+	int sock;
+	int bufSize = 0;
+	int msgSize = 10;
+	unsigned char *msg = "AAAAAAAAAA";
+	unsigned char buf[1200] = {0};
+	unsigned char STA[4] = {0};
+	ans = bo_sendDataFIFO("127.0.0.1", 8888, msg, msgSize);
+	if(ans != 1) goto error;
+	ans = 1;
+	error:
+	TEST_ASSERT_EQUAL(1, ans);
+}
 /* ----------------------------------------------------------------------------
  * @brief	отправляем сообщение SET length=10 msg size = 9
  */
@@ -337,14 +355,14 @@ TEST(fifo, send100MSGSET10)
 	int i = 0;
 	while (NN < 100000) {
 		printf(" =============\n NN = %d\n ============\n", NN);
-		exec = bo_sendDataFIFO("192.168.1.11", 8888, msg, 20);
+		exec = bo_sendDataFIFO("127.0.0.1", 8888, msg, 20);
 		if(exec == -1) {
 			printf("send error %s\n", strerror(errno));
 			goto error;
 		}
 		usleep(100);
 		memset(buf, 0, 20);
-		exec = bo_recvDataFIFO("192.168.1.11", 8888, buf, 20);
+		exec = bo_recvDataFIFO("127.0.0.1", 8888, buf, 20);
 		if(exec == -1) {
 			printf("recv error %s\n", strerror(errno)); 
 			goto error;

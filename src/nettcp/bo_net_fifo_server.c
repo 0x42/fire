@@ -26,6 +26,7 @@ static void fifoAnsNo		(struct ParamSt *param);
 static void fifoAddToFIFO	(struct ParamSt *param);
 static void fifoDelHead		(struct ParamSt *param);
 static void fifoEnd		(struct ParamSt *param);
+static void fifoCloseSock	(int sock);
 static unsigned int readPacketLength(struct ParamSt *param);
 
 /* ----------------------------------------------------------------------------
@@ -243,7 +244,7 @@ static void fifoReadPacket(int clientSock, unsigned char *buffer, int bufSize,
 		}
 		statusTable[packetStatus](&param);
 	}
-	close(param.clientfd);
+	fifoCloseSock(clientSock);
 	dbgout("\n> ----------- END CONNECT ------------ <\n");
 }
  /* ---------------------------------------------------------------------------
@@ -450,7 +451,26 @@ static void fifoAnsErr(struct ParamSt *param)
 	return ans;
  }
 
- 
+ /* ----------------------------------------------------------------------------
+ * @brief	закрытие сокета ожидает EOF на сокете
+ */
+static void fifoCloseSock(int sock)
+{
+	int exec = 0;
+/*	
+	char buf[3] = {0};
+	exec = recv(sock, buf, 3, 0);
+	if(exec != 0) {
+		bo_log("fifoCloseSock() WARNING don't get FIN");
+	} else if(exec == 0) {
+		printf("\nget EOF\n");
+	} 
+*/
+	exec = close(sock);
+	if(exec == -1) {
+		bo_log("fifoCloseSock() errno[%s]", strerror(errno));
+	}
+}
  
  
  
