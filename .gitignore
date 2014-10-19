@@ -2,6 +2,7 @@
 *.o
 *.err
 *.log
+*.out
 *~
 .directory
 test1
@@ -13,3 +14,5 @@ test/stress/stress
 test/stress/tcpnet
 build/
 nbproject/
+test/botest/*.log
+test/botest/*.out

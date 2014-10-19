@@ -14,7 +14,7 @@ struct BO_ITEM_FIFO {
 };
 
 static struct FIFO {
-	int item_size;
+	int itemN;
 	struct BO_ITEM_FIFO *mem;
 	int head; /*  индекс указ на голову*/
 	int tail; 
@@ -22,7 +22,29 @@ static struct FIFO {
 	int count;
 	int free;
 } fifo = {0};
-
+/* ----------------------------------------------------------------------------
+ * @brief	Вывод очереди FIFO
+ */
+void bo_printFIFO() 
+{
+	int i = 0, j = 0;
+	struct BO_ITEM_FIFO *item_fifo;
+	printf("\n=========================================================\n");
+	printf("FIFO:\n itemN[%d]\nhead[%d]\ntail[%d]\nlast[%d]\ncount[%d]\nfree[%d]\n",
+		   fifo.itemN, fifo.head, fifo.tail, fifo.last, fifo.count, fifo.free);
+	printf("FIFO item size[%d]\n", BO_FIFO_ITEM_VAL);
+	printf("  ---------------------------------------------------------\n");
+	
+	for(i = 0; i < fifo.itemN; i++) {
+		item_fifo = fifo.mem + i;
+		printf("\n=====\ni=%d\n=====\n", i);
+		for(j = 0; j < BO_FIFO_ITEM_VAL; j++) {
+			if(j == 16) printf("\n");
+			printf("0x%02x ", item_fifo->val[j]);
+		}
+	}
+	printf("\n=========================================================\n");
+}
 /* ----------------------------------------------------------------------------
  * @brief	Создаем очередь 
  * @itemN	размер очередь в байтах
@@ -34,9 +56,11 @@ int bo_initFIFO(int itemN)
 	fifo.mem = (struct BO_ITEM_FIFO *)
 		malloc(sizeof(struct BO_ITEM_FIFO)*itemN);
 	if(fifo.mem == NULL) goto exit;
+	memset(fifo.mem, 0, sizeof(struct BO_ITEM_FIFO)*itemN);
+	fifo.itemN = itemN;
 	fifo.head = 0;
 	fifo.tail = 0;
-	fifo.last = itemN;
+	fifo.last = itemN - 1;
 	fifo.count = 0;
 	fifo.free = itemN;
 	ans = 1;
@@ -99,6 +123,7 @@ int bo_getFIFO(unsigned char *buf, int bufSize)
 void bo_delHead()
 {
 	if(fifo.count != 0) {
+		memset(fifo.mem+fifo.head, 0, sizeof(struct BO_ITEM_FIFO));
 		fifo.count--;
 		fifo.free++;
 		if(fifo.head == fifo.last) fifo.head = 0;

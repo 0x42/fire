@@ -78,3 +78,195 @@ int bo_waitConnect(int sock, int *clientfd, char **errTxt)
 	}
 	return ans;
 }
+/* ----------------------------------------------------------------------------
+ * @brief	устанав соед с узлом -> отпр SET|LEN|DATA -> ждем ответ OK ->
+ *		закр сокет
+ * @return	[-1] - error; [1] - OK  
+ */
+int bo_sendDataFIFO(char *ip, unsigned int port, 
+	char *data, unsigned int dataSize)
+{
+	int ans  = -1;
+	int sock = -1;
+	int exec = -1;
+	char *head = "SET";
+	unsigned char len[2] = {0};
+	char buf[4] = {0};
+	char *ok = NULL;
+	sock = bo_setConnect(ip, port);
+	if(sock != -1) {
+		boIntToChar(dataSize, len);
+		exec = bo_sendAllData(sock, (unsigned char*)head, 3);
+		if(exec == -1) goto error;
+		exec = bo_sendAllData(sock, len, 2);
+		if(exec == -1) goto error;
+		exec = bo_sendAllData(sock, (unsigned char*)data, dataSize);
+		if(exec == -1) goto error;
+		exec = bo_recvAllData(sock, (unsigned char*)buf, 3, 3);
+		if(exec == -1) {
+error:
+			bo_log("bo_sendDataFIFO() errno[%s]\n ip[%s]\nport[%d]\n", 
+				strerror(errno), ip, port);
+		} else {
+			ok = strstr(buf, "OK");
+			if(ok) ans = 1;
+			else {
+				bo_log("bo_sendDataFIFO() ip[%s] wait[OK] but recv[%s]", 
+					ip,  
+					buf);
+			}
+		}
+		if(close(sock) == -1) {
+			bo_log("bo_sendDataFIFO() when close socket errno[%s]\n ip[%s]\nport[%d]\n", 
+				strerror(errno), ip, port);
+		}
+	} else {
+		bo_log("bo_sendDataFIFO().bo_crtSock() errno[%s]\n ip[%s]\nport[%d]\nsize[%d]", 
+			strerror(errno),
+			ip,
+			port,
+			dataSize);
+	}
+	return ans;
+}
+
+/* ----------------------------------------------------------------------------
+ * @brief	созд сокет 
+ */
+int bo_crtSock(char *ip, unsigned int port, struct sockaddr_in *saddr)
+{
+	int sock = -1;
+	struct in_addr servip;
+	int i = 1;
+	sock = socket(AF_INET, SOCK_STREAM, 0);
+	if(sock != -1) {
+		saddr->sin_family = AF_INET;
+		saddr->sin_port = htons(port);
+		inet_aton(ip, &servip);
+		saddr->sin_addr.s_addr = servip.s_addr;
+		/* Позволяет ядру повторно использовать адрес сокета.
+		 * Можно запускать программу два раза подряд. Не ожидая пока 
+		 * истечет ограничение на повторное испол кортежа (ip, port)(2min)
+		 * SOL_SOCKET - указывает на установку опции обобщеного сокета
+		 * SO_REUSEADDR - опция которая подлежит изменению
+		 * &i - указатель на новое значение для опции
+		 */
+		i = 1;
+		setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &i, sizeof(i));
+	};
+	return sock;
+}
+
+/* ----------------------------------------------------------------------------
+ * @brief	создание сокета -> установка таймера на прием вход данных ->
+ *		установка соединения
+ * @return	[-1] error [sock>0] сокет
+ */
+int bo_setConnect(char *ip, int port)
+{
+	int sock = -1;
+	int n = 0;
+	int conSet = 0;
+	struct sockaddr_in saddr;
+	sock = bo_crtSock(ip, port, &saddr);
+	if(sock > 0) {
+		bo_setTimerRcv(sock);
+		while(n < 10) {
+			if(connect(sock, (struct sockaddr *)&saddr, 
+			   sizeof(struct sockaddr)) == 0) {
+				conSet = 1; 
+				break;
+			} else {
+				bo_log("bo_setConnect() n[%d] \nerrno[%s] ip[%s] \
+					port[%d] ",
+					n,
+					strerror(errno),
+					ip,
+					port);
+				n++;
+			}
+			usleep(100000);
+		}
+		if(conSet != 1) {
+			close(sock);
+			sock = -1;
+		}
+		
+	}
+	return sock;
+}
+
+ /* ---------------------------------------------------------------------------
+  * @brief		отправляет данные 
+  * @buf		данные которые будут отправлены
+  * @len		размер отправл данных
+  * @return		[-1] - ERROR [>0] - кол отпр байт
+  */
+ int bo_sendAllData(int sock, unsigned char *buf, int len)
+ {
+	int count = 0;   /* кол-во отпр байт за один send*/
+	int allSend = 0; /* кол-во всего отправл байт*/
+	unsigned char *ptr = buf;
+	int n = len;
+	/* for debug*/
+	unsigned char *ptr_deb = ptr;
+	int i = 0;
+	while(allSend < len) {
+		count = send(sock, ptr + allSend, n - allSend, 0);
+		if(count == -1) break;
+		/* info for debug*/
+		printf("bo_sendAllData() data:\n");
+		ptr_deb = ptr + allSend;
+		for(; i < count; i++) {
+			printf("%c", *(ptr_deb + i) );
+		}
+		/* end info debug*/
+		allSend += count;
+	}
+	printf("\n");
+	return (count == -1 ? -1 : allSend);
+ }
+ /* ---------------------------------------------------------------------------
+  * @brief		получаем данные размера length
+  * @return		[-1] - ERROR [count] - кол во пол данных	
+  */
+int bo_recvAllData(int sock, unsigned char *buf, int bufSize, int length)
+{
+	int count = 0;
+	int exec = 1;
+	int all = 0;
+	
+	unsigned char *ptr_deb = buf;
+	int i = 0;
+	while(all < length) {
+		count = recv(sock, buf + all, bufSize - all, 0);
+		if(count < 1) { 
+			if(all != length) exec = -1;
+			break;
+		}
+		/* info for debug */
+		printf("bo_recvAllData() data:\n");
+		ptr_deb = buf + all;
+		for(; i < count; i++) {
+			printf("%c", *(ptr_deb + i) );
+		}
+		/* end info debug*/
+		all += count;
+	}
+	printf("\n");
+	return ( exec == -1 ? -1 : all);
+}
+
+
+/* ----------------------------------------------------------------------------
+ * @brief		время ожид получения данных
+ */
+void bo_setTimerRcv(int sock)
+{
+	struct timeval tval;
+	/* 100 мсек*/
+	tval.tv_sec = 0;
+	tval.tv_usec = 500000;
+	/* устан максимальное время ожидания одного пакета */
+	setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tval, sizeof(tval));
+}
