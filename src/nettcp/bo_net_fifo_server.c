@@ -85,7 +85,7 @@ struct ParamSt {
 
 /* ----------------------------------------------------------------------------
  * @brief		Запуск сервера FIFO
- *			request: SET|GET|DEL|ASK
+ *			request: SET|GET|DEL
  *			response: OK|ERR|
  */
 void bo_fifo_main(int n, char **argv)
@@ -233,6 +233,8 @@ static void fifoReadPacket(int clientSock, unsigned char *buffer, int bufSize,
 	packetStatus = READHEAD;
 	/* устан максимальное время ожидания одного пакета */
 	bo_setTimerRcv(clientSock);
+	/* при перезапуске программы позволяет повторно использовать адрес 
+	 * порт, иначе придется ждать 2MSL */
 	setsockopt(clientSock, SOL_SOCKET, SO_REUSEADDR, &i, sizeof(i));
 	dbgout("\n> ----------	CONNECT ---------------- <\n");
 	while(stop == -1) {
