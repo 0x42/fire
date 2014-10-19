@@ -18,6 +18,7 @@ void bo_delHead();
 int bo_getFree();
 
 void bo_delFIFO();
+
 #endif	
 /* 0x42 */
 
