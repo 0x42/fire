@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <string.h>
+#include <malloc.h>
 #include "../tools/dbgout.h"
 #include "../log/bologging.h"
 #include "bo_net.h"
@@ -26,6 +27,7 @@ static void fifoAnsNo		(struct ParamSt *param);
 static void fifoAddToFIFO	(struct ParamSt *param);
 static void fifoDelHead		(struct ParamSt *param);
 static void fifoEnd		(struct ParamSt *param);
+static void fifoMem		(struct ParamSt *param);
 static void fifoCloseSock	(int sock);
 static unsigned int readPacketLength(struct ParamSt *param);
 
@@ -47,14 +49,18 @@ static struct {
  * @brief		состояние сервера
  *		ERR - ошибка
  *		WAIT - ожидание нового подкл 
- *		SETFIFO - установить запрос в FIFO
- *		GETFIFO - забрать запрос из FIFO
+ *		SET - установить запрос в FIFO
+ *		GET - забрать запрос из FIFO
+ *		DEL - удалить голову в очереди
+ *		END - выкл сервера
+ *		ANSNO - очередь пустая
+ *		QUIT  - окончание работы с клиентом
  */
 static char *PacketStatusTxt[] = {"READHEAD", "SET", "GET", "QUIT", 
-"ANSERR", "ANSOK", "ANSNO", "ADDFIFO", "DEL", "END"};
+"ANSERR", "ANSOK", "ANSNO", "ADDFIFO", "DEL", "END", "MEM"};
 
 static enum PacketStatus {READHEAD = 0, SET, GET, QUIT, ANSERR, ANSOK, 
-	ANSNO, ADDFIFO, DEL, END} packetStatus;
+	ANSNO, ADDFIFO, DEL, END, MEM} packetStatus;
 	
 /* массив содерж указатели на функции(возвращают void;
  * аргумент у функций указ на struct ParamSt) */	
@@ -68,7 +74,8 @@ static void(*statusTable[])(struct ParamSt *) = {
 	fifoAnsNo,
 	fifoAddToFIFO,
 	fifoDelHead,
-	fifoEnd
+	fifoEnd,
+	fifoMem
 };
 
 /* @packetLen		длина запроса для FIFO
@@ -85,22 +92,20 @@ struct ParamSt {
 
 /* ----------------------------------------------------------------------------
  * @brief		Запуск сервера FIFO
- *			request: SET|GET|DEL
+ *			request: SET|GET|DEL|MEM
  *			response: OK|ERR|
  */
 void bo_fifo_main(int n, char **argv)
 {
 	int sock = 0;
 	TOHT *cfg = NULL;
-	
 	readConfig(cfg, n, argv);
-	bo_log("%s%s", " INFO ", "START moxa_serv");
+//	bo_log("%s%s", " INFO ", "START moxa_serv");
+/*
 	if( (sock = fifoServStart()) != -1) {
 		if(bo_initFIFO(fifoconf.fifo_len) == 1) {
 			fifoServWork(sock); 
-			dbgout("del fifo");
 			bo_delFIFO();
-			dbgout("after fifo");
 		}
 		if(close(sock) == -1) {
 			bo_log("%s%s errno[%s]", 
@@ -109,10 +114,9 @@ void bo_fifo_main(int n, char **argv)
 				strerror(errno));
 		}
 	}
-	dbgout("free cfg\n");
 	if(cfg != NULL) cfg_free(cfg);
-	
-	bo_log("%s%s", " INFO ", "END	moxa_serv");
+*/	
+//	bo_log("%s%s", " INFO ", "END	moxa_serv");
 };
 /* ----------------------------------------------------------------------------
  * @brief		Читаем данные с конфиг файла
@@ -128,7 +132,7 @@ static void readConfig(TOHT *cfg, int n, char **argv)
 	fifoconf.port      = defP;
 	fifoconf.queue_len = defQ;
 	fifoconf.fifo_len  = defF;
-	
+/*	
 	if(n == 2) {
 		fileName = *(argv + 1);
 		cfg = cfg_load(fileName);
@@ -150,6 +154,7 @@ static void readConfig(TOHT *cfg, int n, char **argv)
 	} else {
 		bo_log("%s", " WARNING start with default config");
 	}
+ */
 };
 
 /* ----------------------------------------------------------------------------
@@ -270,6 +275,7 @@ static void fifoReadPacket(int clientSock, unsigned char *buffer, int bufSize,
 		if(strstr(buf, "SET")) packetStatus = SET;
 		else if(strstr(buf, "GET")) packetStatus = GET;
 		else if(strstr(buf, "DEL")) packetStatus = DEL;
+		else if(strstr(buf, "MEM")) packetStatus = MEM;
 		else if(strstr(buf, "END")) packetStatus = END;
 		else packetStatus = ANSERR;
 	} else {
@@ -423,14 +429,22 @@ static void fifoAnsErr(struct ParamSt *param)
   * @brief		отправляем сообщение OK если сообщ отправ то удал Head
   * status -> QUIT			
   */
- static void fifoDelHead(struct ParamSt *param)
- {
+static void fifoDelHead(struct ParamSt *param)
+{
 	int exec = -1;
 	unsigned char msg[3] = " OK";
 	exec = bo_sendAllData(param->clientfd, msg, sizeof(msg));
 	if(exec != -1) bo_delHead();
 	packetStatus = QUIT;
- }
+}
+/* ----------------------------------------------------------------------------
+ * @brief		пишем в файд memory.trace состояние памяти
+ *			(mstats - not exists see mallinfo <- 0x42) 
+ */
+static void fifoMem(struct ParamSt *param)
+{
+	packetStatus = QUIT;
+}
  /* ---------------------------------------------------------------------------
   * @brief	читаем длину пакета
   * @return	[-1] - ошибка, [>0] - длина сообщения
@@ -459,15 +473,6 @@ static void fifoAnsErr(struct ParamSt *param)
 static void fifoCloseSock(int sock)
 {
 	int exec = 0;
-/*	
-	char buf[3] = {0};
-	exec = recv(sock, buf, 3, 0);
-	if(exec != 0) {
-		bo_log("fifoCloseSock() WARNING don't get FIN");
-	} else if(exec == 0) {
-		printf("\nget EOF\n");
-	} 
-*/
 	exec = close(sock);
 	if(exec == -1) {
 		bo_log("fifoCloseSock() errno[%s]", strerror(errno));

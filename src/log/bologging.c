@@ -193,6 +193,7 @@ STATIC int wrtLog(char *msg, va_list *ap, char **errTxt)
 			if((ch = fgetc(file)) == '\n')
 				nrow++;
                 }
+		fclose(file);
 	}
 	return nrow;
 }
@@ -209,13 +210,7 @@ STATIC int wrtLog(char *msg, va_list *ap, char **errTxt)
 	char timeBuf[40] = {0};
 	va_list ap;
 	bo_getTimeNow(timeBuf, sizeof(timeBuf));
-/* 
-         openlog("FIREROBOTS-NETWORK", LOG_PID, LOG_USER);
-         syslog(LOG_MAKEPRI(LOG_USER, LOG_ERR), 
-		"%s logFileName[%s] errno[%s] msg[%s]",
-                funcName, log.name, errTxt, msg);
-         closelog();
- */	
+	
 	file = fopen(SYSERRFILE, "a+");
 	if(file) {
 		va_start(ap, msg);
@@ -325,7 +320,6 @@ void bo_getTimeNow(char *timeStr, int sizeBuf)
 		return;
 	}
 	/*возвр текущ время системы*/
-//	lt = time(NULL);
 	if(gettimeofday(&tval, NULL) == -1) {
 		lt = time(NULL);
 	} else {

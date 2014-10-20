@@ -1,3 +1,4 @@
+#include <mcheck.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include "log/bologging.h"
@@ -8,18 +9,13 @@
 extern void bo_fifo_main(int n, char **argv);
 /* размер 1,1 Кб */
 
-void prBuf(char *buf, int s)
-{
-	if(buf != NULL) {
-		printf("%s", buf);
-	} else printf("NULL");
-	printf("\n");
-}
-
 int main(int argc, char **argv)
 {
+	mtrace();
 	dbgout("START -> %s\n", *argv);
-	bo_fifo_main(argc, argv);
+	bo_log("TEST");
+//	bo_fifo_main(argc, argv);
 	dbgout("END\n");
+	muntrace();
 	return 0;
 }
