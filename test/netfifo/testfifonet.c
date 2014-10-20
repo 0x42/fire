@@ -355,14 +355,14 @@ TEST(fifo, send100MSGSET10)
 	int i = 0;
 	while (NN < 100000) {
 		printf(" =============\n NN = %d\n ============\n", NN);
-		exec = bo_sendDataFIFO("127.0.0.1", 8888, msg, 20);
+		exec = bo_sendDataFIFO("192.168.1.127", 8888, msg, 20);
 		if(exec == -1) {
 			printf("send error %s\n", strerror(errno));
 			goto error;
 		}
 		usleep(100);
 		memset(buf, 0, 20);
-		exec = bo_recvDataFIFO("127.0.0.1", 8888, buf, 20);
+		exec = bo_recvDataFIFO("192.168.1.127", 8888, buf, 20);
 		if(exec == -1) {
 			printf("recv error %s\n", strerror(errno)); 
 			goto error;
