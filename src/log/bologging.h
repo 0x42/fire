@@ -3,7 +3,7 @@
 /* отключаем static на время тестирования*/
 /* #define STATIC static */
 /* #define SYSERRFILE "/dev/log" */
-#define STATIC
+#define STATIC 
 #define SYSERRFILE "sys.err"
 
 #include <stdio.h>

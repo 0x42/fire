@@ -50,7 +50,8 @@ void bo_resetLogInit()
 /* ----------------------------------------------------------------------------
  * @brief		иниц-ия struct log получение имени файла для логирования
  */
- void loggingINIT()
+
+void loggingINIT()
 {
 	/* получ-ие pid процесса*/
 	log.pid = getpid();
@@ -105,6 +106,7 @@ int bo_log(char *msg, ...)
  *		освобождать не надо тк результат из errno 
  * @return	>0 = ok; <0 = error 
  */
+
 
 STATIC int wrtLog(char *msg, va_list *ap, char **errTxt)
 {
@@ -180,7 +182,8 @@ STATIC int wrtLog(char *msg, va_list *ap, char **errTxt)
  * @return	возвр. кол-во строк в fname файле ecли файл не сущест.
  *		или не удалось открыть возв 0
  */
- int readNRow(const char *fname) 
+
+ int readNRow(const char *fname)
 {
 	int nrow = 0;
 	FILE *file = fopen(fname, "r");
@@ -229,7 +232,8 @@ STATIC int wrtLog(char *msg, va_list *ap, char **errTxt)
 	}
 }
 
- void sysErrParam(char *msg, va_list *ap)
+ 
+void sysErrParam(char *msg, va_list *ap)
 {
 	FILE *file = NULL;
 	char timeBuf[40] = {0};
@@ -276,7 +280,7 @@ int bo_isBigLogSize(int *nrow, int maxrow, char *name, char *oldname)
  * @param fname		имя файла для удаления
  * @return		-1 error; 1 ок
  */
- int delOldFile(char *fname) 
+int delOldFile(char *fname)
 {
 	int err = -1;
 	char *errTxt = NULL;

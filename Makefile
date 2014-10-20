@@ -3,17 +3,17 @@ TARGET_T  = build/test1
 TARGET_T1 = build/test2 
 
 
-#CC = arm-elf-gcc
-CC = gcc
+CC = arm-elf-gcc
+#CC = gcc
 
 #INC_DIR      = -Isrc/log -Isrc/tools -Isrc/nettcp -I/usr/local/arm-elf/include
 INC_DIR		= -Isrc/log -Isrc/tools -Isrc/nettcp
 INC_DIR_TEST	= -Itest/unity/src
 
-CFLAGS  = -g -Wall -c
+CFLAGS  = -Wall -c
 
-LDFLAGS = 
-#LDFLAGS = -Wl, -elf2flt
+#LDFLAGS = 
+LDFLAGS = -Wl, -elf2flt
 
 SRC    = src/main.c
 SRC1   = src/tools/dbgout.c
@@ -76,6 +76,7 @@ default:
 runtrace:
 	MALLOC_TRACE=trace.log $(TARGET)
 	mtrace $(TARGET) trace.log
+
 	
 check:
 	$(CC) $(INC_DIR) $(CFLAGS) $(SRC1) -o $(OBJ1)

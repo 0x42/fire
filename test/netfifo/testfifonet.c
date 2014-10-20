@@ -347,38 +347,33 @@ TEST(fifo, send100MSGSET10)
 	int ans = 0;
 	int exec = 0;
 	char *head = "SET";
-	unsigned char *msg = "ABCDEFGHIJ123456789|"; 
+	int Nsize = 20;
+	unsigned char msg[20] = "123456789 123456789 "; 
 	unsigned char buf[20] = {0};
 	char len[2] = {0};
 	int NN = 0;
 	int R = 0;
 	int i = 0;
-	while (NN < 100000) {
+	while (NN < 20000) {
 		printf(" =============\n NN = %d\n ============\n", NN);
-		exec = bo_sendDataFIFO("192.168.1.127", 8888, msg, 20);
+		exec = bo_sendDataFIFO("192.168.1.127", 8888, msg, Nsize);
 		if(exec == -1) {
 			printf("send error %s\n", strerror(errno));
 			goto error;
 		}
-		usleep(100);
-		memset(buf, 0, 20);
-		exec = bo_recvDataFIFO("192.168.1.127", 8888, buf, 20);
+		memset(buf, 0, Nsize);
+		exec = bo_recvDataFIFO("192.168.1.127", 8888, buf, Nsize);
 		if(exec == -1) {
 			printf("recv error %s\n", strerror(errno)); 
 			goto error;
 		}
-		for(i = 0; i < 20; i++) {
+		for(i = 0; i < Nsize; i++) {
 			if(msg[i] != buf[i]) {
 				printf("msg[%s]!=buf[%s]\n", msg, buf );
 				goto error;
 			}
 		}
 		NN++;
-		R++;
-		if(R == 5000) {
-			R = 0;
-			sleep(1);
-		}
 	}
 	exec = 1;
 	ans = 1;
