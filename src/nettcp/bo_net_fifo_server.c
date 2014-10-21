@@ -100,8 +100,8 @@ void bo_fifo_main(int n, char **argv)
 	int sock = 0;
 	TOHT *cfg = NULL;
 	readConfig(cfg, n, argv);
-//	bo_log("%s%s", " INFO ", "START moxa_serv");
-/*
+	bo_log("%s%s", " INFO ", "START moxa_serv");
+
 	if( (sock = fifoServStart()) != -1) {
 		if(bo_initFIFO(fifoconf.fifo_len) == 1) {
 			fifoServWork(sock); 
@@ -115,8 +115,8 @@ void bo_fifo_main(int n, char **argv)
 		}
 	}
 	if(cfg != NULL) cfg_free(cfg);
-*/	
-//	bo_log("%s%s", " INFO ", "END	moxa_serv");
+	
+	bo_log("%s%s", " INFO ", "END	moxa_serv");
 };
 /* ----------------------------------------------------------------------------
  * @brief		Читаем данные с конфиг файла
@@ -132,7 +132,7 @@ static void readConfig(TOHT *cfg, int n, char **argv)
 	fifoconf.port      = defP;
 	fifoconf.queue_len = defQ;
 	fifoconf.fifo_len  = defF;
-/*	
+	
 	if(n == 2) {
 		fileName = *(argv + 1);
 		cfg = cfg_load(fileName);
@@ -154,7 +154,7 @@ static void readConfig(TOHT *cfg, int n, char **argv)
 	} else {
 		bo_log("%s", " WARNING start with default config");
 	}
- */
+ 
 };
 
 /* ----------------------------------------------------------------------------

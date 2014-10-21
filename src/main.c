@@ -14,7 +14,7 @@ int main(int argc, char **argv)
 	mtrace();
 	dbgout("START -> %s\n", *argv);
 	bo_log("TEST");
-//	bo_fifo_main(argc, argv);
+	bo_fifo_main(argc, argv);
 	dbgout("END\n");
 	muntrace();
 	return 0;

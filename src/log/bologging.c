@@ -327,7 +327,8 @@ void bo_getTimeNow(char *timeStr, int sizeBuf)
 		micro = tval.tv_usec;
 	}
 
-	/*преобразует в структуру tm */
+	/*преобразует в структуру tm 
+	 *localtime() <- mtrace() выдает memory not freed ? <-0x42*/
 	ptr = localtime(&lt);
 	if(strftime(buffer, sizeBuf, "%d-%m-%Y %H:%M:%S ", ptr) == 0)
 		/*не пишем лог тк ошибка возможна только на этапе кодирования*/

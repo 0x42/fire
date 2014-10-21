@@ -193,7 +193,6 @@ TEST(fifo, sendSETL10MSG10)
 	int msgSize = 10;
 	unsigned char *msg = "AAAAAAAAAA";
 	unsigned char buf[1200] = {0};
-	unsigned char STA[4] = {0};
 	ans = bo_sendDataFIFO("127.0.0.1", 8888, msg, msgSize);
 	if(ans != 1) goto error;
 	exec = bo_recvDataFIFO("127.0.0.1", 8888, buf, 1200);
@@ -205,31 +204,24 @@ TEST(fifo, sendSETL10MSG10)
 			}
 			ans = 1;
 		}
+		exec = bo_recvDataFIFO("127.0.0.1", 8888, buf, 1200);
+		if(exec == 0 ) {
+			ans = 1;
+		} else {
+			printf("FIFO is not empty\n");
+			ans = -1;
+		}
+	} else if(exec == 0){
+		printf("FIFO is empty \n");
+		ans = -1;
 	} else {
-		printf(" ");
+		printf("error when recv data from FIFO \n");
 		ans = -1;
 	}
 	error:
 	TEST_ASSERT_EQUAL(1, ans);
 }
-TEST(fifo, sendONLYSETMSG10)
-{
-	printf("sendONLYSETL10MSG10() ... \n");
-	int ans = 0;
-	int i = 0;
-	int exec = 0;
-	int sock;
-	int bufSize = 0;
-	int msgSize = 10;
-	unsigned char *msg = "AAAAAAAAAA";
-	unsigned char buf[1200] = {0};
-	unsigned char STA[4] = {0};
-	ans = bo_sendDataFIFO("127.0.0.1", 8888, msg, msgSize);
-	if(ans != 1) goto error;
-	ans = 1;
-	error:
-	TEST_ASSERT_EQUAL(1, ans);
-}
+
 /* ----------------------------------------------------------------------------
  * @brief	отправляем сообщение SET length=10 msg size = 9
  */
@@ -246,60 +238,6 @@ TEST(fifo, sendSETL10MSG9)
 	int length = 10;
 	ans = sendMSG(msg, msgSize, length);
 	TEST_ASSERT_EQUAL(-100, ans);
-}
-/* ----------------------------------------------------------------------------
- * @brief	отправляем сообщение SET length=10 msg size = 23
- */
-TEST(fifo, sendSETL10MSG23)
-{
-	printf("sendSETL10MSG23() ... \n");
-	int ans = 0;
-	int sock = startSock();
-	int exec = 0;
-	char *p;
-	int tcp_delay = 1;
-	char *head = "SET";
-	unsigned char *msg = "AAAAA AAAAA AAAAA AAAAA"; 
-	char len[2] = {0};
-	char buf[4] = {0};
-	boIntToChar(10, len);
-	if(sock == -1) {
-		printf("startSock() err%s\n",strerror(errno));
-		ans = 0;
-	} else {
-		int e = setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &tcp_delay, sizeof(tcp_delay));
-		if (e == -1) {
-			printf("setsockopt errno[%s]\n", strerror(errno));
-			goto error;
-		}
-		if (connect(sock, (struct sockaddr *) &saddr, 
-		sizeof(struct sockaddr)) == 0) {
-			int exec = send(sock, (void*)head, 3, 0);
-			if(exec == -1)	{ printf("send head err\n"); goto error;}
-			exec = send(sock, (void*)len, 2, 0 );
-			if(exec == -1)	{ printf("send length err\n"); goto error;}
-			exec = send(sock, (void*)msg, 23, 0 );
-			if(exec == -1)	{ printf("send msg err\n"); goto error;}
-			if(exec < 23) { printf("cant send all msg\n"); goto error;}
-			exec = recv(sock, buf, sizeof(buf), 0);
-			buf[3] = '\0';
-			if(exec > 0) {
-				p = strstr(buf, "ERR");
-				if(p) ans = 1;
-			} else {printf("send() err[%s]\n", strerror(errno)); goto error;}
-		} else {
-			printf("connect() err[%s]\n", strerror(errno));
-		}
-	}
-	if(close(sock) == -1) {
-		printf("close() err%s\n",strerror(errno));
-		ans = 0;
-	}
-	error:
-	if(exec == -1) {
-		ans = 0;
-	}
-	TEST_ASSERT_EQUAL(1, ans);
 }
 
 TEST(fifo, sendOnlyHead)
@@ -356,13 +294,13 @@ TEST(fifo, send100MSGSET10)
 	int i = 0;
 	while (NN < 20000) {
 		printf(" =============\n NN = %d\n ============\n", NN);
-		exec = bo_sendDataFIFO("192.168.1.127", 8888, msg, Nsize);
+		exec = bo_sendDataFIFO("127.0.0.1", 8888, msg, Nsize);
 		if(exec == -1) {
 			printf("send error %s\n", strerror(errno));
 			goto error;
 		}
 		memset(buf, 0, Nsize);
-		exec = bo_recvDataFIFO("192.168.1.127", 8888, buf, Nsize);
+		exec = bo_recvDataFIFO("127.0.0.1", 8888, buf, Nsize);
 		if(exec == -1) {
 			printf("recv error %s\n", strerror(errno)); 
 			goto error;
