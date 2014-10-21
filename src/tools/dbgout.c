@@ -4,10 +4,12 @@ void dbgout(char *msg, ...)
 {
 	/*выставить в -1 если не нужно выводить в stdout*/
 	int flgShow = 1; 
+	/* указывает на очередной безымян-ый аргумент */
+	va_list ap; 
+	char *p, *sval;
+	int ival; 
+	double dval;
 	if(flgShow) {
-		va_list ap; // указывает на очередной безымян-ый аргумент
-		char *p, *sval;
-		int ival; double dval;
 		va_start(ap, msg); // устанав ap на 1-й безымян-ый аргумент
 		for(p = msg; *p; p++) {
 			if(*p != '%') {
@@ -24,8 +26,12 @@ void dbgout(char *msg, ...)
 					printf("%f", dval);
 					break;
 				case 's':
-					for(sval = va_arg(ap, char *); *sval; sval++) {
-						putchar(*sval);
+					sval = va_arg(ap, char *);
+					if(sval == NULL) printf("null");
+					else  {
+						for(; *sval; sval++) {
+							putchar(*sval);
+						}
 					}
 					break;
 				default:
@@ -37,3 +43,28 @@ void dbgout(char *msg, ...)
 	}
 }
 
+/* ----------------------------------------------------------------------------
+   *(ans)   - старший байт
+ * *(ans+1) - младший байт
+ *  */
+void boIntToChar(unsigned int x, unsigned char *ans)
+{
+	unsigned int a = 0;
+	a = x >> 8;
+	a = a & 0xFF;
+	*ans = (char)a;
+	a = x & 0xFF;
+	*(ans + 1) = (char)a;
+}
+
+unsigned int boCharToInt(unsigned char *buf) 
+{
+	unsigned int x = 0;
+	x = x | buf[0];
+	x = x << 8;
+	x = x & 0xFF00;
+	x = x | buf[1];
+	/*делаем маску выделяем последние 2 байта*/
+	x = x & 0xFFFF;
+	return x;
+}

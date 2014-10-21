@@ -1,5 +1,6 @@
 #ifndef DBGOUT_H
-#define DBGOUY_H
+#define DBGOUT_H
+
 
 #include <stdarg.h>
 #include <stdio.h>
@@ -8,4 +9,10 @@
    если flgShow == -1 инф не выводит на экран*/
 void dbgout(char *msg, ...);
 
+void boIntToChar(unsigned int x, unsigned char *buf);
+
+unsigned int boCharToInt(unsigned char *buf);
 #endif
+
+
+
