@@ -17,6 +17,9 @@ int bo_initServSock(unsigned int port, char **errTxt);
 /* делает сокет пассивным */
 int bo_setListenSock(unsigned int sockfd, unsigned int queue_len, char **errTxt);
 
+/* запуск сервера */
+int bo_servStart(int port, int queue_len);
+
 /* ожидание коннекта */
 int bo_waitConnect(int sock, int *clientfd, char **errTxt);
 

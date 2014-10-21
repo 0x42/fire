@@ -63,6 +63,36 @@ int bo_setListenSock(unsigned int sockfd, unsigned int queue_len, char **errTxt)
 	}
 	return ans;
 }
+
+/* ----------------------------------------------------------------------------
+ * @brief	запуск слуш сокета. Ошибки пишет в лог.
+ * @port	порт кот слушаем
+ * @queue_len	размер очереди необр запросов
+ * @return	[-1] error; [sockfd] - socket 
+ */
+int bo_servStart(int port, int queue_len)
+{
+	int ans = -1;
+	int sockfd = 0;
+	char *errTxt = NULL;
+	sockfd = bo_initServSock(port, &errTxt);
+	if(sockfd > 0) {
+		if(bo_setListenSock(sockfd, queue_len, &errTxt) != 1) {
+			bo_log("%s%s errno[%s]", " ERROR ", 
+				"bo_ServStart() ", errTxt);
+			close(sockfd);
+			ans = -1;
+		} else {
+			ans = sockfd;
+		}
+	} else {
+		bo_log("%s%s errno[%s]", " ERROR ", 
+			"bo_ServStart()->bo_initServSock()", errTxt);
+		ans = -1;
+	}
+	return ans;
+}
+
 /* ----------------------------------------------------------------------------
  * @brief	слушаем сокет sock, как только приходит коннект возвр сокет 
  *		связ с клиентом clientfd;
@@ -78,6 +108,7 @@ int bo_waitConnect(int sock, int *clientfd, char **errTxt)
 	}
 	return ans;
 }
+
 /* ----------------------------------------------------------------------------
  * @brief	устанав соед с узлом -> отпр SET|LEN|DATA -> ждем ответ OK ->
  *		закр сокет
@@ -226,6 +257,7 @@ int bo_setConnect(char *ip, int port)
 	printf("\n");
 	return (count == -1 ? -1 : allSend);
  }
+ 
  /* ---------------------------------------------------------------------------
   * @brief		получаем данные размера length
   * @return		[-1] - ERROR [count] - кол во пол данных	
@@ -256,7 +288,6 @@ int bo_recvAllData(int sock, unsigned char *buf, int bufSize, int length)
 	printf("\n");
 	return ( exec == -1 ? -1 : all);
 }
-
 
 /* ----------------------------------------------------------------------------
  * @brief		время ожид получения данных

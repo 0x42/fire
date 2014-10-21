@@ -12,7 +12,6 @@ extern unsigned int boCharToInt(unsigned char *buf);
 struct ParamSt;
 static void readConfig(TOHT *cfg, int n, char **argv);
 
-static int  fifoServStart();
 static void fifoServWork	(int sockfdMain);
 static void fifoReadPacket	(int clientSock, unsigned char *buffer, 
 				 int bufSize, 
@@ -102,7 +101,7 @@ void bo_fifo_main(int n, char **argv)
 	readConfig(cfg, n, argv);
 	bo_log("%s%s", " INFO ", "START moxa_serv");
 
-	if( (sock = fifoServStart()) != -1) {
+	if( (sock = bo_servStart(fifoconf.port, fifoconf.queue_len)) != -1) {
 		if(bo_initFIFO(fifoconf.fifo_len) == 1) {
 			fifoServWork(sock); 
 			bo_delFIFO();
@@ -157,32 +156,6 @@ static void readConfig(TOHT *cfg, int n, char **argv)
  
 };
 
-/* ----------------------------------------------------------------------------
- * @brief		запуск слушающего сокета
- * @return		[sockfd] - сокет; [-1] - error
- */ 
- static int fifoServStart()
- {
-	int ans = -1;
-	int sockfd = 0;
-	char *errTxt = NULL;
-	sockfd = bo_initServSock(fifoconf.port, &errTxt);
-	if(sockfd > 0) {
-		if(bo_setListenSock(sockfd, fifoconf.queue_len, &errTxt) != 1) {
-			bo_log("%s%s errno[%s]", " ERROR ", 
-				"fifoServStart() ", errTxt);
-			close(sockfd);
-			ans = -1;
-		} else {
-			ans = sockfd;
-		}
-	} else {
-		bo_log("%s%s errno[%s]", " ERROR ", 
-			"fifoServStart()->bo_initServSock()", errTxt);
-		ans = -1;
-	}
-	return ans;
- };
  /* ---------------------------------------------------------------------------
   * @brief		осн цикл сервера. вход соед и отодает его worker'у
   * @sock		дескриптор главного сокета на который поступают
