@@ -301,3 +301,15 @@ void bo_setTimerRcv(int sock)
 	/* устан максимальное время ожидания одного пакета */
 	setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tval, sizeof(tval));
 }
+
+/* ----------------------------------------------------------------------------
+ * @brief		закрытие сокета
+ */
+void bo_closeSocket(int sock)
+{
+	int exec = 0;
+	exec = close(sock);
+	if(exec == -1) {
+		bo_log("bo_loseSock() errno[%s]", strerror(errno));
+	}
+}

@@ -41,6 +41,14 @@ static void(*statusTable[])(struct Param *) = {
 	recvEnd
 };
 
+/* ----------------------------------------------------------------------------
+ * @brief		возвращает данные и очереди
+ * @buf			указат на буф куда скопир данные
+ * @bufSize		размер буфера
+ * @return		[0] - очередь пустая 
+ *			[-1] error 
+ *			[>0] размер скопир данных в буфер			 
+ */
 int bo_recvDataFIFO(char *ip, unsigned int port, unsigned char *buf, int bufSize)
 {
 	int ans  = -1;

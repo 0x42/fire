@@ -44,6 +44,9 @@ int bo_recvAllData(int sock, unsigned char *buf, int bufSize, int len);
 /* врем в течение кот ждем данные */
 void bo_setTimerRcv(int sock);
 
+/* закрытие сокета */
+void bo_closeSocket(int sock);
+
 #endif	/* BO_NET_H */
 
 /* 0x42 */

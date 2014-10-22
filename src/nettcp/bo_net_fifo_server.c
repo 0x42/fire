@@ -106,12 +106,7 @@ void bo_fifo_main(int n, char **argv)
 			fifoServWork(sock); 
 			bo_delFIFO();
 		}
-		if(close(sock) == -1) {
-			bo_log("%s%s errno[%s]", 
-				" ERROR ",
-				"bo_fifo_main()->close()",
-				strerror(errno));
-		}
+		bo_closeSocket(sock);
 	}
 	if(cfg != NULL) cfg_free(cfg);
 	
@@ -192,9 +187,10 @@ static void fifoServWork(int sockfdMain)
 	}
 	free(buffer1);
  }
- /* ---------------------------------------------------------------------------
+ 
+/* ---------------------------------------------------------------------------
   * @brief		читаем пакет и пишем/забираем/удаляем в/из FIFO
-  * @clientSock		дескриптор сокета(клиента)
+  * @clientSock		дескриптор сокета(клиента) При завершение сокет закр-ся.
   * @buffer		буфер в который пишем данные. 
   * @bufSize		bufSize = BO_FIFO_ITEM_VAL(bo_fifo.h)
   * @endPr		флаг прекращ работы сервера и заверш программы
@@ -224,7 +220,7 @@ static void fifoReadPacket(int clientSock, unsigned char *buffer, int bufSize,
 		}
 		statusTable[packetStatus](&param);
 	}
-	fifoCloseSock(clientSock);
+	bo_closeSock(clientSock);
 	dbgout("\n> ----------- END CONNECT ------------ <\n");
 }
  /* ---------------------------------------------------------------------------
@@ -277,13 +273,12 @@ static void fifoReadPacket(int clientSock, unsigned char *buffer, int bufSize,
 			bo_log("fifoSetData() count[%d]!=length[%d]", count, length);
 		}
 	} else {
-		bo_log("fifoSetData() bad length[%d] ", 
+		bo_log("fifoSetData() bad length[%d] bufSize[%d]", 
 			length, 
 			param->bufSize);
 	}
 	if(flag == 1) {
 		param->packetLen = length;
-		bo_printFIFO();
 		packetStatus = ADDFIFO;
 	} else {
 		packetStatus = ANSERR;
@@ -435,38 +430,10 @@ static void fifoMem(struct ParamSt *param)
 		 *	  b2 - младший байт
  		 */
 		ans = boCharToInt(buf);
-		printf("readPacketLength() length = %d\n", ans);
 	}
 	return ans;
  }
 
- /* ----------------------------------------------------------------------------
- * @brief	закрытие сокета ожидает EOF на сокете
- */
-static void fifoCloseSock(int sock)
-{
-	int exec = 0;
-	exec = close(sock);
-	if(exec == -1) {
-		bo_log("fifoCloseSock() errno[%s]", strerror(errno));
-	}
-}
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
  
  
  
