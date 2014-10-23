@@ -236,8 +236,8 @@ static void routeSet(struct ParamSt *param)
 	int flag = -1;
 	int count = 0;
 	length = readPacketLength(param);
-	/* длина сообщения минимум 3 байта = 1 байт информации + 2 байта CRC */
-	if((length > 3) & (length <= param->bufSize)) {
+	/* длина сообщения минимум 7 байта = 5(XXX:V) байт информации + 2 байта CRC */
+	if((length > 6) & (length <= param->bufSize)) {
 		count = bo_recvAllData(param->clientfd, 
 				       param->buffer,
 			               param->bufSize,
@@ -273,11 +273,31 @@ static void routeAnsErr(struct ParamSt *param)
 
 /* ----------------------------------------------------------------------------
  * @brief	измен значение в таблице tabRoutes 
+ *		packet = [123:127.0.0.1:2XX] max size = 21 + 2(CRC) 
+ *		123       - addr485 (3bytes)
+ *		127.0.0.1 - ip moxa (XXX.XXX.XXX.XXX) 15
+ *		2         - port485
+ *		XX	  - CRC (2bytes)
  */
 static void routeAddTab(struct ParamSt *param)
 {
+	char addr485[3] = {0};
+	char value[18] = {0};
+	int i = 0;
+	int exec = 0;
+	memcpy(addr485, param->buffer, 3);
+	memcpy(value, (param->buffer + 4), 17);
 	dbgout("routeAddTab() ADD_TAB ");
-	
+	printf("\naddr485[");
+	for(; i < sizeof(addr485); i++) {
+		printf("%c",addr485[i]);
+	}
+	printf("]\nvalue:[");
+	for(i = 0; i < sizeof(value); i++) {
+		printf("%c", value[i]);
+	}
+	printf("]\n");
+	exec = ht_put(tabRoutes, );
 	packetStatus = QUIT;
 }
 
@@ -292,9 +312,11 @@ static void routeReadCRC(struct ParamSt *param)
 	unsigned char crcTxt[2] = {0};
 	char *msg = (char *)param->buffer;
 	int msg_len = param->packetLen - 2;
-	crcTxt[0] = param->buffer[param->packetLen - 1];
-	crcTxt[1] = param->buffer[param->packetLen];
+	crcTxt[0] = param->buffer[param->packetLen - 2];
+	crcTxt[1] = param->buffer[param->packetLen - 1];
+	
 	crc = boCharToInt(crcTxt);
+/*	printf("crc[%02x %02x] = [%d]", crcTxt[0], crcTxt[1], crc); */
 	count = crc16modbus(msg, msg_len);
 	if(crc != count) packetStatus = ANSERR;
 	else packetStatus = ADDTAB;

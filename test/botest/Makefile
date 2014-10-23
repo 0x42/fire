@@ -27,6 +27,8 @@ SRC2 = \
     ../netroute/test_runners/Test_route_Runners.c \
     ../netroute/test_runners/all_tests.c \
     ../netroute/testroutenet.c \
+    ../../src/log/bologging.c \
+    ../../src/nettcp/bo_net.c \
     ../../src/tools/ocrc.c \
     ../../src/tools/dbgout.c
 
