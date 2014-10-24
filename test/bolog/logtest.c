@@ -2,8 +2,16 @@
 #include <stdlib.h>
 #include <dirent.h>
 #include <sys/stat.h>
-#include "unity/src/unity.h"
-#include "../src/log/bologging.h"
+#include "../../src/log/bologging.h"
+
+#include "unity_fixture.h"
+
+TEST_GROUP(bolog);
+
+TEST_SETUP(bolog) {}
+
+TEST_TEAR_DOWN(bolog) {}
+
 
 extern int readNRow(const char *fname);
 extern int writeNRow(FILE *f, char *s, int n);
@@ -11,7 +19,7 @@ extern int delOldFile(char *fname);
 extern void sysErr();
 extern void bo_setLogParam(char *fname, char *oldfname, int nrow, int maxrow);
 
-void bo_log_writeNullMsg()
+TEST(bolog, bo_log_writeNullMsg)
 {
 	char *msg = NULL;
 	char *f = "test.log";
@@ -24,7 +32,7 @@ void bo_log_writeNullMsg()
 	TEST_ASSERT_EQUAL(1, ans);
 }
 
-void bo_log_writeEmptyMsg()
+TEST(bolog, bo_log_writeEmptyMsg)
 {
 	char *msg = "";
 	char *f = "test.log";
@@ -37,7 +45,7 @@ void bo_log_writeEmptyMsg()
 	TEST_ASSERT_EQUAL(1, ans);
 }
 
-void bo_log_writeOneChar()
+TEST(bolog, bo_log_writeOneChar)
 {
 	char *msg = "a";
 	char *f = "test.log";
@@ -50,7 +58,7 @@ void bo_log_writeOneChar()
 	TEST_ASSERT_EQUAL(1, ans);
 }
 
-void delOldFile_test()
+TEST(bolog, delOldFile_test)
 {
 	char fname[] = "ringfile(1)_test.log";
         int err = 0;
@@ -62,7 +70,7 @@ void delOldFile_test()
 	TEST_ASSERT_TRUE(err);
 }
 
-void testRead5Row()
+TEST(bolog, testRead5Row)
 {
         char *fname = "NRow.test"; 
         FILE *f = fopen(fname, "w");
@@ -80,7 +88,7 @@ void testRead5Row()
         TEST_ASSERT_EQUAL(5, nrow);
 }
 
-void testRead1Msg()
+TEST(bolog, testRead1Msg)
 {
     char *logFileName = "msglog.test";
     int nrow = 0;
@@ -92,7 +100,7 @@ void testRead1Msg()
     TEST_ASSERT_EQUAL(1, nrow);
 }
 
-void testReadNRowWithoutFile()
+TEST(bolog, testReadNRowWithoutFile)
 {
         char *fname = "EmptyROW.test";
         int nrow = -1;
@@ -101,7 +109,7 @@ void testReadNRowWithoutFile()
         remove(fname);
 }
 
-void isBigLogSize_test1000row()
+TEST(bolog, isBigLogSize_test1000row)
 {
 	char *log = "log.test";
 	char *logOld = "logold.test";
@@ -125,7 +133,7 @@ void isBigLogSize_test1000row()
 	remove(log);
 }
 
-void isBigLogSize_test100000row()
+TEST(bolog, isBigLogSize_test100000row)
 {
 	char *log = "log.test";
 	char *logOld = "logold.test";
@@ -148,7 +156,7 @@ void isBigLogSize_test100000row()
 	remove(log);
 }
 
-void testsysErr()
+TEST(bolog, testsysErr)
 {	
 	int p_int = 100;
 	char *p_str = "Hello";
@@ -158,7 +166,7 @@ void testsysErr()
 	TEST_ASSERT_TRUE(1);
 }
 
-void testsysErrBADParam()
+TEST(bolog, testsysErrBADParam)
 {
 	sysErr("testsysErrBADParam() %s %s", 0, 0);
 	TEST_ASSERT_TRUE(1);

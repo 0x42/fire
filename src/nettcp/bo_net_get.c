@@ -115,6 +115,10 @@ static void recvReadHead(struct Param *p)
 	}
 }
 
+/* ----------------------------------------------------------------------------
+ * @brief	читаем значение Length далее читаем данные размером length
+ *		AK -> DEL(все данные получили ) | ERR (ошибка) 
+ */
 static void recvVal(struct Param *p)
 {
 	int error = -1;

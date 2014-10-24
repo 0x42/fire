@@ -6,8 +6,7 @@
 UNITY_ROOT = ../unity
 CC = gcc
 
-TARGET1 = test_netfifo.out
-TARGET2 = test_netroute.out
+TARGET = test.out
 
 SRC_FILES_UNITY = \
 $(UNITY_ROOT)/src/unity.c \
@@ -32,17 +31,26 @@ SRC2 = \
     ../../src/tools/ocrc.c \
     ../../src/tools/dbgout.c
 
+SRC3 = \
+    ../bolog/test_runners/Test_log_Runners.c \
+    ../bolog/test_runners/all_tests.c \
+    ../bolog/logtest.c \
+    ../../src/log/bologging.c 
+
 INC_DIRS = -Isrc -I$(UNITY_ROOT)/src -I$(UNITY_ROOT)/extras/fixture/src \
 -Isrc/nettcp -Isrc/tools
 
 
 fifo:
-	$(CC) $(INC_DIRS) $(SRC_FILES_UNITY) $(SRC1) -o $(TARGET1)
-	./$(TARGET1)
+	$(CC) $(INC_DIRS) $(SRC_FILES_UNITY) $(SRC1) -o $(TARGET)
+	./$(TARGET)
 
 route:
-	$(CC) $(INC_DIRS) $(SRC_FILES_UNITY) $(SRC2) -o $(TARGET2)
-	./$(TARGET2)
-	
+	$(CC) $(INC_DIRS) $(SRC_FILES_UNITY) $(SRC2) -o $(TARGET)
+	./$(TARGET)
+log:
+	$(CC) $(INC_DIRS) $(SRC_FILES_UNITY) $(SRC3) -o $(TARGET)
+	./$(TARGET)
+
 clean:
-	rm $(TARGET1)
+	rm $(TARGET)

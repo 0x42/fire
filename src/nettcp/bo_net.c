@@ -240,18 +240,18 @@ int bo_setConnect(char *ip, int port)
 	unsigned char *ptr = buf;
 	int n = len;
 	/* for debug*/
-	unsigned char *ptr_deb = ptr;
-	int i = 0;
+/*	unsigned char *ptr_deb = ptr;
+	int i = 0; */
 	while(allSend < len) {
 		count = send(sock, ptr + allSend, n - allSend, 0);
 		if(count == -1) break;
-		/* info for debug*/
+		/* info for debug 
 		printf("bo_sendAllData() data:\n");
 		ptr_deb = ptr + allSend;
 		for(; i < count; i++) {
 			printf("%c", *(ptr_deb + i) );
 		}
-		/* end info debug*/
+		 end info debug*/
 		allSend += count;
 	}
 	printf("\n");

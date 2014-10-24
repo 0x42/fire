@@ -292,7 +292,7 @@ TEST(fifo, send100MSGSET10)
 	int NN = 0;
 	int R = 0;
 	int i = 0;
-	while (NN < 20000) {
+	while (NN < 20) {
 		printf(" =============\n NN = %d\n ============\n", NN);
 		exec = bo_sendDataFIFO("127.0.0.1", 8888, msg, Nsize);
 		if(exec == -1) {
@@ -520,32 +520,4 @@ TEST(fifo, addBigMsgThanItemFifo)
 	TEST_ASSERT_EQUAL(1, flag);
 }
 
-TEST(fifo, testCRC)
-{
-	printf("testCRC() ... \n");
-	char *str = "123456789";
-	char str2[20] = " AAAAA AAAAA ";
-	unsigned short check = 0x4B37;
-	unsigned short width = 16;
-	unsigned short poly = 0x8005;
-	unsigned short reg_init = 0xFFFF;
-	unsigned short xorout = 0x0000;
-	int refin = 1;
-	int refout = 1;
-	gen_tbl_crc16modbus(poly, width, refin);
-	
-	unsigned short check2 = crc16modbus(str2,
-					reg_init, 
-					width, 
-					refin, 
-					refout, 
-					xorout);
-	printf("check2 = %d\n", check2);
-	TEST_ASSERT_EQUAL(check, crc16modbus(str,
-					reg_init, 
-					width, 
-					refin, 
-					refout, 
-					xorout));
-}
 

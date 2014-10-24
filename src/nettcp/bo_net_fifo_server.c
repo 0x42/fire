@@ -27,7 +27,6 @@ static void fifoAddToFIFO	(struct ParamSt *param);
 static void fifoDelHead		(struct ParamSt *param);
 static void fifoEnd		(struct ParamSt *param);
 static void fifoMem		(struct ParamSt *param);
-static void fifoCloseSock	(int sock);
 static unsigned int readPacketLength(struct ParamSt *param);
 
 /* ----------------------------------------------------------------------------
@@ -220,7 +219,7 @@ static void fifoReadPacket(int clientSock, unsigned char *buffer, int bufSize,
 		}
 		statusTable[packetStatus](&param);
 	}
-	bo_closeSock(clientSock);
+	bo_closeSocket(clientSock);
 	dbgout("\n> ----------- END CONNECT ------------ <\n");
 }
  /* ---------------------------------------------------------------------------
@@ -297,7 +296,6 @@ static void fifoReadPacket(int clientSock, unsigned char *buffer, int bufSize,
 	unsigned char len[2] = {0};
 	unsigned char head[3] = "VAL";
 	unsigned char headNO[3] = " NO"; 
-	
 	bo_printFIFO();
 
 	param->packetLen = bo_getFIFO(param->buffer, param->bufSize);
@@ -311,19 +309,30 @@ static void fifoReadPacket(int clientSock, unsigned char *buffer, int bufSize,
 	printf("\n");
 	if(param->packetLen > 0) {
 		exec = bo_sendAllData(param->clientfd, head, 3);
-		if(exec == -1) goto exit;
+		if(exec == -1){
+			bo_log("fifoGetData()send[VAL] errno[%s]", strerror(errno));
+			goto exit;
+		}
+		
 		exec = bo_sendAllData(param->clientfd, len, 2);
-		if(exec == -1) goto exit;
+		if(exec == -1) { 
+			bo_log("fifoGetData()send[len] errno[%s]", strerror(errno));
+			goto exit;
+		}
 		exec = bo_sendAllData(param->clientfd, param->buffer, 
 			param->packetLen);
+		if(exec == -1) {
+			bo_log("fifoGetData()send[data] errno[%s]", strerror(errno));
+			goto exit;
+		}
 	} else {
 		exec = bo_sendAllData(param->clientfd, headNO, 3);
+		bo_log("fifoGetData()send[NO] errno[%s]", strerror(errno));
 		goto exit;
 	}
 	if(exec == -1) {
 		exit:
 		packetStatus = QUIT;
-		bo_log("fifoGetData() errno[%s]", strerror(errno));
 	} else {
 		packetStatus = READHEAD;
 	}
