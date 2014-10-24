@@ -254,7 +254,6 @@ int bo_setConnect(char *ip, int port)
 		 end info debug*/
 		allSend += count;
 	}
-	printf("\n");
 	return (count == -1 ? -1 : allSend);
  }
  
@@ -267,25 +266,25 @@ int bo_recvAllData(int sock, unsigned char *buf, int bufSize, int length)
 	int count = 0;
 	int exec = 1;
 	int all = 0;
-	
-	unsigned char *ptr_deb = buf;
-	int i = 0;
+	/*
+		unsigned char *ptr_deb = buf;
+		int i = 0; 
+	 */
 	while(all < length) {
 		count = recv(sock, buf + all, bufSize - all, 0);
 		if(count < 1) { 
 			if(all != length) exec = -1;
 			break;
 		}
-		/* info for debug */
+		/* info for debug 
 		printf("bo_recvAllData() data:\n");
 		ptr_deb = buf + all;
 		for(; i < count; i++) {
 			printf("%c", *(ptr_deb + i) );
 		}
-		/* end info debug*/
+		 end info debug*/
 		all += count;
 	}
-	printf("\n");
 	return ( exec == -1 ? -1 : all);
 }
 

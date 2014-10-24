@@ -1,8 +1,8 @@
 TARGET		     = build/moxa_serv
-#CC = arm-elf-gcc
-CC = gcc
-LDFLAGS		     = 
-#LDFLAGS	     = -Wl, -elf2flt
+CC = arm-elf-gcc
+#CC = gcc
+#LDFLAGS		     = 
+LDFLAGS	     = -Wl, -elf2flt
 CFLAGS		     = -Wall -c -g
 
 INC_DIR		     = -I../src/log -I../src/tools -I../src/nettcp
