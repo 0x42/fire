@@ -327,7 +327,8 @@ static void fifoReadPacket(int clientSock, unsigned char *buffer, int bufSize,
 		}
 	} else {
 		exec = bo_sendAllData(param->clientfd, headNO, 3);
-		bo_log("fifoGetData()send[NO] errno[%s]", strerror(errno));
+		if(exec == -1)
+			bo_log("fifoGetData()send[NO] errno[%s]", strerror(errno));
 		goto exit;
 	}
 	if(exec == -1) {
