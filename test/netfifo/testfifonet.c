@@ -92,6 +92,26 @@ TEST(fifo, sendOneByte)
 	}
 	TEST_ASSERT_EQUAL(1, ans);
 }
+
+TEST(fifo, getFromEmptyFifo)
+{
+	int exec = -1;
+	char buf[20] = {0};
+	int ans = -1;
+	
+	printf("getFromEmptyFifo() ... \n");
+	exec = bo_recvDataFIFO("127.0.0.1", 8888, buf, 20);
+	if(exec == -1) {
+		printf("recv error %s\n", strerror(errno)); 
+	} else {
+		if(exec == 0) {
+			ans = 1;
+		} else {
+			printf("length[%d] wait length 0 buf[%s]\n", exec, buf);
+		}
+	}
+	TEST_ASSERT_EQUAL(1, ans);
+}
 /* ----------------------------------------------------------------------------
  * @brief	отправляем сообщение SET length=10 msg size = 10
  *		-102 = OK
