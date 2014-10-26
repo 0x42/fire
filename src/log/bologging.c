@@ -56,8 +56,8 @@ void loggingINIT()
 	/* получ-ие pid процесса*/
 	log.pid = getpid();
 	/* ЧИТАТЬ С КОНФ ФАЙЛА*/
-	log.name = "ringfile.log";
-	log.oldname = "ringfile_OLD.log";
+	log.name = "default.log";
+	log.oldname = "default_OLD.log";
 	log.maxrow = 1000;
 	/* ================= */
         logInit = 1;

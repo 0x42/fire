@@ -35,6 +35,13 @@ int bo_sendDataFIFO(char *ip, unsigned int port, char *data, unsigned int size);
 /* получить данные в FIFO */
 int bo_recvDataFIFO(char *ip, unsigned int port, unsigned char *buf, int bufSize);
 
+/* получ данные из таблицы маршрут по адрессу 485*/
+int bo_recvRoute(char *ip, 
+		 unsigned int port, 
+		 char *addr485, 
+	         char *buf, 
+	         int bufSize);
+
 /* отправление данных */
 int bo_sendAllData(int sock, unsigned char *buf, int len);
 

@@ -539,5 +539,3 @@ TEST(fifo, addBigMsgThanItemFifo)
 	exit:
 	TEST_ASSERT_EQUAL(1, flag);
 }
-
-

@@ -84,6 +84,10 @@ int bo_recvDataFIFO(char *ip, unsigned int port, unsigned char *buf, int bufSize
 	return ans;
 }
 
+/* ----------------------------------------------------------------------------
+ * @brief	отправ GET
+ * @status	KA -> READHEAD | ERR
+*/
 static void recvStart(struct Param *p) 
 {
 	unsigned char head[] = "GET";
