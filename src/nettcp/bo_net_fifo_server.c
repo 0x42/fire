@@ -398,6 +398,7 @@ static void fifoAnsErr(struct ParamSt *param)
 		
 	flag = bo_addFIFO(param->buffer, param->packetLen);
 	if(flag == -1) {
+		bo_log("fifoAddToFIFO() can't add data to FIFO");
 		packetStatus = ANSERR;
 	} else {
 		packetStatus = ANSOK;

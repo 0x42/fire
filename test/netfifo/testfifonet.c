@@ -304,7 +304,7 @@ TEST(fifo, send100MSGSET10)
 	printf("send100MSGSET10() ... \n");
 	int ans = 0;
 	int exec = 0;
-	char *head = "SET";
+	int flag = -1;
 	int Nsize = 20;
 	unsigned char msg[20] = "123456789 123456789 "; 
 	unsigned char buf[20] = {0};
@@ -325,12 +325,14 @@ TEST(fifo, send100MSGSET10)
 			printf("recv error %s\n", strerror(errno)); 
 			goto error;
 		}
+		
 		for(i = 0; i < Nsize; i++) {
 			if(msg[i] != buf[i]) {
 				printf("msg[%s]!=buf[%s]\n", msg, buf );
 				goto error;
 			}
 		}
+		
 		NN++;
 	}
 	exec = 1;
