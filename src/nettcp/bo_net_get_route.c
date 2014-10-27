@@ -155,6 +155,7 @@ static void recvVal(struct Param *p)
 		length = boCharToInt(len);
 		printf("recvVal() length[%d]\n", length);
 		if(length <= p->bufSize) {
+			memset(p->buf, 0, p->bufSize);
 			exec = bo_recvAllData(p->sock, (unsigned char *)p->buf, p->bufSize, length);
 			if(exec == -1) goto error;
 			
@@ -167,7 +168,7 @@ static void recvVal(struct Param *p)
 				goto error;
 			} else p->length = length;
 		} else {
-			bo_log("bo_net_get_route.c recvVal() length=%d bufSize=%d",
+			bo_log("bo_net_get_route.c recvVal() bad length[%d] bufSize=[%d]",
 				length, p->bufSize);
 			goto error;
 		}
@@ -192,12 +193,19 @@ static int checkCRC(unsigned char *crcTxt, char *buf, int len)
 	int ans = -1;
 	int crc = -1;
 	int crc_count = -1;
-	printf("checkCRC() buf[%s] \n", buf);
-	printf("crcTxt[%s]\n", crcTxt);
+	
+	int i = 0;
+	printf("checkCRC() buf[");
+	for(i = 0; i < len; i++) {
+		printf("%c", *(buf+i));
+	}
+	printf("]\ncrcTxt[%02x %02x]\n", *crcTxt, *(crcTxt+1));
+
 	crc = boCharToInt(crcTxt);
 	crc_count = crc16modbus(buf, len);
 	if(crc != crc_count) ans = -1;
 	else ans = 1;
 	printf("crc[%d]\n", crc);
+	printf("crc_count[%d]\n", crc_count);
 	return ans;
 }
