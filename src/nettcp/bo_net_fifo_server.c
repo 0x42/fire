@@ -210,8 +210,9 @@ static void fifoReadPacket(int clientSock, unsigned char *buffer, int bufSize,
 	 * порт, иначе придется ждать 2MSL */
 	setsockopt(clientSock, SOL_SOCKET, SO_REUSEADDR, &i, sizeof(i));
 	dbgout("\n> ----------	CONNECT ---------------- <\n");
+	bo_log("fifoReadPacket()-> start");
 	while(stop == -1) {
-		dbgout("\n>>>AVTOMAT STATUS = %s\n", PacketStatusTxt[packetStatus]);
+//		dbgout("\n>>>AVTOMAT STATUS = %s\n", PacketStatusTxt[packetStatus]);
 		if(packetStatus == QUIT) break;
 		if(packetStatus == END) {
 			*endPr = -1;
@@ -219,7 +220,9 @@ static void fifoReadPacket(int clientSock, unsigned char *buffer, int bufSize,
 		}
 		statusTable[packetStatus](&param);
 	}
+	
 	bo_closeSocket(clientSock);
+	bo_log("fifoReadPacket()-> end");
 	dbgout("\n> ----------- END CONNECT ------------ <\n");
 }
  /* ---------------------------------------------------------------------------

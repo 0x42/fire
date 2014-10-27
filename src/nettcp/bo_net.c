@@ -124,7 +124,10 @@ int bo_sendDataFIFO(char *ip, unsigned int port,
 	unsigned char len[2] = {0};
 	char buf[4] = {0};
 	char *ok = NULL;
+	
+	bo_log("bo_sendDataFIFO()->start");
 	sock = bo_setConnect(ip, port);
+	bo_log("bo_sendDataFIFO()->crt sock");
 	if(sock != -1) {
 		boIntToChar(dataSize, len);
 		exec = bo_sendAllData(sock, (unsigned char*)head, 3);
@@ -159,6 +162,7 @@ error:
 			port,
 			dataSize);
 	}
+	bo_log("bo_sendDataFIFO()->end");
 	return ans;
 }
 
