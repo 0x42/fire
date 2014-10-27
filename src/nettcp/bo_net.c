@@ -295,8 +295,8 @@ int bo_recvAllData(int sock, unsigned char *buf, int bufSize, int length)
 void bo_setTimerRcv(int sock)
 {
 	struct timeval tval;
-	/* 100 мсек*/
-	tval.tv_sec = 0;
+	/* 1,5 мсек*/
+	tval.tv_sec = 1;
 	tval.tv_usec = 500000;
 	/* устан максимальное время ожидания одного пакета */
 	setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tval, sizeof(tval));
