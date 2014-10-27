@@ -302,8 +302,8 @@ static void fifoReadPacket(int clientSock, unsigned char *buffer, int bufSize,
 	unsigned char len[2] = {0};
 	unsigned char head[3] = "VAL";
 	unsigned char headNO[3] = " NO"; 
-	/*bo_printFIFO();*/
 	dbgout("GET <-");
+	bo_printFIFO();
 	param->packetLen = bo_getFIFO(param->buffer, param->bufSize);
 	boIntToChar(param->packetLen, len);
 	/*
