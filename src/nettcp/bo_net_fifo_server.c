@@ -209,9 +209,10 @@ static void fifoReadPacket(int clientSock, unsigned char *buffer, int bufSize,
 	/* при перезапуске программы позволяет повторно использовать адрес 
 	 * порт, иначе придется ждать 2MSL */
 	setsockopt(clientSock, SOL_SOCKET, SO_REUSEADDR, &i, sizeof(i));
-	dbgout("\n> ----------	CONNECT ---------------- <\n");
-	bo_log("fifoReadPacket()-> start");
-	while(stop == -1) {
+	/*
+	 * dbgout("\n> ----------	CONNECT ---------------- <\n");
+	*/
+	  while(stop == -1) {
 //		dbgout("\n>>>AVTOMAT STATUS = %s\n", PacketStatusTxt[packetStatus]);
 		if(packetStatus == QUIT) break;
 		if(packetStatus == END) {
@@ -222,8 +223,8 @@ static void fifoReadPacket(int clientSock, unsigned char *buffer, int bufSize,
 	}
 	
 	bo_closeSocket(clientSock);
-	bo_log("fifoReadPacket()-> end");
-	dbgout("\n> ----------- END CONNECT ------------ <\n");
+	
+	dbgout("\n");
 }
  /* ---------------------------------------------------------------------------
   * @brief		чтение заголовка запроса
@@ -242,7 +243,6 @@ static void fifoReadPacket(int clientSock, unsigned char *buffer, int bufSize,
 		bo_log("fifoReadHead() errno[%s]", strerror(errno));
 	}
 	if(exec == 3) {
-		dbgout("fifoReadHead()->HEAD[%s] exec=%d", buf, exec);
 		if(strstr(buf, "SET")) packetStatus = SET;
 		else if(strstr(buf, "GET")) packetStatus = GET;
 		else if(strstr(buf, "DEL")) packetStatus = DEL;
@@ -250,7 +250,9 @@ static void fifoReadPacket(int clientSock, unsigned char *buffer, int bufSize,
 		else if(strstr(buf, "END")) packetStatus = END;
 		else packetStatus = ANSERR;
 	} else {
-		if(exec > 0 ) dbgout("fifoReadHead()->HEAD[%s] exec=%d", buf, exec);
+		if(exec > 0 ) {
+			bo_log("fifoReadHead() recv bad HEAD[%s]", buf);
+		}
 		packetStatus = ANSERR;
 	}
  }
@@ -264,6 +266,7 @@ static void fifoReadPacket(int clientSock, unsigned char *buffer, int bufSize,
 	unsigned int length = 0;
 	int flag = -1;
 	int count = 0;
+	dbgout("SET ->");
 	length = readPacketLength(param);
 	if((length > 0) & (length <= param->bufSize)) {
 		count = bo_recvAllData(param->clientfd, 
@@ -300,16 +303,17 @@ static void fifoReadPacket(int clientSock, unsigned char *buffer, int bufSize,
 	unsigned char head[3] = "VAL";
 	unsigned char headNO[3] = " NO"; 
 	/*bo_printFIFO();*/
-
+	dbgout("GET <-");
 	param->packetLen = bo_getFIFO(param->buffer, param->bufSize);
 	boIntToChar(param->packetLen, len);
-	
+	/*
 	dbgout("param->packetLen=%d\n", param->packetLen);
 	printf("get from FIFO buf:");
 	for(i = 0; i < param->packetLen; i++) {
 		printf("%c ", *(param->buffer + i) );
 	}
 	printf("\n");
+	*/ 
 	if(param->packetLen > 0) {
 		exec = bo_sendAllData(param->clientfd, head, 3);
 		if(exec == -1){
@@ -393,12 +397,14 @@ static void fifoAnsErr(struct ParamSt *param)
  {
 	int flag = -1;
 	int i = 0;
+	/*
 	dbgout("--- --- fifoAddToFIFO len%d val:\n", param->packetLen);
 	for(; i < param->packetLen; i++) {
 		printf("%c ", param->buffer[i]);
 	}
 	printf("\n");
-		
+	*/	
+	bo_printFIFO();
 	flag = bo_addFIFO(param->buffer, param->packetLen);
 	if(flag == -1) {
 		bo_log("fifoAddToFIFO() can't add data to FIFO bad Length value[%d]",

@@ -33,6 +33,7 @@ void bo_printFIFO()
 	printf("FIFO:\n itemN[%d]\nhead[%d]\ntail[%d]\nlast[%d]\ncount[%d]\nfree[%d]\n",
 		   fifo.itemN, fifo.head, fifo.tail, fifo.last, fifo.count, fifo.free);
 	printf("FIFO item size[%d]\n", BO_FIFO_ITEM_VAL);
+/*
 	printf("  ---------------------------------------------------------\n");
 	
 	for(i = 0; i < fifo.itemN; i++) {
@@ -43,6 +44,7 @@ void bo_printFIFO()
 			printf("0x%02x ", item_fifo->val[j]);
 		}
 	}
+ */
 	printf("\n=========================================================\n");
 }
 /* ----------------------------------------------------------------------------

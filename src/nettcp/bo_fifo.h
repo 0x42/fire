@@ -1,6 +1,6 @@
 #ifndef BO_FIFO_H
 #define	BO_FIFO_H
-#define BO_FIFO_ITEM_VAL 20
+#define BO_FIFO_ITEM_VAL 1200
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
