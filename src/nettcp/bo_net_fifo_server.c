@@ -398,8 +398,12 @@ static void fifoAnsErr(struct ParamSt *param)
 		
 	flag = bo_addFIFO(param->buffer, param->packetLen);
 	if(flag == -1) {
-		bo_log("fifoAddToFIFO() can't add data to FIFO");
+		bo_log("fifoAddToFIFO() can't add data to FIFO bad Length value[%d]",
+			param->packetLen);
 		packetStatus = ANSERR;
+	} else if(flag == 0) {
+		bo_log("fifoAddToFIFO() can't add data FIFO is full ");
+		packetStatus = ANSOK;
 	} else {
 		packetStatus = ANSOK;
 	}
