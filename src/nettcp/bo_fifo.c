@@ -69,7 +69,10 @@ int bo_initFIFO(int itemN)
 }
 /* ----------------------------------------------------------------------------
  * @brief	добавляем элем val размером size в очередь fifo  
- * @return	[1] - OK; [-1] - очередь заполнена
+ * @return	[1]  - OK; 
+ *		[0]  - очередь заполнена
+ *		[-1] - не коррект. значение size(больше макс допустимого 
+ *			или меньше 1)
  */
 int  bo_addFIFO(unsigned char *val, int size) 
 {
@@ -78,6 +81,7 @@ int  bo_addFIFO(unsigned char *val, int size)
 	if(val == NULL) goto exit;
 	if(size < 1) goto exit;
 	if(size > BO_FIFO_ITEM_VAL) goto exit;
+	
 	if(fifo.free != 0) {
 		ptr = (fifo.mem + fifo.tail);
 		memcpy(ptr->val, val, size);
@@ -88,6 +92,8 @@ int  bo_addFIFO(unsigned char *val, int size)
 		fifo.count++;
 		fifo.free--;
 		ans = 1;
+	} else {
+		ans = 0;
 	}
 	exit:
 	return ans;
