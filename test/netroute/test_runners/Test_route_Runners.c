@@ -3,4 +3,5 @@
 TEST_GROUP_RUNNER(route)
 {
 	RUN_TEST_CASE(route, simpleTest);
+	RUN_TEST_CASE(route, getTest);
 }

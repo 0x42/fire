@@ -14,11 +14,16 @@ static void routeServWork(int sockMain);
 static void routeReadPacket(int clientSock, unsigned char *buffer, int bufSize,
 			int *endPr);
 
+static int sendValCrc(struct ParamSt *param, char *value, int length);
+static int sendHeadLen(struct ParamSt *param, int length);
+
 static void routeReadHead	(struct ParamSt *param);
 static void routeSet		(struct ParamSt *param);
 static void routeGet		(struct ParamSt *param);
 static void routeQuit		(struct ParamSt *param);
+static void routeAnsOk		(struct ParamSt *param);
 static void routeAnsErr		(struct ParamSt *param);
+static void routeAnsNo		(struct ParamSt *param);
 static void routeAddTab		(struct ParamSt *param);
 static void routeReadCRC	(struct ParamSt *param);
 /* ----------------------------------------------------------------------------
@@ -47,18 +52,20 @@ struct ParamSt {
 /* ----------------------------------------------------------------------------
  * @brief	
  */
-static char *PacketStatusTxt[] = {"READHEAD", "SET", "GET", "QUIT", "ANSERR", 
-				  "ADDTAB", "READCRC"};
+static char *PacketStatusTxt[] = {"READHEAD", "SET", "GET", "QUIT", "ANSOK",
+				  "ANSERR", "ANSNO", "ADDTAB", "READCRC"};
 
-static enum PacketStatus {READHEAD = 0, SET, GET, QUIT, ANSERR, ADDTAB,
-			  READCRC} packetStatus;
+static enum PacketStatus {READHEAD = 0, SET, GET, QUIT, ANSOK, ANSERR, ANSNO,
+			ADDTAB, READCRC} packetStatus;
 
 static void(*statusTable[])(struct ParamSt *) = {
 	routeReadHead,
 	routeSet,
 	routeGet,
 	routeQuit,
+	routeAnsOk,
 	routeAnsErr,
+	routeAnsNo,
 	routeAddTab,
 	routeReadCRC
 };
@@ -259,15 +266,91 @@ static void routeSet(struct ParamSt *param)
 	}
 }
 
+/* ----------------------------------------------------------------------------
+ * @brief	читаем ADDR485(3bytes) ищем в таблице по Addr485 и отправл VAL
+ *		"GET"   ->
+ *		ADDR485 ->
+ *			<- "VAL"
+ *			<- LENGTH
+ *			<- VALUE
+ *			<- CRC
+ * @status      KA -> ANSERR | READHEAD
+ */
 static void routeGet(struct ParamSt *param)
 {
+	int exec = -1;
+	unsigned char addr485[3] = {0};
+	char *value = NULL;
+	int count = -1;
+	int length = 0 ;
 	dbgout("routeGet() GET ");
+	/* читаем адрес 485 */
+	count = bo_recvAllData(param->clientfd, addr485, 3, 3);
+	if(count == 3) {
+		value = ht_get(tabRoutes, (char *)addr485, NULL);
+		if(value == NULL)
+			packetStatus = ANSNO;
+		else {
+			length = strlen(value);
+			exec = sendHeadLen(param, length);
+			if(exec == -1) goto error;
+			exec = sendValCrc(param, value, length);
+			if(exec == -1) goto error;
+			exec = 1;
+		}
+	} else {
+		bo_log("routeGet() ERROR can't read addr485 errno[%s]", 
+			strerror(errno));
+		goto error;
+	}
+	
+	if(exec == -1) {
+		error:
+		packetStatus = ANSERR;
+	} else {
+		packetStatus = READHEAD;
+	}
+}
+
+/* ----------------------------------------------------------------------------
+ * @brief	отправ " OK"(3bytes) KA -> QUIT
+ */
+static void routeAnsOk(struct ParamSt *param)
+{
+	int exec = -1;
+	int sock = param->clientfd;
+	unsigned char msg[] = " OK";
+	dbgout("routeAnsOk() ANSOK ");
+	exec = bo_sendAllData(sock, msg, 3);
+	if(exec == -1) bo_log("routeAnsOk() errno[%s]", strerror(errno));
 	packetStatus = QUIT;
 }
 
+/* ----------------------------------------------------------------------------
+ * @brief	отправ "ERR"(3bytes) KA -> QUIT
+ */
 static void routeAnsErr(struct ParamSt *param)
 {
 	dbgout("routeAnsErr() ANSERR ");
+	int exec = -1;
+	int sock = param->clientfd;
+	unsigned char msg[] = "ERR";
+	exec = bo_sendAllData(sock, msg, 3);
+	if(exec == -1) bo_log("routeAnsErr() errno[%s]", strerror(errno));
+	packetStatus = QUIT;
+}
+
+/* ----------------------------------------------------------------------------
+ * @brief	отправ " NO"(3bytes) KA -> QUIT
+ */
+static void routeAnsNo(struct ParamSt *param)
+{
+	int exec = -1;
+	int sock = param->clientfd;
+	unsigned char msg[] = " NO";
+	dbgout("routeAnsNo() ANSNO ");
+	exec = bo_sendAllData(sock, msg, 3);
+	if(exec == -1) bo_log("routeAnsNo() errno[%s]", strerror(errno));
 	packetStatus = QUIT;
 }
 
@@ -281,7 +364,7 @@ static void routeAnsErr(struct ParamSt *param)
  */
 static void routeAddTab(struct ParamSt *param)
 {
-	char addr485[3] = {0};
+	char addr485[4] = {0};
 	char value[18] = {0};
 	int i = 0;
 	int exec = 0;
@@ -297,8 +380,16 @@ static void routeAddTab(struct ParamSt *param)
 		printf("%c", value[i]);
 	}
 	printf("]\n");
-	exec = ht_put(tabRoutes, );
-	packetStatus = QUIT;
+	/* value должен быть строкой обяз-но!!! тк функция ht_put() принимает 
+	 * в качестве параметра строку*/
+	value[17] = '\0';
+	exec = ht_put(tabRoutes, addr485, value);
+	if(exec == 0) packetStatus = ANSOK;
+	else {
+		bo_log("routeAddTab() can't add key[%s] value[%s] from ht_put()",
+			addr485, value);
+		packetStatus = ANSERR;
+	}
 }
 
 /* ----------------------------------------------------------------------------
@@ -327,7 +418,8 @@ static void routeQuit(struct ParamSt *param) {}
   * @brief	читаем длину пакета
   * @return	[-1] - ошибка, [>0] - длина сообщения
   */
- static unsigned int readPacketLength(struct ParamSt *param)
+
+static unsigned int readPacketLength(struct ParamSt *param)
  {
 	int sock = param->clientfd;
 	unsigned char buf[2] = {0};
@@ -343,3 +435,78 @@ static void routeQuit(struct ParamSt *param) {}
 	}
 	return ans;
  }
+
+/* ----------------------------------------------------------------------------
+ * @brief	отправ "VAL" + LENGTH(2bytes). Ошибки пишем в лог
+ * @return	[-1] error	[1] - ok
+ */
+static int sendHeadLen(struct ParamSt *param, int length)
+{
+	int  ans = -1;
+	unsigned char head[3] = "VAL";
+	unsigned char len[2] = {0};
+	int exec = -1;
+	
+	boIntToChar(length, len);
+	
+	exec = bo_sendAllData(param->clientfd, head, 3);
+	if(exec == -1){
+		bo_log("sendHeadLen()send[VAL] errno[%s]", 
+			strerror(errno));
+		goto exit;
+	}
+
+	exec = bo_sendAllData(param->clientfd, len, 2);
+	if(exec == -1){
+		bo_log("sendHeadLen()send[len] errno[%s]", 
+			strerror(errno));
+		goto exit;
+	}
+	ans = 1;
+	exit:
+	return ans;
+}
+
+/* ----------------------------------------------------------------------------
+ * @brief	отпр Value и CRC
+ * @return	[-1] Error [1] Ok
+ */
+static int sendValCrc(struct ParamSt *param, char *value, int length)
+{
+	int ans = -1;
+	int crc = -1;
+	int exec = -1;
+	unsigned char crcTxt[2] = {0};
+	
+	crc = crc16modbus(value, length);
+	boIntToChar(crc, crcTxt);
+	
+	exec = bo_sendAllData(param->clientfd, (unsigned char *)value, length);
+	if(exec == -1) {
+		bo_log("sendValCrc() ERROR send[%s] errno[%s]", 
+			value, strerror(errno));
+		goto exit;
+	}
+	
+	exec = bo_sendAllData(param->clientfd, (unsigned char *)value, length);
+	if(exec == -1) {
+		bo_log("sendValCrc() ERROR send[crc] errno[%s]", strerror(errno));
+		goto exit;
+	}
+	ans = 1;
+	exit:
+	return ans;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+

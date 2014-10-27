@@ -16,7 +16,8 @@ SRC4   = ../src/tools/ocfg.c
 SRC5   = ../src/tools/oht.c
 SRC6   = ../src/nettcp/bo_net_route_server.c
 SRC7   = ../src/tools/ocrc.c
-
+SRC8   = ../src/nettcp/bo_net_get_route.c
+ 
 OBJ    = build/main.o
 OBJ1   = build/dbgout.o
 OBJ2   = build/bologging.o
@@ -25,6 +26,7 @@ OBJ4   = build/ocfg.o
 OBJ5   = build/oht.o
 OBJ6   = build/bo_net_route_server.o
 OBJ7   = build/ocrc.o
+OBJ8   = build/bo_net_get_route.o
 
 default:
 	$(CC) $(INC_DIR) $(CFLAGS) $(SRC1) -o $(OBJ1)
@@ -34,6 +36,7 @@ default:
 	$(CC) $(INC_DIR) $(CFLAGS) $(SRC5) -o $(OBJ5)	
 	$(CC) $(INC_DIR) $(CFLAGS) $(SRC6) -o $(OBJ6)	
 	$(CC) $(INC_DIR) $(CFLAGS) $(SRC7) -o $(OBJ7)	
+	$(CC) $(INC_DIR) $(CFLAGS) $(SRC8) -o $(OBJ8)	
 
 	$(CC) $(INC_DIR) $(CFLAGS) $(SRC)  -o $(OBJ)
 	$(CC) $(LDFLAGS) -g $(OBJ1) $(OBJ2) $(OBJ3) $(OBJ4) $(OBJ5) \

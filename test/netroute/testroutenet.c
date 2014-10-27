@@ -1,7 +1,7 @@
 #include <string.h>
 #include "unity_fixture.h"
 #include "../../src/tools/dbgout.h"
-
+#include "../../src/nettcp/bo_net.h"
 TEST_GROUP    (route);
 
 TEST_SETUP    (route) {};
@@ -26,5 +26,20 @@ TEST(route, simpleTest)
 	packet[22] = buf1[1];
 //	
 	ans = bo_sendDataFIFO("127.0.0.1", 8889, packet, sizeof(packet));
+	if(ans == -1) {
+		printf("can't send value");
+	}
+	TEST_ASSERT_EQUAL(1, ans);
+}
+
+TEST(route, getTest)
+{
+	int ans = -1;
+	char buf[30] = {0};
+	char addr485[3] = "110";
+	ans = bo_recvRoute("127.0.0.1", 8889, addr485, buf, 30);
+	if(ans == 1) {
+		printf("buf[%s]\n", buf);
+	}
 	TEST_ASSERT_EQUAL(1, ans);
 }

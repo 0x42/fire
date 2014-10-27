@@ -8,7 +8,7 @@ TEST_GROUP_RUNNER(fifo)
 //	RUN_TEST_CASE(fifo, sendSETL10MSG10);
 //	RUN_TEST_CASE(fifo, sendSETL10MSG9);
 //	RUN_TEST_CASE(fifo, sendOnlyHead);
-//	RUN_TEST_CASE(fifo, send100MSGSET10);
+	RUN_TEST_CASE(fifo, send100MSGSET10);
 	/* тест FIFO */
 	RUN_TEST_CASE(fifo, addOneGetOne);
 	RUN_TEST_CASE(fifo, fifo2add3);

@@ -142,9 +142,10 @@ error:
 			ok = strstr(buf, "OK");
 			if(ok) ans = 1;
 			else {
-				bo_log("bo_sendDataFIFO() ip[%s] wait[OK] but recv[%s]", 
+				bo_log("bo_sendDataFIFO() ip[%s] wait[OK] but recv[%s]:\n%s", 
 					ip,  
-					buf);
+					buf,
+					"data don't write in FIFO.");
 			}
 		}
 		if(close(sock) == -1) {
