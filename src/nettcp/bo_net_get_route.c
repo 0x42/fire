@@ -29,7 +29,9 @@ static void recvVal		(struct Param *p);
 static void recvNo		(struct Param *p);
 static void recvErr		(struct Param *p);
 static void recvEnd		(struct Param *p);
-
+/*
+static char *statusTxt[] = {"START", "READHEAD", "VAL", "NO", "ERR", "END"};
+*/
 static enum Status {START=0, READHEAD, VAL, NO, ERR, END} status;
 
 static void (*statusTable[])(struct Param *) = {
@@ -124,7 +126,7 @@ static void recvStart(struct Param *p)
 static void recvReadHead(struct Param *p)
 {	
 	int exec = -1;
-	char buf[3] = {0};
+	char buf[4] = {0};
 	exec = bo_recvAllData(p->sock, (unsigned char *)buf, 3, 3);
 	if(exec == -1) {
 		bo_log("bo_net_get_route.c recvReadHead() errno[%s]", 
@@ -150,10 +152,10 @@ static void recvVal(struct Param *p)
 	unsigned char len[2] = {0};
 	unsigned char crcTxt[2] = {0};
 	exec = bo_recvAllData(p->sock, len, 2, 2);
+	
 	if(exec == -1) goto error;
 	else {
 		length = boCharToInt(len);
-		printf("recvVal() length[%d]\n", length);
 		if(length <= p->bufSize) {
 			memset(p->buf, 0, p->bufSize);
 			exec = bo_recvAllData(p->sock, (unsigned char *)p->buf, p->bufSize, length);
@@ -193,19 +195,13 @@ static int checkCRC(unsigned char *crcTxt, char *buf, int len)
 	int ans = -1;
 	int crc = -1;
 	int crc_count = -1;
-	
-	int i = 0;
-	printf("checkCRC() buf[");
-	for(i = 0; i < len; i++) {
-		printf("%c", *(buf+i));
-	}
-	printf("]\ncrcTxt[%02x %02x]\n", *crcTxt, *(crcTxt+1));
 
 	crc = boCharToInt(crcTxt);
 	crc_count = crc16modbus(buf, len);
 	if(crc != crc_count) ans = -1;
 	else ans = 1;
-	printf("crc[%d]\n", crc);
-	printf("crc_count[%d]\n", crc_count);
+	
 	return ans;
 }
+
+/* 0x42 */
