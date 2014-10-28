@@ -38,8 +38,8 @@ TEST(route, getTest)
 	char buf[30] = {0};
 	char addr485[3] = "110";
 	ans = bo_recvRoute("127.0.0.1", 8889, addr485, buf, 30);
-	if(ans == 1) {
-		printf("buf[%s]\n", buf);
+	if(ans > 0) {
+		ans = 1;
 	}
 	TEST_ASSERT_EQUAL(1, ans);
 }

@@ -283,7 +283,6 @@ static void routeGet(struct ParamSt *param)
 	char *value = NULL;
 	int count = -1;
 	int length = 0 ;
-	dbgout("routeGet() GET ");
 	/* читаем адрес 485 */
 	count = bo_recvAllData(param->clientfd, addr485, 3, 3);
 	if(count == 3) {
@@ -308,7 +307,7 @@ static void routeGet(struct ParamSt *param)
 		error:
 		packetStatus = ANSERR;
 	} else {
-		packetStatus = READHEAD;
+		packetStatus = QUIT;
 	}
 }
 
@@ -455,7 +454,8 @@ static int sendHeadLen(struct ParamSt *param, int length)
 			strerror(errno));
 		goto exit;
 	}
-
+	printf("sendHeadLen() length[%d] len[%02x %02x]/n", length, *len,
+		*(len+1) );
 	exec = bo_sendAllData(param->clientfd, len, 2);
 	if(exec == -1){
 		bo_log("sendHeadLen()send[len] errno[%s]", 
@@ -488,7 +488,7 @@ static int sendValCrc(struct ParamSt *param, char *value, int length)
 		goto exit;
 	}
 	
-	exec = bo_sendAllData(param->clientfd, (unsigned char *)value, length);
+	exec = bo_sendAllData(param->clientfd, crcTxt, 2);
 	if(exec == -1) {
 		bo_log("sendValCrc() ERROR send[crc] errno[%s]", strerror(errno));
 		goto exit;
