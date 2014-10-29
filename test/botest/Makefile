@@ -38,6 +38,12 @@ SRC3 = \
     ../bolog/logtest.c \
     ../../src/log/bologging.c 
 
+SRC4 = \
+    ../llist/test_runners/Test_llist_Runners.c \
+    ../llist/test_runners/all_tests.c \
+    ../llist/testllist.c \
+    ../../src/tools/listsock.c
+
 INC_DIRS = -Isrc -I$(UNITY_ROOT)/src -I$(UNITY_ROOT)/extras/fixture/src \
 -Isrc/nettcp -Isrc/tools
 
@@ -49,6 +55,11 @@ fifo:
 route:
 	$(CC) $(INC_DIRS) $(SRC_FILES_UNITY) $(SRC2) -o $(TARGET)
 	./$(TARGET)
+
+llist:
+	$(CC) $(INC_DIRS) $(SRC_FILES_UNITY) $(SRC4) -o $(TARGET)
+	./$(TARGET)
+
 log:
 	$(CC) $(INC_DIRS) $(SRC_FILES_UNITY) $(SRC3) -o $(TARGET)
 	./$(TARGET)

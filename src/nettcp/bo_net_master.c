@@ -5,27 +5,46 @@
 #include "../nettcp/bo_net.h"
 #include "../tools/oht.h"
 #include "../tools/ocfg.h"
+#include "../tools/listsock.h"
 
 static struct {
-	int port;
+	/* на данный порт устройства присылают измен клиенты, лог ПР */
+	int port_in;
+	/* отправка измен табл роутов, опрос устройств */
+	int port_out;
 	int queue_len;
-	
+	/* макс кол-во утройств могут подкл*/
+	int max_con;
 } servconf = {0};
 
 
 static void m_readConfig(TOHT *cfg, int n, char **argv);
 static void m_servWork(int sock);
+static void m_addClient(int servSock, fd_set *r_set);
 
 void bo_master_main(int argc, char **argv) 
 {
-	TOHT *cfg = NULL;
-	int sock = 0;
+	TOHT *cfg   = NULL;
+	int sock_in = 0;
+	struct bo_llsock *list_in = NULL;
+	
 	m_readConfig(cfg, argc, argv);
 	bo_log("%s%s", " INFO ", "START master");
-	if( (sock = bo_servStart(servconf.port, servconf.queue_len))!= -1) {
-		m_servWork(sock);
-		bo_closeSocket(sock);
+	list_in = bo_crtLLSock(servconf.max_con);
+	if(list_in == NULL) {
+		bo_log("bo_master_main() ERROR %s",
+		"can't create list_in haven't free memory");
+		goto end;
 	}
+	
+	if( (sock_in = bo_servStart(servconf.port_in, servconf.queue_len))!= -1) {
+		m_servWork(sock_in);
+		bo_closeSocket(sock_in);
+	}
+
+end:
+	if(list_in != NULL) bo_del_lsock(list_in);
+	
 	if(cfg != NULL) {
 		cfg_free(cfg);
 		cfg = NULL;
@@ -40,16 +59,18 @@ static void m_readConfig(TOHT *cfg, int n, char **argv)
 	char *f_log	= "master_route.log";
 	char *f_log_old = "master_route.log(old)";
 	int  nrow   = 0;
+	int  max_con = 250;
 	int  maxrow = 1000;
-	servconf.port      = defP;
+	servconf.port_in   = defP;
 	servconf.queue_len = defQ;
-	
+	servconf.max_con   = max_con;
 	if(n == 2) {
 		fileName = *(argv + 1);
 		cfg = cfg_load(fileName);
 		if(cfg != NULL) {
-			servconf.port      = cfg_getint(cfg, "sock:port", defP);
+			servconf.port_in   = cfg_getint(cfg, "sock:port_in", defP);
 			servconf.queue_len = cfg_getint(cfg, "sock:queue_len", defQ);
+			servconf.max_con   = cfg_getint(cfg, "sock:max_connect", max_con);
 			
 			f_log	  = cfg_getstring(cfg, "log:file", f_log);
 			f_log_old = cfg_getstring(cfg, "log:file_old", f_log_old);
@@ -65,13 +86,12 @@ static void m_readConfig(TOHT *cfg, int n, char **argv)
 		bo_setLogParam(f_log, f_log_old, nrow, maxrow);
 		bo_log("%s", " WARNING start with default config");
 	}
-	
 }
 
 /* ----------------------------------------------------------------------------
  * @brief	
  */
-static void m_servWork(int sock)
+static void m_servWork(int sock_in)
 {
 	int stop = 1;
 	int exec = -1;
@@ -86,19 +106,21 @@ static void m_servWork(int sock)
 	tval.tv_usec = 0;
 	
 	while(stop == 1) {
-		FD_ZERO(r_set);
-		FD_ZERO(w_set);
-		FD_ZERO(e_set);
-		FD_SET(sock, r_set);
+		FD_ZERO(&r_set);
+		FD_ZERO(&w_set);
+		FD_ZERO(&e_set);
+		FD_SET(sock_in, &r_set);
+		
 		exec = select(maxdesc, &r_set, NULL, NULL, &tval);
 		if(exec == -1) {
 			bo_log("bo_net_master.c->m_servWork() select errno[%s]",
 				strerror(errno));
 			stop = -1;
 		} else if(exec == 0) {
-			dbgout("server timer event");
+			dbgout("server timer event ");
+			/* делаем опрос подкл устройств */
 		} else {
-			if(FD_ISSET(sock, r_set) == 1) {
+			if(FD_ISSET(sock_in, &r_set) == 1) {
 				
 			}
 		}
@@ -112,7 +134,7 @@ static void m_servWork(int sock)
  * @servSock    серверный сокет
  * @r_set       битовая маска возв  select
  */
-static void addClient(int servSock, fd_set *r_set)
+static void m_addClient(int servSock, fd_set *r_set)
 {
 	int sock = -1;
 	/* провер подкл ли кто-нибудь на серверный сокет */
