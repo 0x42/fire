@@ -38,7 +38,7 @@ void bo_master_main(int argc, char **argv)
 	}
 	
 	if( (sock_in = bo_servStart(servconf.port_in, servconf.queue_len))!= -1) {
-		m_servWork(sock_in);
+		m_servWork(sock_in, list_in);
 		bo_closeSocket(sock_in);
 	}
 
@@ -91,12 +91,12 @@ static void m_readConfig(TOHT *cfg, int n, char **argv)
 /* ----------------------------------------------------------------------------
  * @brief	
  */
-static void m_servWork(int sock_in)
+static void m_servWork(int sock_in, struct bo_llsock *llist_in)
 {
 	int stop = 1;
 	int exec = -1;
-
-	/* максимально возможной номер дескриптора*/
+	int cl_sock = -1;
+	/* максимально возможной номер дескриптора */
 	int maxdesc = FD_SETSIZE;
 	/* таймер на события */
 	struct timeval tval;
@@ -120,9 +120,7 @@ static void m_servWork(int sock_in)
 			dbgout("server timer event ");
 			/* делаем опрос подкл устройств */
 		} else {
-			if(FD_ISSET(sock_in, &r_set) == 1) {
-				
-			}
+			m_addClient(llist_in, sock_in, &r_set);
 		}
 	}
 	/* Очистить все клиент сокеты*/
@@ -134,7 +132,7 @@ static void m_servWork(int sock_in)
  * @servSock    серверный сокет
  * @r_set       битовая маска возв  select
  */
-static void m_addClient(int servSock, fd_set *r_set)
+static void m_addClient(struct bo_llsock *list, int servSock, fd_set *r_set)
 {
 	int sock = -1;
 	/* провер подкл ли кто-нибудь на серверный сокет */
@@ -143,10 +141,42 @@ static void m_addClient(int servSock, fd_set *r_set)
 		if(sock == -1) {
 			bo_log("addClient() accept errno[%s]", strerror(errno));
 		} else {
-			bo_setTimerRcv(sock);
-			
+			/* макс время ожид прихода пакета 
+				bo_setTimerRcv2(sock, 5, 0);
+			*/
+			bo_addll(list, sock);
 		}
 	}
+}
+
+/* ----------------------------------------------------------------------------
+ * @brief	проверяем сокеты из списка которые отправляют данные серверу
+ */
+static void m_workClientIn(struct bo_llsock *list_in, fd_set *r_set)
+{
+	int i = -1;
+	int exec = -1;
+	int sock = -1;
+	struct bo_sock *val = NULL;
+	
+	i = bo_get_head(list_in);
+	while(i != -1) {
+		exec = bo_get_val(list_in, &val, i);
+		sock = val->sock;
+		if(FD_ISSET(sock, r_set) == 1) {
+			m_recvClientMsg(sock);
+		}
+		i = exec;
+	}
+}
+
+/* ----------------------------------------------------------------------------
+ * @brief	читаем данные которые отправил клиент
+ * @sock	клиентский сокет
+ */
+static void m_recvClientMsg(int sock)
+{
+ 
 }
 
 /* 0x42 */

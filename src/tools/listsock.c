@@ -42,6 +42,10 @@ struct bo_llsock *bo_crtLLSock(int size)
 				*(list->free + i) = -1;
 			}
 		}
+		*(list->prev) = -1;
+		*(list->next) = -1;
+		list->val->sock = -1;
+		
 	}
 	
 	if(error == 1) {
@@ -156,6 +160,24 @@ void bo_del_val(struct bo_llsock *llist, int i)
 }
 
 /* ----------------------------------------------------------------------------
+ * @brief	получить элемент
+ * @val		через указатель вернем результат
+ * @i		индекс по которому берем значение из списка
+ * @return	[-1] список пуст [>0] индекс след элемента
+ */
+int bo_get_val(struct bo_llsock *llist, struct bo_sock **val, int i)
+{
+	int ans = -1;
+	*val = NULL;
+	if(i > -1) {
+		*val = llist->val + i;
+		ans = *(llist->next + i);
+	}
+	return ans;
+}
+
+
+/* ----------------------------------------------------------------------------
  * @brief	возв голову списка
  */
 int bo_get_head(struct bo_llsock *llist) 
@@ -169,6 +191,39 @@ int bo_get_head(struct bo_llsock *llist)
 int bo_get_len(struct bo_llsock *llist)
 {
 	return llist->n;
+}
+
+void bo_print_list(struct bo_llsock *llist) 
+{
+	int i = 0;
+	int size = 0;
+	struct bo_sock *v;
+	size = llist->size;
+	printf("size[%d] n[%d]\nind :", size, llist->n);
+	for(i = 0; i < size; i++) {
+		printf("[%d] ", i);
+	}
+	printf("\nval :");
+	for(i = 0; i < size; i++) {
+		v = llist->val + i;
+		printf("[%d] ", v->sock);
+	}
+	printf("\nprev:");
+	
+	for(i = 0; i < size; i++) {
+		printf("[%d] ", *(llist->prev + i));
+	}
+	printf("\nnext:");
+	
+	for(i = 0; i < size; i++) {
+		printf("[%d] ", *(llist->next + i));
+	}
+	printf("\nfree:");
+	
+	for(i = 0; i < size; i++) {
+		printf("[%d] ", *(llist->free + i));
+	}
+	printf("\n");
 }
 
 /* 0x42 */

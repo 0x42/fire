@@ -300,10 +300,21 @@ void bo_setTimerRcv(int sock)
 {
 	struct timeval tval;
 	/* 1,5 мсек*/
-	tval.tv_sec = 1;
+	tval.tv_sec = 0;
 	tval.tv_usec = 500000;
 	/* устан максимальное время ожидания одного пакета */
 	setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tval, sizeof(tval));
+}
+
+void bo_setTimerRcv2(int sock, int sec, int mil)
+{
+	struct timeval tval;
+	/* 1,5 мсек*/
+	tval.tv_sec  = sec;
+	tval.tv_usec = mil;
+	/* устан максимальное время ожидания одного пакета */
+	setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tval, sizeof(tval));
+
 }
 
 /* ----------------------------------------------------------------------------

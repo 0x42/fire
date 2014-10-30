@@ -51,6 +51,8 @@ int bo_recvAllData(int sock, unsigned char *buf, int bufSize, int len);
 /* врем в течение кот ждем данные */
 void bo_setTimerRcv(int sock);
 
+void bo_setTimerRcv2(int sock, int sec, int mil);
+
 /* закрытие сокета */
 void bo_closeSocket(int sock);
 
