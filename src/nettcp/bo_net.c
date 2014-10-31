@@ -317,6 +317,27 @@ void bo_setTimerRcv2(int sock, int sec, int mil)
 
 }
 
+/* ---------------------------------------------------------------------------
+* @brief	читаем длину пакета из сокета
+* @return	[-1] - ошибка, [>0] - длина сообщения
+*/
+unsigned int bo_readPacketLength(int sock)
+{
+	unsigned char buf[2] = {0};
+	int count = 0;
+	unsigned int ans = -1;
+	/* ждем прихода 2byte опред длину сообщения */
+	count = bo_recvAllData(sock, buf, 2, 2); 
+	if(count == 2) {
+		/*b1b2 -> b1 - старший байт
+		 *	  b2 - младший байт
+ 		 */
+		ans = boCharToInt(buf);
+	}
+	return ans;
+}
+
+
 /* ----------------------------------------------------------------------------
  * @brief		закрытие сокета
  */

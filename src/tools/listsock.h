@@ -32,6 +32,10 @@ void bo_print_list(struct bo_llsock *llist);
 
 int bo_get_head(struct bo_llsock *llist);
 
+void bo_del_val(struct bo_llsock *llist, int i);
+
+void bo_del_bysock(struct bo_llsock *llist, int sock);
+
 #endif	/* LISTSOCK_H */
 
 /* 0x42 */

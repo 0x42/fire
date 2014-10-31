@@ -48,6 +48,12 @@ int bo_sendAllData(int sock, unsigned char *buf, int len);
 /* получение данных */
 int bo_recvAllData(int sock, unsigned char *buf, int bufSize, int len);
 
+/* ---------------------------------------------------------------------------
+  * @brief	читаем длину пакета
+  * @return	[-1] - ошибка, [>0] - длина сообщения
+  */
+unsigned int bo_readPacketLength(int sock);
+
 /* врем в течение кот ждем данные */
 void bo_setTimerRcv(int sock);
 

@@ -193,6 +193,22 @@ int bo_get_len(struct bo_llsock *llist)
 	return llist->n;
 }
 
+/* ----------------------------------------------------------------------------
+* @brief	удал item в списке по значению 
+*/
+void bo_del_bysock(struct bo_llsock *llist, int sock)
+{
+	int i = -1, exec = -1;
+	struct bo_sock *val = NULL;
+	
+	i = bo_get_head(llist);
+	while(i != -1) {
+		exec = bo_get_val(llist, &val, i);
+		if(val->sock == sock) bo_del_val(llist, i);
+		i = exec;
+	}
+}
+
 void bo_print_list(struct bo_llsock *llist) 
 {
 	int i = 0;
