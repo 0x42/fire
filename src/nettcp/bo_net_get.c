@@ -54,11 +54,8 @@ int bo_recvDataFIFO(char *ip, unsigned int port, unsigned char *buf, int bufSize
 	int ans  = -1;
 	int stop = 1;
 	int sock = -1;
-	/* ----------------------------*/
-	bo_log("bo_recvDataFIFO() -> start");
-	/* ----------------------------*/
+
 	sock = bo_setConnect(ip, port);
-	bo_log("bo_recvDataFIFO() -> crt sock");
 	
 	if(sock > 0) {
 		param.sock    = sock;
@@ -86,7 +83,6 @@ int bo_recvDataFIFO(char *ip, unsigned int port, unsigned char *buf, int bufSize
 				strerror(errno), ip, port);
 		}
 	}
-	bo_log("bo_recvDataFIFO() -> end");
 	return ans;
 }
 
