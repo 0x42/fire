@@ -30,6 +30,8 @@ int bo_get_val(struct bo_llsock *llist, struct bo_sock **val, int i);
 
 void bo_print_list(struct bo_llsock *llist);
 
+void bo_print_list_val(struct bo_llsock *ll);
+
 int bo_get_head(struct bo_llsock *llist);
 
 void bo_del_val(struct bo_llsock *llist, int i);

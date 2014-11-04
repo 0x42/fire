@@ -27,17 +27,23 @@ static void(*statusTable[])(struct paramThr *) = {
 /* ----------------------------------------------------------------------------
  * @brief	принимаем данные от клиента SET - изменения для табл роутов
  *					    LOG - лог команд для устр 485
+ * @return	[] тип пришедшего сообщения SET[1]
+ *					    LOG[2]
  */
-void bo_master_core(struct paramThr *p)
+int bo_master_core(struct paramThr *p)
 {
+	int typeMSG = 0;
 	int stop = 1;
 	p->status = READHEAD;
 	
 	while(stop) {
 		dbgout("KA[%s]\n", coreStatusTxt[p->status]);
+		if(p->status == SET) typeMSG = 1;
+		if(p->status == ERR) typeMSG = 0;
 		if(p->status == QUIT) break;
 		statusTable[p->status](p);
 	}
+	return typeMSG;
 }
 
 /* ----------------------------------------------------------------------------
@@ -114,11 +120,10 @@ static void coreAdd(struct paramThr *p)
 {
 	char addr485[4] = {0};
 	char value[18] = {0};
-	int i = 0;
 	int exec = 0;
 	memcpy(addr485, p->buf, 3);
 	memcpy(value, (p->buf + 4), 17);
-	
+/*	
 	dbgout("coreAdd() ADD ");
 	printf("\naddr485[");
 	
@@ -130,7 +135,7 @@ static void coreAdd(struct paramThr *p)
 		printf("%c", value[i]);
 	}
 	printf("]\n");
-	
+*/	
 	/* value должен быть строкой обяз-но!!! тк функция ht_put() принимает 
 	 * в качестве параметра строку*/
 	value[17] = '\0';

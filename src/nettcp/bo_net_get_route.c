@@ -186,10 +186,10 @@ static void recvVal(struct Param *p)
 static void recvEnd(struct Param *param) {}
 static void recvNo (struct Param *param) {}
 static void recvErr(struct Param *param) {}
+
 /* ----------------------------------------------------------------------------
  * @return [1] == [-1] !=
  */
-
 static int checkCRC(unsigned char *crcTxt, char *buf, int len)
 {
 	int ans = -1;

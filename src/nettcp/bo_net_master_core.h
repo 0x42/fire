@@ -7,7 +7,7 @@
 #include "../tools/dbgout.h"
 #include "../tools/ocrc.h"
 
-enum m_coreStatus {READHEAD = 0, SET, QUIT, ANSOK, ERR, ADD, READCRC};
+enum m_coreStatus {READHEAD = 0, SET, QUIT, ANSOK, ERR, ADD, READCRC, LOG};
 
 struct paramThr {
     int sock;
@@ -18,10 +18,13 @@ struct paramThr {
     unsigned char *buf;
     /* length длина пакета принятого*/
     int length;
+    /* тип пришедшего сообщения [1] - SET(измен для таблицы роутов) 
+     *                          [2] - LOG(лог ПР) */
+    int type;
 };
 
 
-void bo_master_core(struct paramThr *p);
+int bo_master_core(struct paramThr *p);
 
 #endif	/* BO_NET_MASTER_CORE_H */
 

@@ -32,6 +32,8 @@ int bo_setConnect(char *ip, int port);
 /* отправка данных в FIFO */
 int bo_sendDataFIFO(char *ip, unsigned int port, char *data, unsigned int size);
 
+int bo_sendSetMsg(int sock, char *data, unsigned int dataSize);
+
 /* получить данные в FIFO */
 int bo_recvDataFIFO(char *ip, unsigned int port, unsigned char *buf, int bufSize);
 

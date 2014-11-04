@@ -163,6 +163,59 @@ error:
 	return ans;
 }
 
+
+/* ----------------------------------------------------------------------------
+ * @brief	устанав соед с узлом -> отпр SET|LEN|DATA -> ждем ответ OK ->
+ *		закр сокет
+ * @return	[-1] - error; [1] - OK  
+ */
+int bo_sendSetMsg(int sock, char *data, unsigned int dataSize)
+{
+	int ans  = -1;
+	int exec = -1;
+	char *head = "SET";
+	unsigned char len[2] = {0};
+	char buf[4] = {0};
+	
+	boIntToChar(dataSize, len);
+	exec = bo_sendAllData(sock, (unsigned char*)head, 3);
+	if(exec == -1) {
+		bo_log("bo_sendSetMsg() %s send[head] errno[%s]\n",
+			"ERROR",
+			strerror(errno));
+		goto error;
+	}
+	exec = bo_sendAllData(sock, len, 2);
+	if(exec == -1) {
+		bo_log("bo_sendSetMsg() %s send[len] errno[%s]\n",
+			"ERROR",
+			strerror(errno));
+		goto error;
+	}
+	exec = bo_sendAllData(sock, (unsigned char*)data, dataSize);
+	if(exec == -1) {
+		bo_log("bo_sendSetMsg() %s send[data] errno[%s]\n",
+			"ERROR",
+			strerror(errno));
+		goto error;
+	}
+
+	exec = bo_recvAllData(sock, (unsigned char*)buf, 3, 3);
+	if(exec == -1) {
+error:
+		bo_log("bo_sendSetMsg() %s recv ans errno[%s]\n",
+			"ERROR",
+			strerror(errno));
+	} else {
+		if(strstr(buf, "OK")) ans = 1;
+		else {
+			bo_log("bo_sendSetMsg() wait[OK] but recv[%s]:\n%s", 
+				buf, "data don't send to client.");
+		}
+	}
+	return ans;
+}
+
 /* ----------------------------------------------------------------------------
  * @brief	созд сокет 
  */

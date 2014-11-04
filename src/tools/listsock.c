@@ -141,6 +141,9 @@ void bo_del_val(struct bo_llsock *llist, int i)
 {
 	int buf = -1;
 	int pr = -1, nx = -1; 
+	struct bo_sock *bs = NULL;
+	bs = llist->val + i;
+	bs->sock = 0;
 	/* добавлеям индекс в стек свободных ячеек */
 	buf = *llist->free;
 	*llist->free = i;
@@ -163,7 +166,7 @@ void bo_del_val(struct bo_llsock *llist, int i)
  * @brief	получить элемент
  * @val		через указатель вернем результат
  * @i		индекс по которому берем значение из списка
- * @return	[-1] список пуст [>0] индекс след элемента
+ * @return	 индекс след элемента
  */
 int bo_get_val(struct bo_llsock *llist, struct bo_sock **val, int i)
 {
@@ -172,7 +175,7 @@ int bo_get_val(struct bo_llsock *llist, struct bo_sock **val, int i)
 	if(i > -1) {
 		*val = llist->val + i;
 		ans = *(llist->next + i);
-	}
+	}  
 	return ans;
 }
 
@@ -242,4 +245,16 @@ void bo_print_list(struct bo_llsock *llist)
 	printf("\n");
 }
 
+void bo_print_list_val(struct bo_llsock *ll)
+{
+	int i = 0;
+	int size = 0;
+	struct bo_sock *v;
+	size = ll->size;
+	
+	for(i = 0; i < size; i++) {
+		v = ll->val + i;
+		printf("[%d] ", v->sock);
+	}
+}
 /* 0x42 */
