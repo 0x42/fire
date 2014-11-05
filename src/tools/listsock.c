@@ -1,3 +1,4 @@
+
 #include "listsock.h"
 
 /* ----------------------------------------------------------------------------
@@ -110,11 +111,26 @@ int bo_addll(struct bo_llsock *llist, int sock)
 	int t = -1;
 	int ans = -1;
 	struct bo_sock *bs = NULL;
+	struct sockaddr_in addr;
+	char *ip;
+	socklen_t addr_len = sizeof(addr);
+	int exec = -1;
+	/* опред ip адрес */
+	exec = getpeername(sock, (struct sockaddr *)&addr, &addr_len);
+	if(exec == 0) {
+		ip = inet_ntoa(addr.sin_addr);
+		
+		if(addr_len > 15) addr_len = 15;
+	} else {
+		addr_len = 7;
+		ip = "0.0.0.0";
+	}
 	
 	i = getFreeInd(llist);
 	if(i != -1) {
 		bs = llist->val + i;
 		bs->sock = sock;
+		memcpy(bs->ip, ip, addr_len);
 		if(llist->n == 0) {
 			/* добавление первого элемента */
 			*(llist->prev + i) = -1;
@@ -194,6 +210,31 @@ int bo_get_head(struct bo_llsock *llist)
 int bo_get_len(struct bo_llsock *llist)
 {
 	return llist->n;
+}
+
+/* ----------------------------------------------------------------------------
+ * @brief	возвращает ip по сокету
+ * @sock	
+ * @ip		указ на строку в которую запишет результат
+ * @return	[1] - find ip [-1] no data		
+ */
+int bo_getip_bysock(struct bo_llsock *llist, int sock, char *ip)
+{
+	int i = -1, exec = -1;
+	int ans = -1;
+	struct bo_sock *val = NULL;
+
+	i = bo_get_head(llist);
+	while(i != -1) {
+		exec = bo_get_val(llist, &val, i);
+		if(val->sock == sock) {
+			memcpy(ip, val->ip, BO_IP_MAXLEN);
+			ans = 1;
+			return ans;
+		}
+		i = exec;
+	}
+	return ans;
 }
 
 /* ----------------------------------------------------------------------------

@@ -2,6 +2,8 @@
 #include <string.h>
 #include <sys/select.h>
 #include <fcntl.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 
 #include "../nettcp/bo_net.h"
 #include "../tools/oht.h"
@@ -30,7 +32,7 @@ static void m_addClientOut(struct bo_llsock *list, int servSock, fd_set *set,
 static void m_workClient(struct bo_llsock *list_in, struct bo_llsock *list_out,
 			   fd_set *r_set, fd_set *w_set, TOHT *tr);
 static int  m_recvClientMsg(int sock, TOHT *tr);
-static void m_sendClientMsg(int sock, TOHT *tr);
+static void m_sendClientMsg(int sock, TOHT *tr, struct bo_llsock *llist_out);
 static void m_addSockToSet(struct bo_llsock *list_in, fd_set *r_set);
 static int  m_isClosed(struct bo_llsock *list_in, int sock);
 /* ----------------------------------------------------------------------------
@@ -50,12 +52,10 @@ void bo_master_main(int argc, char **argv)
 	m_readConfig(cfg, argc, argv);
 	bo_log("%s%s", " INFO ", "START master");
 	
-//	list_in  = m_crtLL(servconf.max_con);
-	list_in  = m_crtLL(10);
+	list_in  = m_crtLL(servconf.max_con);
 	if(list_in  == NULL) goto end;
 	
-//	list_out = m_crtLL(servconf.max_con);
-	list_out = m_crtLL(10);
+	list_out = m_crtLL(servconf.max_con);
 	if(list_out == NULL) goto end;
 	
 	tab_routes = ht_new(50);
@@ -113,7 +113,7 @@ static void m_readConfig(TOHT *cfg, int n, char **argv)
 		cfg = cfg_load(fileName);
 		if(cfg != NULL) {
 			servconf.port_in   = cfg_getint(cfg, "sock:port_in", defPin);
-			servconf.port_out  = cfg_getint(cfg, "sock:port_in", defPout);
+			servconf.port_out  = cfg_getint(cfg, "sock:port_out", defPout);
 			servconf.queue_len = cfg_getint(cfg, "sock:queue_len", defQ);
 			servconf.max_con   = cfg_getint(cfg, "sock:max_connect", max_con);
 			
@@ -160,7 +160,7 @@ static void m_servWork(int sock_in, int sock_out,
 	int maxdesc = FD_SETSIZE;
 	/* таймер на события */
 	fd_set r_set, w_set, e_set;
-
+	
 	while(stop == 1) {
 		FD_ZERO(&r_set);
 		FD_ZERO(&w_set);
@@ -244,9 +244,9 @@ static void m_addClientOut(struct bo_llsock *list, int servSock, fd_set *set,
 		} else {
 			/* макс время ожид прихода пакета, 
 			 * чтобы искл блокировки */
-			bo_setTimerRcv2(sock, 0, 500);
+			bo_setTimerRcv2(sock, 5, 500);
 			bo_addll(list, sock);
-			m_sendClientMsg(sock, tr);
+			m_sendClientMsg(sock, tr, list);
 		}
 	} else {
 		dbgout("m_addClientOut-> not serv sock \n");
@@ -263,37 +263,38 @@ static void m_workClient(struct bo_llsock *list_in, struct bo_llsock *list_out,
 	int exec = -1;
 	int sock = -1;
 	int max_desc = FD_SETSIZE;
-	/* флаг получены измен */
+	/* флаг получен измен */
 	int flag = -1;
 	struct timeval tval;
 	tval.tv_sec = 0;
 	tval.tv_usec = 50;
 	
 	struct bo_sock *val = NULL;
-	printf("CHK FROM LIST_IN: ");
+	dbgout("CHK FROM LIST_IN: ");
 	i = bo_get_head(list_in);
 	while(i != -1) {
 		exec = bo_get_val(list_in, &val, i);
 		sock = val->sock;
-		printf("val->sock[%d]\n", sock);
 		if(FD_ISSET(sock, r_set) == 1) {
 			/* реализовать в потоках ??? <- 0x42 */
-			printf("sock[%d] ", sock);
+			dbgout("sock[%d] set\n", sock);
 			if(m_isClosed(list_in, sock) == 1) 
 				if(m_recvClientMsg(sock, tr) == 1) flag = 1;
 		}
 		i = exec;
 	}
 	/* делаем проверку надо ли закрывать сокеты из списка out*/
+	dbgout("\nCHK LIST OUT TO CLOSE:  ");
 	i = bo_get_head(list_out);
 	while(i != -1) {
 		exec = bo_get_val(list_out, &val, i);
 		sock = val->sock;
-		printf("val->sock[%d]\n", sock);
 		if(FD_ISSET(sock, r_set) == 1) {
 			/* реализовать в потоках ??? <- 0x42 */
-			printf("sock[%d] ", sock);
-			m_isClosed(list_out, sock); 
+			dbgout("sock[%d] set \n", sock);
+			bo_closeSocket(sock);
+			bo_del_bysock(list_out, sock);
+//			m_isClosed(list_out, sock); 
 		}
 		i = exec;
 	}
@@ -304,21 +305,21 @@ static void m_workClient(struct bo_llsock *list_in, struct bo_llsock *list_out,
 		m_addSockToSet(list_out, w_set);
 		exec = select(max_desc, NULL, w_set, NULL, &tval);
 		if(exec > 0 ) {
-			printf("SEND CHANGE TO:");
+			dbgout("\nSEND CHANGE TO:");
 			i = bo_get_head(list_out);
 			while(i != -1) {
 				exec = bo_get_val(list_out, &val, i);
 				sock = val->sock;
 				if(FD_ISSET(sock, w_set) == 1) {
-					printf(" sock[%d] ", sock);
-					m_sendClientMsg(sock, tr);
+					dbgout(" sock[%d] ", sock);
+					m_sendClientMsg(sock, tr, list_out);
 				}
 				i = exec;
 			}
-			printf("\n");
+			dbgout("\n");
 		}
 	}
-	printf("\n");
+	dbgout("\n");
 	
 }
 
@@ -393,7 +394,7 @@ static int m_recvClientMsg(int sock, TOHT *tr)
 /* ----------------------------------------------------------------------------
  * @brief	отправ всю таблицу роутов клиенту(чтобы искл возм коллизии)
  */
-static void m_sendClientMsg(int sock, TOHT *tr)
+static void m_sendClientMsg(int sock, TOHT *tr, struct bo_llsock *list)
 {
 	int i = 0;
 	char *key = NULL;
@@ -401,12 +402,13 @@ static void m_sendClientMsg(int sock, TOHT *tr)
 	int valSize = 0;
 	int crc = 0;
 	int exec = 0;
+	char ip[BO_IP_MAXLEN] = "null"; /* listsock.h define */
 	unsigned char cbuf[2] = {0};
 	int packetSize = 23;
 	char packet[packetSize];
-	/* packet = [XXX:XXX.XXX.XXX.XXX:XXX];
-	 * 
-	 */
+	char dbg[packetSize-1];
+	dbg[packetSize-2] = "\0";
+	/* packet = [XXX:XXX.XXX.XXX.XXX:XXX];  */
 	
 	dbgout("отправка табл роутов sock[%d]\n", sock);
 	for(i = 0; i < tr->size; i++) {
@@ -426,7 +428,10 @@ static void m_sendClientMsg(int sock, TOHT *tr)
 				packet[22] = cbuf[1];
 				exec = bo_sendSetMsg(sock, packet, packetSize);
 				if(exec == -1) {
-					bo_log("m_sendClientMsg() can't send data to client");
+					bo_getip_bysock(list, sock, ip);
+					bo_log("m_sendClientMsg() can't send data to ip[%s]", ip);
+					memcpy(dbg, packet, 21);
+					bo_log("packet[%s]", dbg);
 				}
 			} else {
 				bo_log("m_sendClientMsg() -> ERR valSize[%d]", 

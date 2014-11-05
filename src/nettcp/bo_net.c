@@ -180,22 +180,22 @@ int bo_sendSetMsg(int sock, char *data, unsigned int dataSize)
 	boIntToChar(dataSize, len);
 	exec = bo_sendAllData(sock, (unsigned char*)head, 3);
 	if(exec == -1) {
-		bo_log("bo_sendSetMsg() %s send[head] errno[%s]\n",
-			"ERROR",
+		bo_log("bo_sendSetMsg() %s send[head] errno[%s]",
+			"WARN",
 			strerror(errno));
 		goto error;
 	}
 	exec = bo_sendAllData(sock, len, 2);
 	if(exec == -1) {
-		bo_log("bo_sendSetMsg() %s send[len] errno[%s]\n",
-			"ERROR",
+		bo_log("bo_sendSetMsg() %s send[len] errno[%s]",
+			"WARN",
 			strerror(errno));
 		goto error;
 	}
 	exec = bo_sendAllData(sock, (unsigned char*)data, dataSize);
 	if(exec == -1) {
-		bo_log("bo_sendSetMsg() %s send[data] errno[%s]\n",
-			"ERROR",
+		bo_log("bo_sendSetMsg() %s send[data] errno[%s]",
+			"WARN",
 			strerror(errno));
 		goto error;
 	}
@@ -203,8 +203,8 @@ int bo_sendSetMsg(int sock, char *data, unsigned int dataSize)
 	exec = bo_recvAllData(sock, (unsigned char*)buf, 3, 3);
 	if(exec == -1) {
 error:
-		bo_log("bo_sendSetMsg() %s recv ans errno[%s]\n",
-			"ERROR",
+		bo_log("bo_sendSetMsg() %s recv ans errno[%s]",
+			"WARN",
 			strerror(errno));
 	} else {
 		if(strstr(buf, "OK")) ans = 1;

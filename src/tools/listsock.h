@@ -1,12 +1,16 @@
 #ifndef LISTSOCK_H
 #define	LISTSOCK_H
+#define BO_IP_MAXLEN 15
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <fcntl.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 
 struct bo_sock {
 	int sock;
-	char ip[15]; /* XXX.XXX.XXX.XXX */
+	char ip[BO_IP_MAXLEN]; /* XXX.XXX.XXX.XXX */
 };
 
 struct bo_llsock {
@@ -38,6 +42,7 @@ void bo_del_val(struct bo_llsock *llist, int i);
 
 void bo_del_bysock(struct bo_llsock *llist, int sock);
 
+int bo_getip_bysock(struct bo_llsock *llist, int sock, char *ip);
 #endif	/* LISTSOCK_H */
 
 /* 0x42 */
