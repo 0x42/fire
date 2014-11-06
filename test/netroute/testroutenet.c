@@ -238,3 +238,83 @@ int t_getMsg(int sock)
 	setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, NULL, sizeof(tval));
 	return ans;
 }
+
+/*
+ * тест на ошибки  
+ */
+
+TEST(route, closeTest)
+{
+	const int error = -1;
+	int s_cl = -1;
+	int exec = -1;
+	struct sockaddr_in saddr;
+	
+	printf("start client ..... \n");
+	s_cl = bo_crtSock("127.0.0.1", 8123, &saddr);
+	if(s_cl == -1) {
+		printf("bo_crtSock() errno[%s]\n", strerror(errno));
+		goto error;
+	}
+	
+	exec = connect(s_cl, (struct sockaddr *)&saddr, sizeof(struct sockaddr));
+	if(exec != 0) {
+		printf("connect() errno[%s]\n", strerror(errno));
+		close(s_cl);
+		goto error;
+	}
+	
+	printf("send msg ...");
+	char msg[3] = "T01";
+	exec = bo_sendAllData(s_cl, msg, 3);
+	if(exec == -1) {
+		printf("bo_sendAllData() errno[%s]\n", strerror(errno));
+		goto error;
+	}
+	printf(" ..ok[%d]\n", exec);
+//	sleep(5);
+//	printf("send msg2 ...");
+//	char msg2[3] = "T02";
+//	exec = bo_sendAllData(s_cl, msg2, 3);
+//	if(exec == -1) {
+//		printf("bo_sendAllData() errno[%s]\n", strerror(errno));
+//		goto error;
+//	}
+//	printf(" ..ok[%d]\n", exec);
+	
+	close(s_cl);
+	if(error == 1) {
+error:
+		printf("ERROR\n");
+	}
+	printf("end\n");
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

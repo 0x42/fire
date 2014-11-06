@@ -143,7 +143,7 @@ error:
 			ok = strstr(buf, "OK");
 			if(ok) ans = 1;
 			else {
-				bo_log("bo_sendDataFIFO() ip[%s] wait[OK] but recv[%s]:\n%s", 
+					bo_log("bo_sendDataFIFO() ip[%s] wait[OK] but recv[%s]:\n%s", 
 					ip,  
 					buf,
 					"data don't write in FIFO.");
@@ -165,8 +165,7 @@ error:
 
 
 /* ----------------------------------------------------------------------------
- * @brief	устанав соед с узлом -> отпр SET|LEN|DATA -> ждем ответ OK ->
- *		закр сокет
+ * @brief	устанав соед с узлом -> отпр SET|LEN|DATA -> ждем ответ OK 
  * @return	[-1] - error; [1] - OK  
  */
 int bo_sendSetMsg(int sock, char *data, unsigned int dataSize)
@@ -389,7 +388,6 @@ unsigned int bo_readPacketLength(int sock)
 	}
 	return ans;
 }
-
 
 /* ----------------------------------------------------------------------------
  * @brief		закрытие сокета

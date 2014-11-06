@@ -29,17 +29,18 @@ static void(*statusTable[])(struct paramThr *) = {
  *					    LOG - лог команд для устр 485
  * @return	[] тип пришедшего сообщения SET[1]
  *					    LOG[2]
+ *					    ERR[-1]
  */
 int bo_master_core(struct paramThr *p)
 {
-	int typeMSG = 0;
+	int typeMSG = -1;
 	int stop = 1;
 	p->status = READHEAD;
 	
 	while(stop) {
 		dbgout("KA[%s]\n", coreStatusTxt[p->status]);
 		if(p->status == SET) typeMSG = 1;
-		if(p->status == ERR) typeMSG = 0;
+		if(p->status == ERR) typeMSG = -1;
 		if(p->status == QUIT) break;
 		statusTable[p->status](p);
 	}
@@ -76,8 +77,8 @@ static void coreSet(struct paramThr *p)
 	int flag  = -1;
 	int count = 0;
 	length = bo_readPacketLength(p->sock);
-	/* длина сообщения минимум 7 байта = 5(XXX:V) байт информации + 2 байта CRC */
-	if((length > 6) & (length <= p->bufSize)) {
+	/* длина сообщения минимум 10 байта = 5(XXX:VVVV) байт информации + 2 байта CRC */
+	if((length > 9) & (length <= p->bufSize)) {
 		count = bo_recvAllData(p->sock, 
 				       p->buf,
 			               p->bufSize,
