@@ -32,6 +32,8 @@ int bo_setConnect(char *ip, int port);
 /* отправка данных в FIFO */
 int bo_sendDataFIFO(char *ip, unsigned int port, char *data, unsigned int size);
 
+int bo_sendSetMsg(int sock, char *data, unsigned int dataSize);
+
 /* получить данные в FIFO */
 int bo_recvDataFIFO(char *ip, unsigned int port, unsigned char *buf, int bufSize);
 
@@ -48,8 +50,16 @@ int bo_sendAllData(int sock, unsigned char *buf, int len);
 /* получение данных */
 int bo_recvAllData(int sock, unsigned char *buf, int bufSize, int len);
 
+/* ---------------------------------------------------------------------------
+  * @brief	читаем длину пакета
+  * @return	[-1] - ошибка, [>0] - длина сообщения
+  */
+unsigned int bo_readPacketLength(int sock);
+
 /* врем в течение кот ждем данные */
 void bo_setTimerRcv(int sock);
+
+void bo_setTimerRcv2(int sock, int sec, int mil);
 
 /* закрытие сокета */
 void bo_closeSocket(int sock);

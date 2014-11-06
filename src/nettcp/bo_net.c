@@ -143,7 +143,7 @@ error:
 			ok = strstr(buf, "OK");
 			if(ok) ans = 1;
 			else {
-				bo_log("bo_sendDataFIFO() ip[%s] wait[OK] but recv[%s]:\n%s", 
+					bo_log("bo_sendDataFIFO() ip[%s] wait[OK] but recv[%s]:\n%s", 
 					ip,  
 					buf,
 					"data don't write in FIFO.");
@@ -159,6 +159,58 @@ error:
 			ip,
 			port,
 			dataSize);
+	}
+	return ans;
+}
+
+
+/* ----------------------------------------------------------------------------
+ * @brief	устанав соед с узлом -> отпр SET|LEN|DATA -> ждем ответ OK 
+ * @return	[-1] - error; [1] - OK  
+ */
+int bo_sendSetMsg(int sock, char *data, unsigned int dataSize)
+{
+	int ans  = -1;
+	int exec = -1;
+	char *head = "SET";
+	unsigned char len[2] = {0};
+	char buf[4] = {0};
+	
+	boIntToChar(dataSize, len);
+	exec = bo_sendAllData(sock, (unsigned char*)head, 3);
+	if(exec == -1) {
+		bo_log("bo_sendSetMsg() %s send[head] errno[%s]",
+			"WARN",
+			strerror(errno));
+		goto error;
+	}
+	exec = bo_sendAllData(sock, len, 2);
+	if(exec == -1) {
+		bo_log("bo_sendSetMsg() %s send[len] errno[%s]",
+			"WARN",
+			strerror(errno));
+		goto error;
+	}
+	exec = bo_sendAllData(sock, (unsigned char*)data, dataSize);
+	if(exec == -1) {
+		bo_log("bo_sendSetMsg() %s send[data] errno[%s]",
+			"WARN",
+			strerror(errno));
+		goto error;
+	}
+
+	exec = bo_recvAllData(sock, (unsigned char*)buf, 3, 3);
+	if(exec == -1) {
+error:
+		bo_log("bo_sendSetMsg() %s recv ans errno[%s]",
+			"WARN",
+			strerror(errno));
+	} else {
+		if(strstr(buf, "OK")) ans = 1;
+		else {
+			bo_log("bo_sendSetMsg() wait[OK] but recv[%s]:\n%s", 
+				buf, "data don't send to client.");
+		}
 	}
 	return ans;
 }
@@ -300,10 +352,41 @@ void bo_setTimerRcv(int sock)
 {
 	struct timeval tval;
 	/* 1,5 мсек*/
-	tval.tv_sec = 5;
+	tval.tv_sec = 0;
 	tval.tv_usec = 500000;
 	/* устан максимальное время ожидания одного пакета */
 	setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tval, sizeof(tval));
+}
+
+void bo_setTimerRcv2(int sock, int sec, int mil)
+{
+	struct timeval tval;
+	/* 1,5 мсек*/
+	tval.tv_sec  = sec;
+	tval.tv_usec = mil;
+	/* устан максимальное время ожидания одного пакета */
+	setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tval, sizeof(tval));
+
+}
+
+/* ---------------------------------------------------------------------------
+* @brief	читаем длину пакета из сокета
+* @return	[-1] - ошибка, [>0] - длина сообщения
+*/
+unsigned int bo_readPacketLength(int sock)
+{
+	unsigned char buf[2] = {0};
+	int count = 0;
+	unsigned int ans = -1;
+	/* ждем прихода 2byte опред длину сообщения */
+	count = bo_recvAllData(sock, buf, 2, 2); 
+	if(count == 2) {
+		/*b1b2 -> b1 - старший байт
+		 *	  b2 - младший байт
+ 		 */
+		ans = boCharToInt(buf);
+	}
+	return ans;
 }
 
 /* ----------------------------------------------------------------------------

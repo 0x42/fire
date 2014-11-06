@@ -242,7 +242,7 @@ static void routeSet(struct ParamSt *param)
 	unsigned int length = 0;
 	int flag = -1;
 	int count = 0;
-	length = readPacketLength(param);
+	length = bo_readPacketLength(param->clientfd);
 	/* длина сообщения минимум 7 байта = 5(XXX:V) байт информации + 2 байта CRC */
 	if((length > 6) & (length <= param->bufSize)) {
 		count = bo_recvAllData(param->clientfd, 
@@ -413,27 +413,7 @@ static void routeReadCRC(struct ParamSt *param)
 }
 
 static void routeQuit(struct ParamSt *param) {}
-/* ---------------------------------------------------------------------------
-  * @brief	читаем длину пакета
-  * @return	[-1] - ошибка, [>0] - длина сообщения
-  */
 
-static unsigned int readPacketLength(struct ParamSt *param)
- {
-	int sock = param->clientfd;
-	unsigned char buf[2] = {0};
-	int count = 0;
-	unsigned int ans = -1;
-	/* ждем прихода 2byte опред длину сообщения */
-	count = bo_recvAllData(sock, buf, 2, 2); 
-	if(count == 2) {
-		/*b1b2 -> b1 - старший байт
-		 *	  b2 - младший байт
- 		 */
-		ans = boCharToInt(buf);
-	}
-	return ans;
- }
 
 /* ----------------------------------------------------------------------------
  * @brief	отправ "VAL" + LENGTH(2bytes). Ошибки пишем в лог
