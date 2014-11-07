@@ -297,15 +297,9 @@ int bo_setConnect(char *ip, int port)
 /*	unsigned char *ptr_deb = ptr;
 	int i = 0; */
 	while(allSend < len) {
-		count = send(sock, ptr + allSend, n - allSend, 0);
+		/* lock SIG_PIPE signal */
+		count = send(sock, ptr + allSend, n - allSend, MSG_NOSIGNAL);
 		if(count == -1) break;
-		/* info for debug 
-		printf("bo_sendAllData() data:\n");
-		ptr_deb = ptr + allSend;
-		for(; i < count; i++) {
-			printf("%c", *(ptr_deb + i) );
-		}
-		 end info debug*/
 		allSend += count;
 	}
 	return (count == -1 ? -1 : allSend);

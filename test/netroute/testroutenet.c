@@ -1,15 +1,23 @@
 #include <string.h>
+#include <sys/socket.h>
 #include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <arpa/inet.h>
+#include <pthread.h>
 
 #include "unity_fixture.h"
 #include "../../src/tools/dbgout.h"
 #include "../../src/nettcp/bo_net.h"
+#include "../../src/nettcp/bo_net_master_core.h"
+#include "../../src/tools/oht.h"
+
 TEST_GROUP    (route);
 
 TEST_SETUP    (route) {};
 TEST_TEAR_DOWN(route) {};
 
+static int bo_sendAllData_NoSig(int sock, char *buf, int len);
+static void *cltSendRoute(void *arg);
 char *MSG[21] = {"110:192.168.100.101:2", "111:192.168.100.102:1"};
 
 TEST(route, simpleTest)
@@ -239,10 +247,87 @@ int t_getMsg(int sock)
 	return ans;
 }
 
+TEST(route, boMasterCoreTest)
+{
+	TOHT *tab = ht_new(10);
+	struct paramThr p;
+	pthread_t thr_cl;
+	int res = -1;
+	int s_serv = -1;
+	int s_cl = -1;
+	int ans = -1;
+	char buf[30];
+	char data[23] = "123:255.254.253.251:1";
+	
+	printf("boMasterCoreTestf() ... \n");
+	s_serv = bo_servStart(9900, 2);
+	if(s_serv == -1) {printf("ERR bo_servStart()\n"); goto error; }
+	
+	res = pthread_create(&thr_cl, NULL, &cltSendRoute, NULL);
+	if(res != 0) { printf("ERR can't crt thread"); goto error;}
+	
+	char *err;
+	res = bo_waitConnect(s_serv, &s_cl, &err);
+	if(res == -1) {printf("ERR bo_waitConnect()\n");}
+	
+	p.sock = s_cl;
+	p.route_tab = tab;
+	p.buf  = buf;
+	p.bufSize = sizeof(buf);
+	printf("serv try recv SET MSG \n");
+	res = bo_master_core(&p);
+	if(res == -1) { printf("ERR bo_master_core\n"); goto error;}
+	if(res == 1)  { printf("recv SET msg ok \n"); }
+	
+	int i = 0;
+	printf("recv buf[");
+	for(; i < 21; i++) {
+		printf("%c", buf[i]);
+	}
+	printf("]\n");
+	
+	char dd[21];
+	memcpy(dd, buf, 21);
+	
+	if( strstr(data, dd) ) { printf("OK\n"); ans = 1;}
+	
+	ht_free(tab);
+	bo_closeSocket(s_serv);
+	error:
+	TEST_ASSERT_EQUAL(1, ans);
+}
+
+static void *cltSendRoute(void *arg)
+{
+	gen_tbl_crc16modbus();
+	int ans  = -1;
+	int s_cl = -1;
+	int exec = -1;
+	
+	char data[23] = "123:255.254.253.251:1";
+	int crc = crc16modbus(data, 21);
+	unsigned char buf1[2] = {0};
+	boIntToChar(crc, buf1);
+	data[21] = buf1[0];
+	data[22] = buf1[1];
+	
+	sleep(1);
+	s_cl = bo_setConnect("127.0.0.1", 9900);
+	if(s_cl == -1) {printf("ERR cltSendRoute bo_setConnect\n"); goto error; }
+	
+	exec = bo_sendSetMsg(s_cl, data, 23);
+	if(exec == -1) {printf("ERR cltSendRoute bo_sendSetMsg");goto error;}
+	
+	bo_closeSocket(s_cl);
+	if(exec == -1) {printf("ERR cltSendRoute bo_closeSocket");goto error;}
+	ans = 1;
+	error:
+	return ans;
+}
+
 /*
  * тест на ошибки  
  */
-
 TEST(route, closeTest)
 {
 	const int error = -1;
@@ -251,11 +336,14 @@ TEST(route, closeTest)
 	struct sockaddr_in saddr;
 	
 	printf("start client ..... \n");
-	s_cl = bo_crtSock("127.0.0.1", 8123, &saddr);
+	s_cl = bo_crtSock("192.168.1.11", 8123, &saddr);
 	if(s_cl == -1) {
 		printf("bo_crtSock() errno[%s]\n", strerror(errno));
 		goto error;
 	}
+	
+	int i = 1;
+	setsockopt( s_cl, IPPROTO_TCP, TCP_NODELAY, (void *)&i, sizeof(i));
 	
 	exec = connect(s_cl, (struct sockaddr *)&saddr, sizeof(struct sockaddr));
 	if(exec != 0) {
@@ -266,21 +354,33 @@ TEST(route, closeTest)
 	
 	printf("send msg ...");
 	char msg[3] = "T01";
-	exec = bo_sendAllData(s_cl, msg, 3);
+	exec = bo_sendAllData_NoSig(s_cl, msg, 3);
 	if(exec == -1) {
 		printf("bo_sendAllData() errno[%s]\n", strerror(errno));
 		goto error;
 	}
 	printf(" ..ok[%d]\n", exec);
-//	sleep(5);
-//	printf("send msg2 ...");
-//	char msg2[3] = "T02";
-//	exec = bo_sendAllData(s_cl, msg2, 3);
-//	if(exec == -1) {
-//		printf("bo_sendAllData() errno[%s]\n", strerror(errno));
-//		goto error;
-//	}
-//	printf(" ..ok[%d]\n", exec);
+	
+	sleep(20);
+	printf("send msg2 ...");
+	char msg2[3] = "T02";
+	exec = bo_sendAllData_NoSig(s_cl, msg2, 3);
+	if(exec == -1) {
+		printf("bo_sendAllData() errno[%s]\n", strerror(errno));
+		goto error;
+	}
+	printf(" ..ok[%d]\n", exec);
+	
+	sleep(20);
+	printf("send msg3 ...");
+	char msg3[3] = "T03";
+	exec = bo_sendAllData_NoSig(s_cl, msg3, 3);
+	if(exec == -1) {
+		printf("bo_sendAllData() errno[%s]\n", strerror(errno));
+		goto error;
+	}
+	printf(" ..ok[%d]\n", exec);
+	sleep(20);
 	
 	close(s_cl);
 	if(error == 1) {
@@ -290,7 +390,28 @@ error:
 	printf("end\n");
 }
 
-
+/* send with blck signal */
+static int bo_sendAllData_NoSig(int sock, char *buf, int len)
+{
+	int count = 0;   /* кол-во отпр байт за один send*/
+	int allSend = 0; /* кол-во всего отправл байт*/
+	unsigned char *ptr = buf;
+	int n = len;
+	int i = 1;
+	int ni = sizeof(i);
+	int err = getsockopt(sock, SOL_SOCKET, SO_ERROR, &i, &ni);
+	if(err < 0) {
+		printf("getsockopt() err[%s]\n", strerror(errno));
+	} 
+		printf("getsockopt() i[%d][%s]\n",i, strerror(i));
+	while(allSend < len) {
+		/* блок возм сигнал SIGPIPE */
+		count = send(sock, ptr + allSend, n - allSend, MSG_NOSIGNAL);
+		if(count == -1) break;
+		allSend += count;
+	}
+	return (count == -1 ? -1 : allSend);	
+}
 
 
 
