@@ -319,9 +319,7 @@ int bo_recvAllData(int sock, unsigned char *buf, int bufSize, int length)
 		int i = 0; 
 	
 	while(all < length) {
-		/*
-		count = recv(sock, buf + all, bufSize - all, 0);
-		*/
+
 		count = recv(sock, buf + all, length - all, 0);
 		if(count < 1) { 
 			if(all != length) exec = -1;

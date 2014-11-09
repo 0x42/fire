@@ -28,7 +28,7 @@ TEST(route, simpleTest)
 	gen_tbl_crc16modbus();
 	printf("simpleTest() ... \n");
 	int ans = 1;
-	char *msg = "110:192.168.100.101:2"; //21
+	char *msg = "003:192.168.100.127:2"; //21
 	char packet[23] = {0};
 	unsigned int n = 21;
 	int crc = crc16modbus(msg, n);
@@ -523,13 +523,13 @@ static int bo_sendAllData_NoSig(int sock, char *buf, int len)
 
 
 
+/*
+0   0  3  :    1  6  8  .   1  0  0  .   1  2  7   :  2
+48 48 51 58   49 54 56 46  49 48 48 46  49 50 55  58 50 166 196
 
+003:192.
 
-
-
-
-
-
+*/
 
 
 
