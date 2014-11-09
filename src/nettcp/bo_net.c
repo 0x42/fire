@@ -336,7 +336,7 @@ int bo_recvAllData(int sock, unsigned char *buf, int bufSize, int length)
 		/* end info debug*/
 		all += count;
 	}
-		printf("bo_recvAllData() data end\n");
+		printf("\nbo_recvAllData() data end\n");
 	return ( exec == -1 ? -1 : all);
 }
 
