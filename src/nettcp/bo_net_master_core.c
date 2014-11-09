@@ -78,6 +78,7 @@ static void coreSet(struct paramThr *p)
 	int count = 0;
 	length = bo_readPacketLength(p->sock);
 	/* длина сообщения минимум 10 байта = 5(XXX:VVVV) байт информации + 2 байта CRC */
+	memset(p->buf, 0, p->bufSize);
 	if((length > 9) & (length <= p->bufSize)) {
 		count = bo_recvAllData(p->sock, 
 				       p->buf,
@@ -85,10 +86,11 @@ static void coreSet(struct paramThr *p)
 				       length);
 		if((count > 0) & (count == length)) flag = 1; 
 		else {
-			bo_log("bo_net_master.c coreSet() count[%d]!=length[%d]", count, length);
+			bo_log("bo_net_master_core.c coreSet() count[%d]!=length[%d]", count, length);
+			bo_log("bo_net_master_core.c coreSet() buf[%s]", p->buf);
 		}
 	} else {
-		bo_log("bo_net_master.c coreSet() bad length[%d] ", 
+		bo_log("bo_net_master_core.c coreSet() bad length[%d] ", 
 			length, 
 			p->bufSize);
 	}

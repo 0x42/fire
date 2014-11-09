@@ -280,16 +280,11 @@ TEST(route, boMasterCoreTest)
 	if(res == 1)  { printf("recv SET msg ok \n"); }
 	
 	int i = 0;
-	printf("recv buf[");
+	ans = 1;
+	
 	for(; i < 21; i++) {
-		printf("%c", buf[i]);
+		if(buf[i] != data[i]) ans = -1;
 	}
-	printf("]\n");
-	
-	char dd[21];
-	memcpy(dd, buf, 21);
-	
-	if( strstr(data, dd) ) { printf("OK\n"); ans = 1;}
 	
 	ht_free(tab);
 	bo_closeSocket(s_serv);
