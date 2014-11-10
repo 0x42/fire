@@ -132,7 +132,7 @@ static void coreAdd(struct paramThr *p)
 	char value[18] = {0};
 	int exec = 0;
 	memcpy(addr485, p->buf, 3);
-	memcpy(value, (p->buf + 4), 17);
+	memcpy(value, (p->buf + 4), p->length - 2);
 /*	
 	dbgout("coreAdd() ADD ");
 	printf("\naddr485[");

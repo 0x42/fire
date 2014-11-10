@@ -321,7 +321,6 @@ static void m_workClient(struct bo_llsock *list_in, struct bo_llsock *list_out,
 		}
 	}
 	dbgout("\n");
-	
 }
 
 /* ----------------------------------------------------------------------------
