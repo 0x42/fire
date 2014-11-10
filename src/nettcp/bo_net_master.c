@@ -407,6 +407,7 @@ static void m_sendClientMsg(int sock, TOHT *tr, struct bo_llsock *list)
 	char packet[packetSize];
 	char dbg[packetSize-1];
 	dbg[packetSize-2] = '\0';
+	int p_len = 0;
 	/* packet = [XXX:XXX.XXX.XXX.XXX:XXX];  */
 	
 	dbgout("отправка табл роутов sock[%d]\n", sock);
@@ -416,20 +417,26 @@ static void m_sendClientMsg(int sock, TOHT *tr, struct bo_llsock *list)
 			memset(packet, 0, packetSize);
 			val = *(tr->val + i);
 			valSize = strlen(val);
+			p_len = valSize;
 			if(valSize <= packetSize) {
-				dbgout("send->val[%s]\n", val);
+				dbgout("send->val[%s] %d\n", val, valSize);
 				memcpy(packet, key, 3);
 				packet[3] = ':';
 				memcpy(packet + 4, val, valSize);
-				crc = crc16modbus(packet, 21);
+				p_len += 4;
+				crc = crc16modbus(packet, p_len);
+				
 				boIntToChar(crc, cbuf);
-				packet[21] = cbuf[0];
-				packet[22] = cbuf[1];
-				exec = bo_sendSetMsg(sock, packet, packetSize);
+				
+				packet[p_len] = cbuf[0];
+				packet[p_len + 1] = cbuf[1];
+				p_len +=2;
+				printf("p_len [%d] \n", p_len);
+				exec = bo_sendSetMsg(sock, packet, p_len);
 				if(exec == -1) {
 					bo_getip_bysock(list, sock, ip);
 					bo_log("m_sendClientMsg() can't send data to ip[%s]", ip);
-					memcpy(dbg, packet, 21);
+					memcpy(dbg, packet, p_len);
 					bo_log("packet[%s]", dbg);
 				}
 			} else {

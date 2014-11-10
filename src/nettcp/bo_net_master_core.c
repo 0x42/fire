@@ -122,6 +122,8 @@ static void coreReadCRC(struct paramThr *p)
 		printf("%c", msg[i]);
 	}
 	printf("]\n");
+	
+	p->length = msg_len;
 	if(crc != count) p->status = ERR;
 	else p->status = ADD;
 }
@@ -132,23 +134,11 @@ static void coreAdd(struct paramThr *p)
 	char value[18] = {0};
 	int exec = 0;
 	memcpy(addr485, p->buf, 3);
-	memcpy(value, (p->buf + 4), p->length - 2);
-/*	
-	dbgout("coreAdd() ADD ");
-	printf("\naddr485[");
+	/* 4 = 1':' + addr(3)*/
+	memcpy(value, (p->buf + 4), p->length - 4);
 	
-	for(; i < sizeof(addr485); i++) {
-		printf("%c", addr485[i]);
-	}
-	printf("]\nvalue:[");
-	for(i = 0; i < sizeof(value); i++) {
-		printf("%c", value[i]);
-	}
-	printf("]\n");
-*/	
 	/* value должен быть строкой обяз-но!!! тк функция ht_put() принимает 
 	 * в качестве параметра строку*/
-	value[17] = '\0';
 	exec = ht_put(p->route_tab, addr485, value);
 	if(exec == 0) p->status = ANSOK;
 	else {

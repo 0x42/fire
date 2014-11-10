@@ -323,6 +323,73 @@ static void *cltSendRoute(void *arg)
 	return ans;
 }
 
+TEST(route, sendNULLTest)
+{
+	printf("sendNULLTest() ...\n");
+	struct sockaddr_in saddr;
+	struct sockaddr_in saddr2;
+	int ans = -1;
+	int exec = -1;
+	int size = -1;
+	int sock_out = -1, sock_in = -1;
+	char packet[10] = {0};
+	unsigned char txt[2] = {0};
+	char msg_null[8] = "010:NULL";
+	
+	gen_tbl_crc16modbus();
+	
+	sock_in  = bo_crtSock("127.0.0.1", 8891, &saddr);
+	sock_out = bo_crtSock("127.0.0.1", 8890, &saddr2);
+	
+	exec = connect(sock_out, (struct sockaddr *)&saddr2, sizeof(struct sockaddr));
+	if(exec != 0) { 
+		printf("can't connect to 8890\n");
+		goto end;
+	}
+	
+	exec = connect(sock_in,  (struct sockaddr *)&saddr,  sizeof(struct sockaddr));
+	if(exec != 0) {
+		printf("can't connect to 8891\n");
+		goto end;
+	}
+	
+	char buf[50] = {0};
+//	
+	memcpy(packet, msg_null, 8);
+	int crc = crc16modbus(msg_null, 8);
+	boIntToChar(crc, txt);
+	
+	packet[8] = txt[0];
+	packet[9] = txt[1];
+	
+
+	printf("send msg ..");
+	exec = bo_sendSetMsg(sock_out, packet, 10);
+	if(exec == -1) goto end;
+	printf(". ok\n");
+	
+	int i = 0;
+	char buf_out[30] = {0};
+	struct paramThr p;
+	p.sock = sock_in;
+	p.buf  = buf_out;
+	p.bufSize = 30;
+	p.route_tab = ht_new(50);
+	
+	bo_master_core(&p);
+	
+//	printf("buf[");
+//	for(; i < p.length; i++) {
+//		printf(p.buf[i]);
+//	}
+//	printf("]/n");
+	ans = 1;
+	end:
+	close(sock_in );
+	close(sock_out);	
+	TEST_ASSERT_EQUAL(1, ans);
+}
+
 TEST(route, bugOvlTest)
 {
 	printf("bufOvlTest ... \n");
