@@ -220,7 +220,7 @@ static void m_addClient(struct bo_llsock *list, int servSock, fd_set *set)
 		} else {
 			/* макс время ожид прихода пакета, 
 			 * чтобы искл блокировки */
-			bo_setTimerRcv2(sock, 0, 500);
+			bo_setTimerRcv2(sock, 5, 500);
 			bo_addll(list, sock);
 		}
 	} else {
@@ -386,7 +386,6 @@ static int m_recvClientMsg(int sock, TOHT *tr)
 	p.buf = buf;
 	p.bufSize = bufSize;
 	p.length = 0;
-	p.type = -1;
 	t_msg = bo_master_core(&p);
 	return t_msg;
 }
@@ -407,7 +406,7 @@ static void m_sendClientMsg(int sock, TOHT *tr, struct bo_llsock *list)
 	int packetSize = 23;
 	char packet[packetSize];
 	char dbg[packetSize-1];
-	dbg[packetSize-2] = "\0";
+	dbg[packetSize-2] = '\0';
 	/* packet = [XXX:XXX.XXX.XXX.XXX:XXX];  */
 	
 	dbgout("отправка табл роутов sock[%d]\n", sock);

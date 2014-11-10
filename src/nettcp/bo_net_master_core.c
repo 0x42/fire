@@ -78,6 +78,7 @@ static void coreSet(struct paramThr *p)
 	int count = 0;
 	length = bo_readPacketLength(p->sock);
 	/* длина сообщения минимум 10 байта = 5(XXX:VVVV) байт информации + 2 байта CRC */
+	memset(p->buf, 0, p->bufSize);
 	if((length > 9) & (length <= p->bufSize)) {
 		count = bo_recvAllData(p->sock, 
 				       p->buf,
@@ -85,10 +86,11 @@ static void coreSet(struct paramThr *p)
 				       length);
 		if((count > 0) & (count == length)) flag = 1; 
 		else {
-			bo_log("bo_net_master.c coreSet() count[%d]!=length[%d]", count, length);
+			bo_log("bo_net_master_core.c coreSet() count[%d]!=length[%d]", count, length);
+			bo_log("bo_net_master_core.c coreSet() buf[%s]", p->buf);
 		}
 	} else {
-		bo_log("bo_net_master.c coreSet() bad length[%d] ", 
+		bo_log("bo_net_master_core.c coreSet() bad length[%d] ", 
 			length, 
 			p->bufSize);
 	}
@@ -107,12 +109,19 @@ static void coreReadCRC(struct paramThr *p)
 	unsigned char crcTxt[2] = {0};
 	char *msg = (char *)p->buf;
 	int msg_len = p->length - 2;
+	int i = 0;
 	crcTxt[0] = p->buf[p->length - 2];
 	crcTxt[1] = p->buf[p->length - 1];
 	
 	crc = boCharToInt(crcTxt);
-	printf("crc[%02x %02x] = [%d]", crcTxt[0], crcTxt[1], crc); 
+	printf("crc[%02x %02x] = [%d]\n", crcTxt[0], crcTxt[1], crc); 
 	count = crc16modbus(msg, msg_len);
+	printf("count[%d]\n msg[", count);
+	
+	for(; i < msg_len; i++) {
+		printf("%c", msg[i]);
+	}
+	printf("]\n");
 	if(crc != count) p->status = ERR;
 	else p->status = ADD;
 }
@@ -165,7 +174,6 @@ static void coreOk(struct paramThr *p)
 { 
 	int exec = -1;
 	unsigned char msg[] = " OK";
-
 	exec = bo_sendAllData(p->sock, msg, 3);
 	if(exec == -1) bo_log("coreOk() errno[%s]", strerror(errno));
 	p->status = QUIT;

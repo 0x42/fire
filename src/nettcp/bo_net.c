@@ -297,15 +297,9 @@ int bo_setConnect(char *ip, int port)
 /*	unsigned char *ptr_deb = ptr;
 	int i = 0; */
 	while(allSend < len) {
-		count = send(sock, ptr + allSend, n - allSend, 0);
+		/* lock SIG_PIPE signal */
+		count = send(sock, ptr + allSend, n - allSend, MSG_NOSIGNAL);
 		if(count == -1) break;
-		/* info for debug 
-		printf("bo_sendAllData() data:\n");
-		ptr_deb = ptr + allSend;
-		for(; i < count; i++) {
-			printf("%c", *(ptr_deb + i) );
-		}
-		 end info debug*/
 		allSend += count;
 	}
 	return (count == -1 ? -1 : allSend);
@@ -320,14 +314,12 @@ int bo_recvAllData(int sock, unsigned char *buf, int bufSize, int length)
 	int count = 0;
 	int exec = 1;
 	int all = 0;
-	/*
+/*	
 		unsigned char *ptr_deb = buf;
 		int i = 0; 
-	 */
+*/	
 	while(all < length) {
-		/*
-		count = recv(sock, buf + all, bufSize - all, 0);
-		*/
+
 		count = recv(sock, buf + all, length - all, 0);
 		if(count < 1) { 
 			if(all != length) exec = -1;
@@ -352,7 +344,7 @@ void bo_setTimerRcv(int sock)
 {
 	struct timeval tval;
 	/* 1,5 мсек*/
-	tval.tv_sec = 0;
+	tval.tv_sec = 5;
 	tval.tv_usec = 500000;
 	/* устан максимальное время ожидания одного пакета */
 	setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tval, sizeof(tval));

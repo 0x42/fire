@@ -30,6 +30,8 @@ SRC2 = \
     ../../src/nettcp/bo_net.c \
     ../../src/nettcp/bo_net_get_route.c \
     ../../src/tools/ocrc.c \
+    ../../src/tools/oht.c \
+    ../../src/nettcp/bo_net_master_core.c \
     ../../src/tools/dbgout.c
 
 SRC3 = \
@@ -63,7 +65,7 @@ fifo:
 	./$(TARGET)
 
 route:
-	$(CC) $(INC_DIRS) $(SRC_FILES_UNITY) $(SRC2) -o $(TARGET)
+	$(CC) $(INC_DIRS) $(SRC_FILES_UNITY) -lpthread $(SRC2) -o $(TARGET)
 	./$(TARGET)
 
 llist:
