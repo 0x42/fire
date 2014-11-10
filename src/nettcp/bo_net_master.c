@@ -404,10 +404,10 @@ static void m_sendClientMsg(int sock, TOHT *tr, struct bo_llsock *list)
 	char ip[BO_IP_MAXLEN] = "null"; /* listsock.h define */
 	unsigned char cbuf[2] = {0};
 	int packetSize = 23;
+	int p_len = 0;
 	char packet[packetSize];
 	char dbg[packetSize-1];
 	dbg[packetSize-2] = '\0';
-	int p_len = 0;
 	/* packet = [XXX:XXX.XXX.XXX.XXX:XXX];  */
 	
 	dbgout("отправка табл роутов sock[%d]\n", sock);
