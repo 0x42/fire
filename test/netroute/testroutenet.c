@@ -21,23 +21,23 @@ static void *cltSendRoute(void *arg);
 void str_splitInt(int *buf, const char *istr, const char *dlm);
 void put_rtbl(int sock, int dst);
 
-char *MSG[21] = {"110:192.168.100.101:2", "111:192.168.100.102:1"};
+char *MSG[21] = {"003:192.168.100.127:2", "111:192.168.100.102:1"};
 
 TEST(route, simpleTest)
 {
 	gen_tbl_crc16modbus();
 	printf("simpleTest() ... \n");
 	int ans = 1;
-	char *msg = "003:192.168.100.127:2"; //21
+	char *msg = ""; //21
 	char packet[23] = {0};
 	unsigned int n = 21;
-	int crc = crc16modbus(msg, n);
+	int crc = crc16modbus(*MSG, n);
 	unsigned char buf1[2] = {0};
 	boIntToChar(crc, buf1);
 	
 	memcpy(packet, *MSG, 21);
 //	printf("\nmsg[%s] packet[%s]\n", msg, packet);
-//	printf("crc[%d]=[%02x %02x]\n", crc, buf1[0], buf1[1]);
+	printf("crc[%d]=[%02x %02x]\n", crc, buf1[0], buf1[1]);
 	packet[21] = buf1[0];
 	packet[22] = buf1[1];
 //	

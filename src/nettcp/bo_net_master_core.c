@@ -109,12 +109,19 @@ static void coreReadCRC(struct paramThr *p)
 	unsigned char crcTxt[2] = {0};
 	char *msg = (char *)p->buf;
 	int msg_len = p->length - 2;
+	int i = 0;
 	crcTxt[0] = p->buf[p->length - 2];
 	crcTxt[1] = p->buf[p->length - 1];
 	
 	crc = boCharToInt(crcTxt);
-	printf("crc[%02x %02x] = [%d]", crcTxt[0], crcTxt[1], crc); 
+	printf("crc[%02x %02x] = [%d]\n", crcTxt[0], crcTxt[1], crc); 
 	count = crc16modbus(msg, msg_len);
+	printf("count[%d]\n msg[", count);
+	
+	for(; i < msg_len; i++) {
+		printf("%c", msg[i]);
+	}
+	printf("]\n");
 	if(crc != count) p->status = ERR;
 	else p->status = ADD;
 }

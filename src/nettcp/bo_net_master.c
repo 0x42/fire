@@ -220,7 +220,7 @@ static void m_addClient(struct bo_llsock *list, int servSock, fd_set *set)
 		} else {
 			/* макс время ожид прихода пакета, 
 			 * чтобы искл блокировки */
-			bo_setTimerRcv2(sock, 0, 500);
+			bo_setTimerRcv2(sock, 5, 500);
 			bo_addll(list, sock);
 		}
 	} else {
