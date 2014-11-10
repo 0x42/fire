@@ -265,11 +265,12 @@ static void m_workClient(struct bo_llsock *list_in, struct bo_llsock *list_out,
 	int max_desc = FD_SETSIZE;
 	/* флаг получен измен */
 	int flag = -1;
+	struct bo_sock *val = NULL;
 	struct timeval tval;
 	tval.tv_sec = 0;
 	tval.tv_usec = 50;
 	
-	struct bo_sock *val = NULL;
+	
 	dbgout("CHK FROM LIST_IN: ");
 	i = bo_get_head(list_in);
 	while(i != -1) {

@@ -3,7 +3,7 @@
  * получаем изменения -> сохр в таблицу -> отпр изм-ия устр-м из списка 
  */
 
-#include <mcheck.h>
+/*#include <mcheck.h> */
 #include <stdio.h>
 #include <stdlib.h>
 #include "../src/tools/dbgout.h"
@@ -13,10 +13,10 @@ extern void bo_master_main(int argc, char **argv);
 
 int main(int argc, char **argv)
 {
-	mtrace();
+/*	mtrace(); */
 	dbgout("START master-> %s\n", *argv);
 	bo_master_main(argc, argv);
 	dbgout("END\n");
-	muntrace();
+/*	muntrace(); */
 	return 0;
 }

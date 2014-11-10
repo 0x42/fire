@@ -59,23 +59,14 @@ int main(int argn, char **argv)
 		printf("get bad msg[%s]", buf);
 	}
 	printf(".. ok\n");
+	printf(" KILL APP \n");
+	sleep(120);
 	
-	sleep(30);
-	
-	printf("send msg ...");
-	unsigned char msg[3] = "T01";
-	int exec = -1;
-	exec = bo_sendAllData(s_cl, msg, 3);
-	if(exec == -1) {
-		printf("bo_sendAllData() errno[%s]\n", strerror(errno));
-		goto error;
-	}
-	printf(" ..ok[%d]\n", exec);
-
-	
-	sleep(60);
 	printf("close client sock\n");
 	close(s_cl);
+	
+	
+
 	close(s_serv);
 	if(error == 1) {
 		error:

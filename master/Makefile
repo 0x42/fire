@@ -1,8 +1,8 @@
 TARGET		     = build/master
-#CC = arm-elf-gcc
-CC = gcc
-LDFLAGS		     = 
-#LDFLAGS	     = -Wl, -elf2flt
+CC = arm-elf-gcc
+#CC = gcc
+#LDFLAGS		     = 
+LDFLAGS	     = -Wl, -elf2flt
 
 CFLAGS		     = -Wall -c -g
 
