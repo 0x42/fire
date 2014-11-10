@@ -416,7 +416,7 @@ static void m_sendClientMsg(int sock, TOHT *tr, struct bo_llsock *list)
 			memset(packet, 0, packetSize);
 			val = *(tr->val + i);
 			valSize = strlen(val);
-			if(valSize == 17) {
+			if(valSize <= packetSize) {
 				dbgout("send->val[%s]\n", val);
 				memcpy(packet, key, 3);
 				packet[3] = ':';
@@ -435,7 +435,7 @@ static void m_sendClientMsg(int sock, TOHT *tr, struct bo_llsock *list)
 			} else {
 				bo_log("m_sendClientMsg() -> ERR valSize[%d]", 
 					valSize);
-				bo_log("big size val in table");
+				bo_log("big size val[%s] in table", val);
 			}
 		}
 	}
