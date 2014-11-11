@@ -1,9 +1,9 @@
 TARGET		     = build/master
-#CC = arm-elf-gcc
-CC = gcc
+CC = arm-elf-gcc
+#CC = gcc
 LDFLAGS		     = 
 
-#LDFLAGS	     = -Wl, -elf2flt
+LDFLAGS	     = -Wl, -elf2flt
 CFLAGS		     = -Wall -c -g
 
 INC_DIR		     = -I../src/log -I../src/tools -I../src/nettcp
