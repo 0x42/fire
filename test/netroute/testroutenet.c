@@ -378,11 +378,11 @@ TEST(route, sendNULLTest)
 	
 	bo_master_core(&p);
 	
-//	printf("buf[");
-//	for(; i < p.length; i++) {
-//		printf(p.buf[i]);
-//	}
-//	printf("]/n");
+	printf("buf[");
+	for(; i < p.length; i++) {
+		printf("%c",p.buf[i]);
+	}
+	printf("]/n");
 	ans = 1;
 	end:
 	close(sock_in );
