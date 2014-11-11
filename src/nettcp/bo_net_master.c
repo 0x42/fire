@@ -33,6 +33,8 @@ static void m_workClient(struct bo_llsock *list_in, struct bo_llsock *list_out,
 			   fd_set *r_set, fd_set *w_set, TOHT *tr);
 static int  m_recvClientMsg(int sock, TOHT *tr);
 static void m_sendClientMsg(int sock, TOHT *tr, struct bo_llsock *llist_out);
+static void m_repeatSendRoute(struct bo_llsock *list_out, TOHT *tr);
+static void m_delRoute(struct bo_sock *val, TOHT *tr);
 static void m_addSockToSet(struct bo_llsock *list_in, fd_set *r_set);
 static int  m_isClosed(struct bo_llsock *list_in, int sock);
 /* ----------------------------------------------------------------------------
@@ -158,10 +160,13 @@ static void m_servWork(int sock_in, int sock_out,
 	int exec = -1;
 	/* максимально возможной номер дескриптора для сокета*/
 	int maxdesc = FD_SETSIZE;
-	/* таймер на события */
 	fd_set r_set, w_set, e_set;
-	
+	/* таймер на события */
+	struct timeval tval;
+
 	while(stop == 1) {
+		tval.tv_sec  = 0;
+		tval.tv_usec = 50;
 		FD_ZERO(&r_set);
 		FD_ZERO(&w_set);
 		FD_ZERO(&e_set);
@@ -172,16 +177,18 @@ static void m_servWork(int sock_in, int sock_out,
 		/* если сокет из того списка подаст сигнал на передачу 
 		 * значит его надо закрыть.*/
 		m_addSockToSet(llist_out, &r_set);
-		exec = select(maxdesc, &r_set, NULL, NULL, NULL);
-		dbgout("\n------ EVENT ->\n");
+		exec = select(maxdesc, &r_set, NULL, NULL, &tval);
 		if(exec == -1) {
 			bo_log("bo_net_master.c->m_servWork() select errno[%s]",
 				strerror(errno));
+			bo_log("CRITICAL ERROR app will stop");
 			stop = -1;
 		} else if(exec == 0) {
-			dbgout("... timer event \n");
-			/* делаем опрос подкл устройств */
+			/* если в списке есть устр которым не удалось отправить
+			 * таблицу повторяем отправку */
+			m_repeatSendRoute(llist_out, tr);
 		} else {
+			dbgout("\n------ EVENT ->\n");
 			/* если событие произошло у серв сокетов in&out 
 			 * добавляем в список*/
 			dbgout("CHK SERV IN \n");
@@ -194,9 +201,8 @@ static void m_servWork(int sock_in, int sock_out,
 			dbgout("\nOUT:   "); bo_print_list_val(llist_out);
 			dbgout("\nCHK CLIENT   \n");
 			m_workClient(llist_in, llist_out, &r_set, &w_set, tr);
-			
+			dbgout("------ END \n");
 		}
-		dbgout("------ END \n");
 	}
 	/* Очистить все клиент сокеты*/
 }
@@ -284,7 +290,8 @@ static void m_workClient(struct bo_llsock *list_in, struct bo_llsock *list_out,
 		}
 		i = exec;
 	}
-	/* делаем проверку надо ли закрывать сокеты из списка out*/
+	/* делаем проверку надо ли закрывать сокеты из списка out
+	   удал записи из таблицы роутов для этого сокета */
 	dbgout("\nCHK LIST OUT TO CLOSE:  ");
 	i = bo_get_head(list_out);
 	while(i != -1) {
@@ -293,9 +300,10 @@ static void m_workClient(struct bo_llsock *list_in, struct bo_llsock *list_out,
 		if(FD_ISSET(sock, r_set) == 1) {
 			/* реализовать в потоках ??? <- 0x42 */
 			dbgout("sock[%d] set \n", sock);
+			m_delRoute(val, tr);
 			bo_closeSocket(sock);
 			bo_del_bysock(list_out, sock);
-//			m_isClosed(list_out, sock); 
+			flag = 1;
 		}
 		i = exec;
 	}
@@ -408,7 +416,7 @@ static void m_sendClientMsg(int sock, TOHT *tr, struct bo_llsock *list)
 	char packet[packetSize];
 	char dbg[packetSize-1];
 	dbg[packetSize-2] = '\0';
-	/* packet = [XXX:XXX.XXX.XXX.XXX:XXX];  */
+	/* packet = [XXX:XXX.XXX.XXX.XXX:XXX] / [XXX:NULL];  */
 	
 	dbgout("отправка табл роутов sock[%d]\n", sock);
 	for(i = 0; i < tr->size; i++) {
@@ -431,13 +439,15 @@ static void m_sendClientMsg(int sock, TOHT *tr, struct bo_llsock *list)
 				packet[p_len] = cbuf[0];
 				packet[p_len + 1] = cbuf[1];
 				p_len +=2;
-				printf("p_len [%d] \n", p_len);
 				exec = bo_sendSetMsg(sock, packet, p_len);
 				if(exec == -1) {
 					bo_getip_bysock(list, sock, ip);
+					bo_setflag_bysock(list, sock, -1);
 					bo_log("m_sendClientMsg() can't send data to ip[%s]", ip);
 					memcpy(dbg, packet, p_len);
 					bo_log("packet[%s]", dbg);
+				} else {
+					bo_setflag_bysock(list, sock, 1);
 				}
 			} else {
 				bo_log("m_sendClientMsg() -> ERR valSize[%d]", 
@@ -447,4 +457,50 @@ static void m_sendClientMsg(int sock, TOHT *tr, struct bo_llsock *list)
 		}
 	}
 }
+
+/* ----------------------------------------------------------------------------
+ * @brief 
+ */
+static void m_repeatSendRoute(struct bo_llsock *list_out, TOHT *tr)
+{
+	int i    = -1;
+	int exec = -1;
+	int sock = -1;
+	struct bo_sock *val = NULL;
+	
+	i = bo_get_head(list_out);
+	while(i != -1) {
+		sock = -1;
+		exec = bo_get_val(list_out, &val, i);
+		if(val->flag == -1 ) {
+			sock = val->sock;
+			m_sendClientMsg(sock, tr, list_out);
+		}
+		i = exec;
+	}
+}
+
+/* ----------------------------------------------------------------------------
+ * @brief	наход строки у которых ip = item->ip удал их  
+ */
+static void m_delRoute(struct bo_sock *item, TOHT *tr)
+{
+	int i = -1;
+	int exec = 0;
+	char *key = NULL;
+	char *val = NULL;
+	char *err_msg = "m_delRoute() ERROR can't change TAB ROUTE ht_put[-1]";
+	for(i = 0; i < tr->size; i++) {
+		key = *(tr->key + i);
+		if(key != NULL) {
+			val = *(tr->val + i);
+			if(strstr(val, item->ip)) {
+				exec = 0;
+				exec = ht_put(tr, key, "NULL");
+				if(exec == -1) 	bo_log(err_msg);
+			}
+		}
+	}
+}
+
 /* 0x42 */

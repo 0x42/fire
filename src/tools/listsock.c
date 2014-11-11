@@ -130,6 +130,7 @@ int bo_addll(struct bo_llsock *llist, int sock)
 	if(i != -1) {
 		bs = llist->val + i;
 		bs->sock = sock;
+		bs->flag = 1;
 		memcpy(bs->ip, ip, addr_len);
 		if(llist->n == 0) {
 			/* добавление первого элемента */
@@ -182,7 +183,7 @@ void bo_del_val(struct bo_llsock *llist, int i)
  * @brief	получить элемент
  * @val		через указатель вернем результат
  * @i		индекс по которому берем значение из списка
- * @return	 индекс след элемента
+ * @return	 индекс след элемента или NULL
  */
 int bo_get_val(struct bo_llsock *llist, struct bo_sock **val, int i)
 {
@@ -249,6 +250,23 @@ void bo_del_bysock(struct bo_llsock *llist, int sock)
 	while(i != -1) {
 		exec = bo_get_val(llist, &val, i);
 		if(val->sock == sock) bo_del_val(llist, i);
+		i = exec;
+	}
+}
+
+/* ----------------------------------------------------------------------------
+ * @brief	
+ * @flag	[1/-1] может принимать значение
+ */
+void bo_setflag_bysock(struct bo_llsock *llist, int sock, int flag)
+{
+	int i = -1, exec = -1;
+	struct bo_sock *val = NULL;
+	
+	i = bo_get_head(llist);
+	while(i != -1) {
+		exec = bo_get_val(llist, &val, i);
+		if(val->sock == sock) val->flag = flag;
 		i = exec;
 	}
 }

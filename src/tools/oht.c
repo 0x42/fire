@@ -135,7 +135,7 @@ static int modify_value(TOHT *ht, const char *key, const char *val)
  * @val: Новое значение.
  *
  * Если добавление нового значения прошло успешно, то выходим с
- * результатом 0. Иначе - выходим с результатом 1.
+ * результатом 0. Иначе - выходим с результатом -1.
 */
 static int add_value(TOHT *ht, const char *key, const char *val)
 {

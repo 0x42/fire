@@ -12,6 +12,9 @@
 struct bo_sock {
 	int sock;
 	char ip[BO_IP_MAXLEN]; /* XXX.XXX.XXX.XXX */
+        /* флаг отправки данных по этому сокету
+           [1]- OK; [-1]- FALSE */
+        int flag; 
 };
 
 struct bo_llsock {
@@ -42,6 +45,8 @@ int bo_get_head(struct bo_llsock *llist);
 void bo_del_val(struct bo_llsock *llist, int i);
 
 void bo_del_bysock(struct bo_llsock *llist, int sock);
+
+void bo_setflag_bysock(struct bo_llsock *llist, int sock, int flag);
 
 int bo_getip_bysock(struct bo_llsock *llist, int sock, char *ip);
 #endif	/* LISTSOCK_H */
