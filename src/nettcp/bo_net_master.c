@@ -160,6 +160,7 @@ static void m_servWork(int sock_in, int sock_out,
 	int exec = -1;
 	/* максимально возможной номер дескриптора для сокета*/
 	int maxdesc = FD_SETSIZE;
+	maxdesc = 30;
 	fd_set r_set, w_set, e_set;
 	/* таймер на события */
 	struct timeval tval;
@@ -196,9 +197,10 @@ static void m_servWork(int sock_in, int sock_out,
 			
 			dbgout("CHK SERV OUT \n");
 			m_addClientOut(llist_out, sock_out, &r_set, tr);
-			
+			/*
 			dbgout("IN:    ");   bo_print_list_val(llist_in);
-			dbgout("\nOUT:   "); bo_print_list_val(llist_out);
+			dbgout("\nOUT:   "); bo_print_list_val(llist_out); 
+			*/
 			dbgout("\nCHK CLIENT   \n");
 			m_workClient(llist_in, llist_out, &r_set, &w_set, tr);
 			dbgout("------ END \n");
@@ -315,6 +317,8 @@ static void m_workClient(struct bo_llsock *list_in, struct bo_llsock *list_out,
 		exec = select(max_desc, NULL, w_set, NULL, &tval);
 		if(exec > 0 ) {
 			dbgout("\nSEND CHANGE TO:");
+			struct timeval begin, end;
+			gettimeofday(&begin, NULL);
 			i = bo_get_head(list_out);
 			while(i != -1) {
 				exec = bo_get_val(list_out, &val, i);
@@ -325,7 +329,12 @@ static void m_workClient(struct bo_llsock *list_in, struct bo_llsock *list_out,
 				}
 				i = exec;
 			}
+			
 			dbgout("\n");
+			gettimeofday(&end, NULL);
+			double diff_sec = difftime(end.tv_sec, begin.tv_sec)*1000000;
+			double diff_milli = difftime(end.tv_usec, begin.tv_usec);
+			printf("send time:[%f] \n", (diff_sec+diff_milli)/1000000);
 		}
 	}
 	dbgout("\n");
@@ -427,7 +436,7 @@ static void m_sendClientMsg(int sock, TOHT *tr, struct bo_llsock *list)
 			valSize = strlen(val);
 			p_len = valSize;
 			if(valSize <= packetSize) {
-				dbgout("send->val[%s] %d\n", val, valSize);
+				/*dbgout("send->val[%s] %d\n", val, valSize);*/
 				memcpy(packet, key, 3);
 				packet[3] = ':';
 				memcpy(packet + 4, val, valSize);

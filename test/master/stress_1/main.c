@@ -2,19 +2,22 @@
 #include <string.h>
 #include <sys/select.h>
 #include <pthread.h>
+#include <time.h>
 
 #include "../../../src/tools/ocrc.h"
 #include "../../../src/tools/oht.h"
 #include "../../../src/nettcp/bo_net_master_core.h"
 
-char TR[2][23];
-char TR_N[2][10];
-int tr_n = 2;
+char TR[100][23];
+char TR_N[100][10];
+int tr_n = 100;
 
 struct thr_arg {
 	int out1;
 	int out2;
 }; 
+
+void recvNullTab(struct thr_arg *arg);
 
 void init_TR()
 {
@@ -47,6 +50,8 @@ int sendTR(int sock)
 	int exec = -1;
 	int i = 0;
 	int ans = 1;
+	struct timeval begin, end;
+	gettimeofday(&begin, NULL);
 	for(;i < tr_n; i++) {
 		msg = TR[i];
 		exec = bo_sendSetMsg(sock, msg, 23);
@@ -59,6 +64,10 @@ int sendTR(int sock)
 			goto end;
 		}
 	}
+	gettimeofday(&end, NULL);
+	double diff_sec = difftime(end.tv_sec, begin.tv_sec)*1000000;
+	double diff_milli = difftime(end.tv_usec, begin.tv_usec);
+	printf("send N pack[%d]time:[%f] ", tr_n, (diff_sec+diff_milli)/1000000);
 	end:
 	return ans;
 }
@@ -80,6 +89,8 @@ void *recvTR(void *arg)
 	p.route_tab = ht_new(50);
 	p.buf = b;
 	p.bufSize = 50;
+	struct timeval begin, end;
+	gettimeofday(&begin, NULL);
 	
 	while((out1_n + out2_n) < tr_n*2) {
 		FD_ZERO(&rset);
@@ -103,6 +114,11 @@ void *recvTR(void *arg)
 		
 		}
 	}
+	
+	gettimeofday(&end, NULL);
+	double diff_sec = difftime(end.tv_sec, begin.tv_sec) * 1000000;
+	double diff_milli = difftime(end.tv_usec, begin.tv_usec);
+	printf("send N pack[%d]time:[%f] ", tr_n*2, (diff_sec + diff_milli)/1000000);
 	
 	struct timeval tval;
 	tval.tv_sec = 1;
@@ -173,12 +189,11 @@ void *recvTRNULL(void *arg)
 	p.route_tab = ht_new(50);
 	p.buf = b;
 	p.bufSize = 50;
-	
+	struct timeval begin, end;
+	gettimeofday(&begin, NULL);
 	while(out1_n < tr_n) {
 		FD_ZERO(&rset);
 		FD_SET(out1, &rset);
-		printf(".\n");
-
 		exec = select(out1 + 1, &rset, NULL, NULL, NULL);
 		if(exec == -1) { printf("select err[%s]\n", strerror(errno)); break;}
 		else {
@@ -190,6 +205,10 @@ void *recvTRNULL(void *arg)
 			}		
 		}
 	}
+	gettimeofday(&end, NULL);
+	double diff_sec = difftime(end.tv_sec, begin.tv_sec)*1000000;
+	double diff_milli = difftime(end.tv_usec, begin.tv_usec);
+	printf("send N pack[%d]time:[%f] ", tr_n, (diff_sec+diff_milli)/1000000);
 	
 	struct timeval tval;
 	tval.tv_sec = 1;
@@ -290,26 +309,58 @@ int main()
 	printf(">RECV OK \n");
 
 	/* ----------------------------------------- */
-	printf(">RECV NULL ...\n");
-	sleep(1);
+	printf("DISCONNECT out2 ...\n");
 	bo_closeSocket(out2);
 	arg.out2 = -1;
+	arg.out1 = out1;
+	recvNullTab(&arg);
+	
+	printf("DISCONNECT out1 ...\n");
+	bo_closeSocket(out1);
+	printf(">SEND TR in1 ... ");
+	exec = sendTR(in1);
+	if(exec == -1) printf("ERROR\n");
+	else printf("OK\n");
+	
+	
+	out2 = bo_setConnect("127.0.0.1", 8891);
+	if(out2 == -1) { printf("out2 error ..."); goto error; }
+	printf(">CONNECT out2 ... ok\n");
+	
+	out1 = bo_setConnect("127.0.0.1", 8891);
+	if(out1 == -1) { printf("out2 error ..."); goto error; }
+	printf(">CONNECT out1 ... ok\n");
 	
 	arg.out1 = out1;
-	pthread_create(&thr1, NULL, &recvTRNULL, (void *)&arg);
+	arg.out2 = out2;
+	
+	printf(">RECV ...\n");
+	pthread_create(&thr1, NULL, &recvTR, (void *)&arg);
 	
 	pthread_join(thr1, (void *)&thr_ans);
-	
 	if(thr_ans == -1) {
-		printf("recvTRNULL ERROR\n");
+		printf("\nrecvTR ERROR\n");
 		goto error;
 	}
-	printf(">RECV NULL OK\n");
+	printf(">RECV OK \n");
 	
 	if(blk == 1) {
 		error:
 		printf("ERROR\n");
 	}
 	printf("STRESS ... END \n");
+}
+
+void recvNullTab(struct thr_arg *arg) 
+{
+	printf(">RECV NULL ...\n");
+	pthread_t thr1;
+	int thr_ans = -1;
+	pthread_create(&thr1, NULL, &recvTRNULL, (void *)arg);
+	pthread_join(thr1, (void *)&thr_ans);
+	if(thr_ans == -1) {
+		printf("recvTRNULL ERROR\n");
+	}
+	printf(">RECV NULL OK\n");
 }
 /* 0x42 */

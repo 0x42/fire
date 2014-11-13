@@ -9,6 +9,8 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
+#include "ort.h"
+
 struct bo_sock {
 	int sock;
 	char ip[BO_IP_MAXLEN]; /* XXX.XXX.XXX.XXX */

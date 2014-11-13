@@ -40,18 +40,18 @@ int bo_master_core(struct paramThr *p)
 	while(stop) {
 		
 		if(p->status == SET) { 
-			dbgout("KA[%s]", coreStatusTxt[p->status]);
-			typeMSG = 1; 
+		/*	dbgout("KA[%s]", coreStatusTxt[p->status]);
+		*/	typeMSG = 1; 
 		}
 		if(p->status == ERR) { 
-			dbgout("[%s]", coreStatusTxt[p->status]);
-			typeMSG = -1; 
+		/*	dbgout("[%s]", coreStatusTxt[p->status]);
+		*/	typeMSG = -1; 
 		}
 		if(p->status == ANSOK) {
-			dbgout("[%s]", coreStatusTxt[p->status]);
+		/*	dbgout("[%s]", coreStatusTxt[p->status]); */
 		}
 		if(p->status == QUIT) {
-			dbgout("\n");
+		/*	dbgout("\n"); */
 			break;
 		}
 		statusTable[p->status](p);
@@ -121,20 +121,20 @@ static void coreReadCRC(struct paramThr *p)
 	unsigned char crcTxt[2] = {0};
 	char *msg = (char *)p->buf;
 	int msg_len = p->length - 2;
-	int i = 0;
+/*	int i = 0; */
 	crcTxt[0] = p->buf[p->length - 2];
 	crcTxt[1] = p->buf[p->length - 1];
 	
 	crc = boCharToInt(crcTxt);
 /*	printf("crc[%02x %02x] = [%d]\n", crcTxt[0], crcTxt[1], crc); */ 
 	count = crc16modbus(msg, msg_len);
-	dbgout(" msg["); 
+/*	dbgout(" msg["); 
 	
 	for(; i < msg_len; i++) {
 		printf("%c", msg[i]);
 	}
 	dbgout("] ");
-	
+*/	
 	p->length = msg_len;
 	if(crc != count) p->status = ERR;
 	else p->status = ADD;

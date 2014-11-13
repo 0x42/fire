@@ -112,18 +112,27 @@ int bo_addll(struct bo_llsock *llist, int sock)
 	int ans = -1;
 	struct bo_sock *bs = NULL;
 	struct sockaddr_in addr;
-	char *ip;
 	socklen_t addr_len = sizeof(addr);
+
+	char ip[15] = "000.000.000.000";
+	char *ip_buf;
+	int ip_num[4] = {0};
 	int exec = -1;
 	/* опред ip адрес */
 	exec = getpeername(sock, (struct sockaddr *)&addr, &addr_len);
-	if(exec == 0) {
-		ip = inet_ntoa(addr.sin_addr);
-	} else {
-		ip = "000.000.000.000";
-	}
 	
 	addr_len = 15;
+	if(exec == 0) {
+		ip_buf = inet_ntoa(addr.sin_addr);
+		str_splitInt(ip_num, ip_buf, ".");
+		sprintf(ip, "%03d.%03d.%03d.%03d", 
+			ip_num[0],
+			ip_num[1],
+			ip_num[2],
+			ip_num[3]);
+		
+	}
+	
 	i = getFreeInd(llist);
 	if(i != -1) {
 		bs = llist->val + i;

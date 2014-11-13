@@ -3,13 +3,13 @@
 void dbgout(char *msg, ...)
 {
 	/*выставить в -1 если не нужно выводить в stdout*/
-	int flgShow = 1; 
+	int flgShow = -1; 
 	/* указывает на очередной безымян-ый аргумент */
 	va_list ap; 
 	char *p, *sval;
 	int ival; 
 	double dval;
-	if(flgShow) {
+	if(flgShow == 1) {
 		va_start(ap, msg); // устанав ap на 1-й безымян-ый аргумент
 		for(p = msg; *p; p++) {
 			if(*p != '%') {
