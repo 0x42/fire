@@ -10,24 +10,26 @@
 #include "ort.h"
 
 
-/** Размер буфера для строки файла таблицы маршрутов */
-#define RT_LSIZE 10
+/** Размер буфера для строки файла таблицы маршрутов
+ * "123:192.168.100.127:2"
+ */
+#define RT_LSIZE 21
 
 /** Плохой ключ */
 #define RT_IKEY (char *)-1
 
 
 /**
- * str_split - Преобразовать входящую строку в массив типа int.
+ * str_splitInt - Преобразовать входящую строку в массив типа int.
  * @buf:  Указатель на буфер с результатом.
  * @istr: Строка для разбора.
  * @dlm:  Разделитель.
  *
- * Пример: строка - "203:004:1", результат в буфере - {203, 4, 1} 
+ * Пример: строка - "203:004:1", результат в буфере - {203, 4, 1}
  */
-static void str_split(int *buf, const char *istr, const char *dlm)
+void str_splitInt(int *buf, const char *istr, const char *dlm)
 {
-	char *str = strdup(istr);
+	char *str = str_dup(istr);
 	char *pch;
 	int i = 0;
 	
@@ -37,6 +39,48 @@ static void str_split(int *buf, const char *istr, const char *dlm)
 		buf[i++] = atoi(pch);
 		pch = strtok(NULL, dlm);
 	}
+	free(str);
+}
+
+/**
+ * str_splitRt - Преобразовать входящую строку в структуру rtbl.
+ * @rt:  Указатель на структуру.
+ * @istr: Строка для разбора.
+ * @dlm:  Разделитель.
+ *
+ */
+void str_splitRt(struct rtbl *rt, const char *istr, const char *dlm)
+{
+	char *str = str_dup(istr);
+	char *pch;
+	
+	pch = strtok(str, dlm);
+	rt->adr = atoi(pch);
+	pch = strtok(NULL, dlm);
+	strcpy(rt->ip, pch);
+	pch = strtok(NULL, dlm);
+	rt->port = atoi(pch);
+
+	free(str);
+}
+
+/**
+ * str_splitVal - Преобразовать значение, найденное по ключу, в структуру rtbl.
+ * @rt:  Указатель на структуру.
+ * @istr: Строка для разбора.
+ * @dlm:  Разделитель.
+ *
+ */
+void str_splitVal(struct rtbl *rt, const char *istr, const char *dlm)
+{
+	char *str = str_dup(istr);
+	char *pch;
+	
+	pch = strtok(str, dlm);
+	strcpy(rt->ip, pch);
+	pch = strtok(NULL, dlm);
+	rt->port = atoi(pch);
+
 	free(str);
 }
 
@@ -81,7 +125,7 @@ void rt_free(TOHT *ht)
 /**
  * rt_getstring - Получить значение строку по входящему ключу.
  * @ht:  Таблица для поиска.
- * @key: Ключ в виде - "node:adr".
+ * @key: Ключ в виде - "adr".
  * @def: Значение по умолчанию, если ничего не нашли.
  * @return   Указатель на строку которую нашли.
  *
@@ -98,20 +142,83 @@ static char *rt_getstring(TOHT *ht, const char *key, char *def)
 }
 
 /**
- * rt_getport - Получить порт RS485 по входящему ключу.
+ * rt_getsize - Получить размер хэш таблицы.
+ * @ht:  Хэш таблица.
+ *
+ * @return  ht->size.
+*/
+int rt_getsize(TOHT *ht)
+{
+	return ht->size;
+}
+
+
+/**
+ * rt_iskey - Проверка наличия ключа в хэш таблице.
+ * @ht:  Хэш таблица.
+ * @key: Ключ.
+ *
+ * @return  1- если ключ найден, иначе - 0.
+*/
+int rt_iskey(TOHT *ht, const char *key)
+{
+	if (key == NULL) return 0;
+	
+	if (get_key_index(ht, key) < ht->size)
+		/* Ключ найден */
+		return 1;
+	else
+		return 0;
+}
+
+/**
+ * rt_getkey - Получить ключ из хэш таблицы по индексу.
+ * @ht:  Хэш таблица.
+ * @idx: Индекс.
+ *
+ * @return  Если ключ найден получаем ключ ввиде строки, иначе - NULL.
+*/
+char *rt_getkey(TOHT *ht, int idx)
+{
+	if (idx < ht->size)
+		return ht->key[idx];
+	else
+		return NULL;
+}
+
+/**
+ * rt_getip - Получить значение IP по входящему ключу.
  * @ht:  Таблица для поиска.
- * @key: Ключ в виде - "node:adr".
- * @nf:  Значение, если ничего не нашли.
- * @return  Найденое значение порта.
+ * @key: Ключ в виде - "adr".
+ * @ip:  Указатель на буфер куда будет положен IP адрес.
  *
  */
-int rt_getport(TOHT *ht, const char *key, int nf)
+void rt_getip(TOHT *ht, const char *key, char *ip)
 {
-	char *str;
+	struct rtbl rt;
+	char *sval;
 
-	str = rt_getstring(ht, key, RT_IKEY);
-	if (str == RT_IKEY) return nf;
-	return atoi(str);
+	sval = rt_getstring(ht, key, "0:0");
+	str_splitVal(&rt, sval, ":");
+	strcpy(ip, rt.ip);
+}
+
+/**
+ * rt_getport - Получить значение порта RS485 по входящему ключу.
+ * @ht:  Таблица для поиска.
+ * @key: Ключ в виде - "adr".
+ * @return   Найденое значение порта.
+ *
+ */
+int rt_getport(TOHT *ht, const char *key)
+{
+	struct rtbl rt;
+	char *sval;
+
+	sval = rt_getstring(ht, key, "0:0");
+	str_splitVal(&rt, sval, ":");
+	
+	return rt.port;
 }
 
 /**
@@ -171,15 +278,14 @@ void rt_save(TOHT *ht, const char *rtname)
  * @rtname: Имя файла таблицы маршрутов.
  * @return  Указатель на таблицу.
  *
- * Таблица маршрутов (node:adr:port):
+ * Таблица маршрутов (adr:ip:port):
  * ---------
- * 013:022:2
- * 013:025:2
- * 013:140:1
+ * 022:192.168.1.13:2
+ * 025:192.168.1.13:2
+ * 140:192.168.1.13:1
  * ---------
  * что означает -
- *  network=192.168.0;
- *  узел=13 (ip=192.168.0.13);
+ *  ip=192.168.1.13
  *  RS485 порт 1 имеет устройство с адресом 140;
  *  RS485 порт 2 имеет устройства с адресами 22, 25.
  */
@@ -188,10 +294,11 @@ TOHT *rt_load(const char *rtname)
 	TOHT *ht;
 	FILE *in;
 
+	struct rtbl rt;
+	
 	char line [RT_LSIZE+1];
-	char key [8];
-	char val [2];
-	int buf [4];
+	char key [4];
+	char val [18];
 	
 	int err = 0;
 
@@ -231,9 +338,9 @@ TOHT *rt_load(const char *rtname)
 			/** Отбрасываем пустые строки */
 			continue;
 		
-		str_split(buf, line, ":");
-		sprintf(key, "%03d:%03d", buf[0], buf[1]);
-		sprintf(val, "%d", buf[2]);
+		str_splitRt(&rt, line, ":");
+		sprintf(key, "%03d", rt.adr);
+		sprintf(val, "%s:%d", rt.ip, rt.port);
 		err = ht_put(ht, key, val);
 		
 		if (err < 0) {

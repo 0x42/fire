@@ -45,7 +45,7 @@ static void *mem_reorg(void *ptr, int size, size_t st)
  *
  * Это аналог функции strdup().
 */
-static char *str_dup(const char *str)
+char *str_dup(const char *str)
 {
 	char *dstr;
 	
@@ -88,13 +88,13 @@ static unsigned int ht_hash(const char *key)
  *
  * Если ключ найден получаем индекс ключа, иначе - ht->size.
 */
-static int get_key_index(TOHT *ht, const char *key)
+int get_key_index(TOHT *ht, const char *key)
 {
 	unsigned hash = ht_hash(key);
 	int i;
 
 	for (i=0; i<ht->size; i++) {
-		if (ht->key[i] == NULL) continue ;
+		if (ht->key[i] == NULL) continue;
 		/* Сравнение хэшей */
 		if (hash == ht->hash[i]) {
 			/* Сравниваем строки для разрешения коллизий */
@@ -104,6 +104,32 @@ static int get_key_index(TOHT *ht, const char *key)
 		}
 	}
 	return ht->size;
+}
+
+/**
+ * ht_get_size - Получить размер хэш таблицы.
+ * @ht:  Хэш таблица.
+ *
+ * @return  ht->size.
+*/
+int ht_get_size(TOHT *ht)
+{
+	return ht->size;
+}
+
+/**
+ * ht_get_key - Получить ключ из хэш таблицы по индексу.
+ * @ht:  Хэш таблица.
+ * @idx: Индекс.
+ *
+ * @return  Если ключ найден получаем ключ ввиде строки, иначе - NULL.
+*/
+char *ht_get_key(TOHT *ht, int idx)
+{
+	if (idx < ht->size)
+		return ht->key[idx];
+	else
+		return NULL;
 }
 
 /**
@@ -135,7 +161,7 @@ static int modify_value(TOHT *ht, const char *key, const char *val)
  * @val: Новое значение.
  *
  * Если добавление нового значения прошло успешно, то выходим с
- * результатом 0. Иначе - выходим с результатом -1.
+ * результатом 0. Иначе - выходим с результатом 1.
 */
 static int add_value(TOHT *ht, const char *key, const char *val)
 {
@@ -164,7 +190,7 @@ static int add_value(TOHT *ht, const char *key, const char *val)
 	}
 
 	ht->key[i] = str_dup(key);
-	ht->val[i] = val ? str_dup(val) : NULL;
+	ht->val[i] = val ? str_dup(val) : NULL;	
 	ht->hash[i] = hash;
 	ht->n++;
 	return 0;

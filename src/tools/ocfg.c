@@ -269,7 +269,7 @@ int cfg_parse_line(TOHT *ht,
 /**
  * cfg_load - Загрузка и разбор конфигурационного файла в таблицу.
  * @cfgname: Имя конфигурационного файла.
- * @return  [NULL] - error; Указатель на таблицу.
+ * @return  Указатель на таблицу или NULL при неудаче.
  *
 */
 TOHT *cfg_load(const char *cfgname)

@@ -27,8 +27,15 @@ typedef struct _oht_ {
 	unsigned *hash;  /** Список хэш-значений для ключей */
 } TOHT;
 
+
+char *str_dup(const char *str);
+
 TOHT *ht_new(int size);
 void ht_free(TOHT *ht);
+
+int ht_get_size(TOHT *ht);
+int get_key_index(TOHT *ht, const char *key);
+char *ht_get_key(TOHT *ht, int idx);
 
 char *ht_get(TOHT *ht, const char *key, char *def);
 int ht_put(TOHT *ht, const char *key, const char *val);
