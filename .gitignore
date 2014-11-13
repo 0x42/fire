@@ -12,6 +12,7 @@ src/**/*.*.swp
 src/**/*.*.gch
 test/stress/*.o
 test/stress/stress
+test/master/stress_1/stress
 test/stress/tcpnet
 build/
 nbproject/

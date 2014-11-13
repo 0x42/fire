@@ -119,13 +119,11 @@ int bo_addll(struct bo_llsock *llist, int sock)
 	exec = getpeername(sock, (struct sockaddr *)&addr, &addr_len);
 	if(exec == 0) {
 		ip = inet_ntoa(addr.sin_addr);
-		
-		if(addr_len > 15) addr_len = 15;
 	} else {
-		addr_len = 7;
-		ip = "0.0.0.0";
+		ip = "000.000.000.000";
 	}
 	
+	addr_len = 15;
 	i = getFreeInd(llist);
 	if(i != -1) {
 		bs = llist->val + i;

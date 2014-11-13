@@ -116,6 +116,7 @@ void *recvTR(void *arg)
 		ans = -1;
 		goto end;
 	}
+	printf("select = [%d]\n", exec);
 	int find = -1;
 	char *key = NULL; char *val = NULL; char *row;
 	char ppp[22]; char ddd[22];
@@ -158,7 +159,7 @@ void *recvTR(void *arg)
 
 void *recvTRNULL(void *arg)
 {
-		int ans = 1;
+	int ans = 1;
 	int exec = -1;
 	int i = 0, out1_n = 0;
 	fd_set rset;
@@ -176,7 +177,9 @@ void *recvTRNULL(void *arg)
 	while(out1_n < tr_n) {
 		FD_ZERO(&rset);
 		FD_SET(out1, &rset);
-		exec = select(1024, &rset, NULL, NULL, NULL);
+		printf(".\n");
+
+		exec = select(out1 + 1, &rset, NULL, NULL, NULL);
 		if(exec == -1) { printf("select err[%s]\n", strerror(errno)); break;}
 		else {
 			if(FD_ISSET(out1, &rset) == 1) {
@@ -290,7 +293,11 @@ int main()
 	printf(">RECV NULL ...\n");
 	sleep(1);
 	bo_closeSocket(out2);
+	arg.out2 = -1;
+	
+	arg.out1 = out1;
 	pthread_create(&thr1, NULL, &recvTRNULL, (void *)&arg);
+	
 	pthread_join(thr1, (void *)&thr_ans);
 	
 	if(thr_ans == -1) {
