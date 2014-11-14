@@ -1,10 +1,10 @@
 TARGET		     = build/master
 
-#CC = arm-elf-gcc
-#LDFLAGS	     = -Wl, -elf2flt
+CC = arm-elf-gcc
+LDFLAGS	     = -Wl, -elf2flt -lpthread
 
-CC = gcc
-LDFLAGS		     = -lpthread
+#CC = gcc
+#LDFLAGS		     = -lpthread
 
 CFLAGS		     = -Wall -c -g
 
