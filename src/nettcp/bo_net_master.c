@@ -160,7 +160,6 @@ static void m_servWork(int sock_in, int sock_out,
 	int exec = -1;
 	/* максимально возможной номер дескриптора для сокета*/
 	int maxdesc = FD_SETSIZE;
-	maxdesc = 30;
 	fd_set r_set, w_set, e_set;
 	/* таймер на события */
 	struct timeval tval;
