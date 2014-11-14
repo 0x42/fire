@@ -87,7 +87,30 @@ struct ParamSt {
 	unsigned char *buffer;
 	int bufSize;
 };
-
+/* ----------------------------------------------------------------------------
+ * @brief	запуск сервера FIFO в потоке
+ * @port	порт сервера
+ * @fifo_len    размер очереди FIFO
+ * @queue_len   размер очереди на сокете
+ */
+void bo_fifo_thrmode(int port, int queue_len, int fifo_len)
+{
+	int sock = 0;
+	bo_log(" %s %s %s", "FIFO", "INFO", "START(THR mode) moxa_serv");
+	fifoconf.port      = port;
+	fifoconf.queue_len = queue_len;
+	fifoconf.fifo_len  = fifo_len;
+	
+	if( (sock = bo_servStart(fifoconf.port, fifoconf.queue_len)) != -1) {
+		if(bo_initFIFO(fifoconf.fifo_len) == 1) {
+			fifoServWork(sock); 
+			bo_delFIFO();
+		}
+		bo_closeSocket(sock);
+	}
+	
+	bo_log("%s %s %s", "FIFO", "INFO", "END	moxa_serv");
+}
 /* ----------------------------------------------------------------------------
  * @brief		Запуск сервера FIFO
  *			request: SET|GET|DEL|MEM
