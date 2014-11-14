@@ -395,6 +395,7 @@ static int m_recvClientMsg(int sock, TOHT *tr)
 	/* при передачи лога ПР придется увеличить до 1200 */
 	int bufSize = 80;
 	unsigned char buf[bufSize];
+	unsigned char ppp[33];
 	int t_msg = 0;
 	dbgout("m_recvClientMsg() sock is set[%d] \n", sock);
 	p.sock = sock;
@@ -403,6 +404,9 @@ static int m_recvClientMsg(int sock, TOHT *tr)
 	p.bufSize = bufSize;
 	p.length = 0;
 	t_msg = bo_master_core(&p);
+	memset(ppp, 0, 33);
+	memcpy(ppp, buf, p.length);
+	bo_log("recv[%s]", ppp);
 	return t_msg;
 }
 
@@ -448,6 +452,7 @@ static void m_sendClientMsg(int sock, TOHT *tr, struct bo_llsock *list)
 				packet[p_len + 1] = cbuf[1];
 				p_len +=2;
 				exec = bo_sendSetMsg(sock, packet, p_len);
+				printf("send>%s\n", packet);
 				if(exec == -1) {
 					bo_getip_bysock(list, sock, ip);
 					bo_setflag_bysock(list, sock, -1);

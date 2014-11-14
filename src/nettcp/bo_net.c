@@ -238,6 +238,8 @@ int bo_crtSock(char *ip, unsigned int port, struct sockaddr_in *saddr)
 		 */
 		i = 1;
 		setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &i, sizeof(i));
+	} else {
+		bo_log("bo_crtSock() socket() errno[%s]", strerror(errno));
 	};
 	return sock;
 }

@@ -163,6 +163,15 @@ void *recvTR(void *arg)
 				printf("%c", TR[i][ii]);
 			}
 			printf("]\n");
+			bo_log(" ===== TAB FROM SERVER ===== ");
+			for(j = 0; j < p.route_tab->size; j++) {
+				key = *(p.route_tab->key + j);
+				if(key != NULL) {
+					val = *(p.route_tab->val + j);
+					bo_log("%d -> %s:%s", j, key, val);
+				}
+			}
+			bo_log(" ===== END TAB ROUTE   ===== ");
 			ans = -1;
 		}
 	}
@@ -260,6 +269,24 @@ void *recvTRNULL(void *arg)
 	}
 	end:
 	return (void *)ans;
+}
+
+int test_toht()
+{
+	TOHT *tab = ht_new(50);
+	int i = 0;
+	char key[4];
+	char val[18];
+	for(; i < tr_n; i++) {
+		memset(key, 0, 4);
+		memset(val, 0, 18);
+		memcpy(key, TR[i], 3);
+		memcpy(val, TR[i], 17);
+		ht_put(tab, key, val);
+	}
+	for(i = 0; i < tr_n; i++) {
+		
+	}
 }
 
 int main() 
