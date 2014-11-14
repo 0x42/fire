@@ -4,7 +4,7 @@ TARGET		     = build/master
 #LDFLAGS	     = -Wl, -elf2flt
 
 CC = gcc
-LDFLAGS		     = 
+LDFLAGS		     = -lpthread
 
 CFLAGS		     = -Wall -c -g
 

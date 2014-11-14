@@ -22,13 +22,18 @@ static struct FIFO {
 	int count;
 	int free;
 } fifo = {0};
+
+pthread_mutex_t fifo_lock = PTHREAD_MUTEX_INITIALIZER;
 /* ----------------------------------------------------------------------------
  * @brief	Вывод очереди FIFO
  */
 void bo_printFIFO() 
 {
-	int i = 0, j = 0;
-	struct BO_ITEM_FIFO *item_fifo;
+	/*
+		int i = 0, j = 0;
+		struct BO_ITEM_FIFO *item_fifo;
+	*/
+	pthread_mutex_lock(&fifo_lock);
 	printf("\n=========================================================\n");
 	printf("FIFO:\n itemN[%d]\nhead[%d]\ntail[%d]\nlast[%d]\ncount[%d]\nfree[%d]\n",
 		   fifo.itemN, fifo.head, fifo.tail, fifo.last, fifo.count, fifo.free);
@@ -46,6 +51,7 @@ void bo_printFIFO()
 	}
  */
 	printf("\n=========================================================\n");
+	pthread_mutex_unlock(&fifo_lock);
 }
 /* ----------------------------------------------------------------------------
  * @brief	Создаем очередь 
@@ -54,6 +60,7 @@ void bo_printFIFO()
  */
 int bo_initFIFO(int itemN)
 {
+	pthread_mutex_lock(&fifo_lock);
 	int ans = -1;
 	fifo.mem = (struct BO_ITEM_FIFO *)
 		malloc(sizeof(struct BO_ITEM_FIFO)*itemN);
@@ -67,6 +74,7 @@ int bo_initFIFO(int itemN)
 	fifo.free = itemN;
 	ans = 1;
 	exit:
+	pthread_mutex_unlock(&fifo_lock);
 	return ans;
 }
 /* ----------------------------------------------------------------------------
@@ -76,10 +84,13 @@ int bo_initFIFO(int itemN)
  *		[-1] - не коррект. значение size(больше макс допустимого 
  *			или меньше 1)
  */
-int  bo_addFIFO(unsigned char *val, int size) 
+int  bo_addFIFO(unsigned char *val, int size) /*THREAD SAFE*/ 
 {
 	int ans = -1;
 	struct BO_ITEM_FIFO *ptr = NULL;
+	
+	pthread_mutex_lock(&fifo_lock);
+	
 	if(val == NULL) goto exit;
 	if(size < 1) goto exit;
 	if(size > BO_FIFO_ITEM_VAL) goto exit;
@@ -97,7 +108,9 @@ int  bo_addFIFO(unsigned char *val, int size)
 	} else {
 		ans = 0;
 	}
+	
 	exit:
+	pthread_mutex_unlock(&fifo_lock);
 	return ans;
 }
 /* ----------------------------------------------------------------------------
@@ -106,7 +119,7 @@ int  bo_addFIFO(unsigned char *val, int size)
  * @bufSize     размер буфера
  * @return	[-1] - нет данных в очереди [N] - размер данных
  */
-int bo_getFIFO(unsigned char *buf, int bufSize)
+int bo_getFIFO(unsigned char *buf, int bufSize) /*NO THREAD SAFE*/
 {
 	int ans = -1;
 	struct BO_ITEM_FIFO *ptr = NULL;
@@ -125,10 +138,25 @@ int bo_getFIFO(unsigned char *buf, int bufSize)
 	}
 	return ans;
 }
+
+/* ----------------------------------------------------------------------------
+ * @brief	берем голову удал голову
+ */
+int bo_getFifoVal(unsigned char *buf, int bufSize) /*THREAD SAFE*/
+{
+	int ans = -1;
+	pthread_mutex_lock(&fifo_lock);
+	if(fifo.mem != NULL) {
+		ans = bo_getFIFO(buf, bufSize);
+		if(ans != -1) bo_delHead();
+	}
+	pthread_mutex_unlock(&fifo_lock);
+	return ans;
+}
 /* ----------------------------------------------------------------------------
  * @brief		Делаем головой очереди следующий элемент
  */
-void bo_delHead()
+void bo_delHead() /*NO THREAD SAFE*/
 {
 	if(fifo.count != 0) {
 		memset(fifo.mem+fifo.head, 0, sizeof(struct BO_ITEM_FIFO));
@@ -157,6 +185,8 @@ int bo_getCount()
  */
 void bo_delFIFO()
 {
+	pthread_mutex_lock(&fifo_lock);
+
 	free(fifo.mem);
 	fifo.mem = NULL;
 	fifo.head = 0;
@@ -164,4 +194,7 @@ void bo_delFIFO()
 	fifo.last = 0;
 	fifo.count = 0;
 	fifo.free = 0;
+	
+	pthread_mutex_unlock(&fifo_lock);
+
 }
