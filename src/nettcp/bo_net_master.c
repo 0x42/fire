@@ -316,8 +316,6 @@ static void m_workClient(struct bo_llsock *list_in, struct bo_llsock *list_out,
 		exec = select(max_desc, NULL, w_set, NULL, &tval);
 		if(exec > 0 ) {
 			dbgout("\nSEND CHANGE TO:");
-			struct timeval begin, end;
-			gettimeofday(&begin, NULL);
 			i = bo_get_head(list_out);
 			while(i != -1) {
 				exec = bo_get_val(list_out, &val, i);
@@ -330,10 +328,6 @@ static void m_workClient(struct bo_llsock *list_in, struct bo_llsock *list_out,
 			}
 			
 			dbgout("\n");
-			gettimeofday(&end, NULL);
-			double diff_sec = difftime(end.tv_sec, begin.tv_sec)*1000000;
-			double diff_milli = difftime(end.tv_usec, begin.tv_usec);
-			printf("send time:[%f] \n", (diff_sec+diff_milli)/1000000);
 		}
 	}
 	dbgout("\n");

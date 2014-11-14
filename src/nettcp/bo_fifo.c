@@ -60,8 +60,8 @@ void bo_printFIFO()
  */
 int bo_initFIFO(int itemN)
 {
-	pthread_mutex_lock(&fifo_lock);
 	int ans = -1;
+	pthread_mutex_lock(&fifo_lock);
 	fifo.mem = (struct BO_ITEM_FIFO *)
 		malloc(sizeof(struct BO_ITEM_FIFO)*itemN);
 	if(fifo.mem == NULL) goto exit;
