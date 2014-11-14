@@ -271,9 +271,8 @@ void *recvTRNULL(void *arg)
 	return (void *)ans;
 }
 
-int test_toht()
+void test_toht_set_chk(TOHT *tab)
 {
-	TOHT *tab = ht_new(50);
 	int i = 0;
 	char key[4];
 	char val[18];
@@ -281,12 +280,111 @@ int test_toht()
 		memset(key, 0, 4);
 		memset(val, 0, 18);
 		memcpy(key, TR[i], 3);
-		memcpy(val, TR[i], 17);
+		memcpy(val, (TR[i]+4), 17);
 		ht_put(tab, key, val);
 	}
+	int j = 0, rrr, find;
+	char ppp[22], ddd[22];
+	char *row; char *kk; char *vv;
 	for(i = 0; i < tr_n; i++) {
+		rrr = 0;
+		row = TR[i]; find = -1;
+		memset(ddd, 0, 22);
+		memcpy(ddd, row, 21);
 		
+		for(j = 0; j < tab->size; j++ ) {
+			kk = *(tab->key + j);
+			if(kk != NULL) {
+				memset(ppp, 0, 22);
+				vv = *(tab->val + j);
+				memcpy(ppp, kk, 3);
+				ppp[3] = ':';
+				memcpy(ppp + 4, vv, strlen(val));
+				if(strstr(ppp, ddd)) {
+					find = 1;
+				}
+				rrr++;
+			}
+		}
+		if(find != 1) {
+			int ii;
+			printf(" ERROR don't get from tab: [");
+			for(ii = 0; ii < 21; ii++) {
+				printf("%c", TR[i][ii]);
+			}
+			printf("]\n");
+		/*	printf(" ===== TAB FROM SERVER ===== \n");
+			for(j = 0; j < tab->size; j++) {
+				kk = *(tab->key + j);
+				if(kk != NULL) {
+					vv = *(tab->val + j);
+					printf("%d ->%s:%s\n", j, kk, vv);
+				}
+			}
+		 */
+		}
 	}
+	if(rrr != tr_n) printf("ERROR bad size TAB\n");
+}
+void test_toht_setN_chk(TOHT *tab)
+{
+	int i = 0;
+	char key[4];
+	char val[18];
+	
+	for(; i < tr_n; i++) {
+		memset(key, 0, 4);
+		memcpy(key, TR_N[i], 3);		
+		ht_put(tab, key, "NULL");
+	}
+	int j = 0, rrr, find;
+	char ppp[22], ddd[9];
+	char *row; char *kk; char *vv;
+	for(i = 0; i < tr_n; i++) {
+		rrr = 0;
+		row = TR_N[i]; find = -1;
+		memset(ddd, 0, 9);
+		memcpy(ddd, row, 8);
+		
+		for(j = 0; j < tab->size; j++ ) {
+			kk = *(tab->key + j);
+			if(kk != NULL) {
+				memset(ppp, 0, 22);
+				vv = *(tab->val + j);
+				memcpy(ppp, kk, 3);
+				ppp[3] = ':';
+				memcpy(ppp + 4, vv, strlen(val));
+				if(strstr(ppp, ddd)) {
+					find = 1;
+				}
+				rrr++;
+			}
+		}
+		if(find != 1) {
+			int ii;
+			printf(" ERROR don't get from tab null: [");
+			for(ii = 0; ii < 10; ii++) {
+				printf("%c", TR_N[i][ii]);
+			}
+			printf("]\n");
+			printf(" ===== TAB ===== \n");
+			for(j = 0; j < tab->size; j++) {
+				kk = *(tab->key + j);
+				if(kk != NULL) {
+					vv = *(tab->val + j);
+					printf("%d ->%s:%s\n", j, kk, vv);
+				}
+			} 
+			break;
+		}
+	}
+}
+int test_toht()
+{
+	TOHT *tab = ht_new(50);
+	test_toht_set_chk(tab);
+	test_toht_setN_chk(tab);
+	test_toht_set_chk(tab);
 }
 
 int main() 
@@ -298,6 +396,8 @@ int main()
 	struct thr_arg arg;
 	gen_tbl_crc16modbus();
 	init_TR();
+	printf("test_toht\n");
+	test_toht();
 	printf("STRESS ... RUN \n");
 	
 	in1 = bo_setConnect("127.0.0.1", 8890);
