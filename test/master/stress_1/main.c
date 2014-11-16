@@ -3,14 +3,38 @@
 #include <sys/select.h>
 #include <pthread.h>
 #include <time.h>
+#include <mcheck.h>
 
 #include "../../../src/tools/ocrc.h"
 #include "../../../src/tools/oht.h"
 #include "../../../src/nettcp/bo_net_master_core.h"
 
-char TR[100][23];
-char TR_N[100][10];
-int tr_n = 100;
+char TR[10][23];
+char TR_N[10][10];
+int tr_n = 10;
+
+char TT[10][21] = {"000:127.000.000.001:1",
+		"001:127.000.000.001:1",
+		"002:127.000.000.001:1",
+		"003:127.000.000.001:1",
+		"004:127.000.000.001:1",
+		"005:127.000.000.001:1",
+		"006:127.000.000.001:1",
+		"007:127.000.000.001:1",
+		"008:127.000.000.001:1",
+		"009:127.000.000.001:1"};
+
+char TT_N[10][8] = {"000:NULL",
+		"001:NULL",
+		"002:NULL",
+		"003:NULL",
+		"004:NULL",
+		"005:NULL",
+		"006:NULL",
+		"007:NULL",
+		"008:NULL",
+		"009:NULL"};
+int tt_n = 10;
 
 struct thr_arg {
 	int out1;
@@ -118,7 +142,7 @@ void *recvTR(void *arg)
 	gettimeofday(&end, NULL);
 	double diff_sec = difftime(end.tv_sec, begin.tv_sec) * 1000000;
 	double diff_milli = difftime(end.tv_usec, begin.tv_usec);
-	printf("send N pack[%d]time:[%f] ", tr_n*2, (diff_sec + diff_milli)/1000000);
+	printf("recv N pack[%d]time:[%f] ", (out1_n+out2_n), (diff_sec + diff_milli)/1000000);
 	
 	struct timeval tval;
 	tval.tv_sec = 1;
@@ -132,7 +156,7 @@ void *recvTR(void *arg)
 		ans = -1;
 		goto end;
 	}
-	printf("select = [%d]\n", exec);
+
 	int find = -1;
 	char *key = NULL; char *val = NULL; char *row;
 	char ppp[22]; char ddd[22];
@@ -200,10 +224,12 @@ void *recvTRNULL(void *arg)
 	p.bufSize = 50;
 	struct timeval begin, end;
 	gettimeofday(&begin, NULL);
+	printf("recvTRNULL -- recv:");
 	while(out1_n < tr_n) {
+		printf(".");
 		FD_ZERO(&rset);
 		FD_SET(out1, &rset);
-		exec = select(out1 + 1, &rset, NULL, NULL, NULL);
+		exec = select(1024, &rset, NULL, NULL, NULL);
 		if(exec == -1) { printf("select err[%s]\n", strerror(errno)); break;}
 		else {
 			if(FD_ISSET(out1, &rset) == 1) {
@@ -214,10 +240,12 @@ void *recvTRNULL(void *arg)
 			}		
 		}
 	}
+	printf("\n");
+	
 	gettimeofday(&end, NULL);
 	double diff_sec = difftime(end.tv_sec, begin.tv_sec)*1000000;
 	double diff_milli = difftime(end.tv_usec, begin.tv_usec);
-	printf("send N pack[%d]time:[%f] ", tr_n, (diff_sec+diff_milli)/1000000);
+	printf("recv N pack[%d]time:[%f] ", out1_n, (diff_sec+diff_milli)/1000000);
 	
 	struct timeval tval;
 	tval.tv_sec = 1;
@@ -271,123 +299,62 @@ void *recvTRNULL(void *arg)
 	return (void *)ans;
 }
 
+void test_print_tab(TOHT *tab)
+{
+	char *kk; char *vv;
+	printf("==== TAB ROUTE ====\n");
+	int j;
+	for(j = 0; j < tab->size; j++ ) {
+		kk = *(tab->key + j);
+		if(kk != NULL) {
+			vv = *(tab->val + j);
+			printf("[%s:%s]\n", kk, vv);
+		}
+	}
+	printf("==== END TAB ====\n");
+
+}
+
 void test_toht_set_chk(TOHT *tab)
 {
-	int i = 0;
-	char key[4];
-	char val[18];
-	for(; i < tr_n; i++) {
+	int i = 0; char key[4];	char val[18];
+	for(; i < tt_n; i++) {
 		memset(key, 0, 4);
 		memset(val, 0, 18);
-		memcpy(key, TR[i], 3);
-		memcpy(val, (TR[i]+4), 17);
+		memcpy(key, TT[i], 3);
+		memcpy(val, (TT[i]+4), 17);
 		ht_put(tab, key, val);
 	}
-	int j = 0, rrr, find;
-	char ppp[22], ddd[22];
-	char *row; char *kk; char *vv;
-	for(i = 0; i < tr_n; i++) {
-		rrr = 0;
-		row = TR[i]; find = -1;
-		memset(ddd, 0, 22);
-		memcpy(ddd, row, 21);
-		
-		for(j = 0; j < tab->size; j++ ) {
-			kk = *(tab->key + j);
-			if(kk != NULL) {
-				memset(ppp, 0, 22);
-				vv = *(tab->val + j);
-				memcpy(ppp, kk, 3);
-				ppp[3] = ':';
-				memcpy(ppp + 4, vv, strlen(val));
-				if(strstr(ppp, ddd)) {
-					find = 1;
-				}
-				rrr++;
-			}
-		}
-		if(find != 1) {
-			int ii;
-			printf(" ERROR don't get from tab: [");
-			for(ii = 0; ii < 21; ii++) {
-				printf("%c", TR[i][ii]);
-			}
-			printf("]\n");
-		/*	printf(" ===== TAB FROM SERVER ===== \n");
-			for(j = 0; j < tab->size; j++) {
-				kk = *(tab->key + j);
-				if(kk != NULL) {
-					vv = *(tab->val + j);
-					printf("%d ->%s:%s\n", j, kk, vv);
-				}
-			}
-		 */
-		}
-	}
-	if(rrr != tr_n) printf("ERROR bad size TAB\n");
-}
-void test_toht_setN_chk(TOHT *tab)
-{
-	int i = 0;
-	char key[4];
-	char val[18];
 	
-	for(; i < tr_n; i++) {
+	printf("after set ... \n");
+	test_print_tab(tab);
+	for(i = 0; i < tt_n; i++ ) {
 		memset(key, 0, 4);
-		memcpy(key, TR_N[i], 3);		
+		memcpy(key, TT_N[i], 3);
 		ht_put(tab, key, "NULL");
 	}
-	int j = 0, rrr, find;
-	char ppp[22], ddd[9];
-	char *row; char *kk; char *vv;
-	for(i = 0; i < tr_n; i++) {
-		rrr = 0;
-		row = TR_N[i]; find = -1;
-		memset(ddd, 0, 9);
-		memcpy(ddd, row, 8);
-		
-		for(j = 0; j < tab->size; j++ ) {
-			kk = *(tab->key + j);
-			if(kk != NULL) {
-				memset(ppp, 0, 22);
-				vv = *(tab->val + j);
-				memcpy(ppp, kk, 3);
-				ppp[3] = ':';
-				memcpy(ppp + 4, vv, strlen(val));
-				if(strstr(ppp, ddd)) {
-					find = 1;
-				}
-				rrr++;
-			}
-		}
-		if(find != 1) {
-			int ii;
-			printf(" ERROR don't get from tab null: [");
-			for(ii = 0; ii < 10; ii++) {
-				printf("%c", TR_N[i][ii]);
-			}
-			printf("]\n");
-			printf(" ===== TAB ===== \n");
-			for(j = 0; j < tab->size; j++) {
-				kk = *(tab->key + j);
-				if(kk != NULL) {
-					vv = *(tab->val + j);
-					printf("%d ->%s:%s\n", j, kk, vv);
-				}
-			} 
-			break;
-		}
+	
+	printf("after set null ... \n");
+	test_print_tab(tab);
+	for(i = 0; i < tt_n; i++) {
+		memset(key, 0, 4);
+		memset(val, 0, 18);
+		memcpy(key, TT[i], 3);
+		memcpy(val, (TT[i]+4), 17);
+		ht_put(tab, key, val);
 	}
+	
+	printf("after set ... \n");
+	test_print_tab(tab);
 }
+
 int test_toht()
 {
 	TOHT *tab = ht_new(50);
 	test_toht_set_chk(tab);
-	test_toht_setN_chk(tab);
-	test_toht_set_chk(tab);
 }
 
-int main() 
+void one_row_one_set()
 {
 	int blk = -1;
 	int in1 = -1, in2 = -1, out1 = -1, out2= -1;
@@ -396,9 +363,8 @@ int main()
 	struct thr_arg arg;
 	gen_tbl_crc16modbus();
 	init_TR();
-	printf("test_toht\n");
-	test_toht();
-	printf("STRESS ... RUN \n");
+	
+	printf("STRESS SEND ONE ROW ONE SET ... RUN \n");
 	
 	in1 = bo_setConnect("127.0.0.1", 8890);
 	if(in1 == -1) { printf("in1 connect ... "); goto error; }
@@ -406,7 +372,7 @@ int main()
 	in2 = bo_setConnect("127.0.0.1", 8890);
 	if(in2 == -1) { printf("in2 connect ... "); goto error; }
 
-	printf(">CONNECT in1, in2  ... ok\n");
+	printf(">CONNECT in1[%d], in2[%d]  ... ok\n", in1, in2);
 
 	printf(">SEND TR in1 ... ");
 	exec = sendTR(in1);
@@ -419,7 +385,7 @@ int main()
 
 	out2 = bo_setConnect("127.0.0.1", 8891);
 	if(out2 == -1) { printf("out2 connect ..."); goto error; }
-	printf(">CONNECT out1, out2 ... ok\n");
+	printf(">CONNECT out1[%d], out2[%d] ... ok\n", out1, out2);
 	
 	arg.out1 = out1;
 	arg.out2 = out2;
@@ -436,14 +402,16 @@ int main()
 	printf(">RECV OK \n");
 
 	/* ----------------------------------------- */
-	printf("DISCONNECT out2 ...\n");
+	printf("DISCONNECT out2[%d] ...\n", out2);
 	bo_closeSocket(out2);
 	arg.out2 = -1;
 	arg.out1 = out1;
-	recvNullTab(&arg);
+//	recvNullTab(&arg);
 	
-	printf("DISCONNECT out1 ...\n");
+	printf("DISCONNECT out1[%d] ...\n", out1);
 	bo_closeSocket(out1);
+	sleep(5);
+	
 	printf(">SEND TR in1 ... ");
 	exec = sendTR(in1);
 	if(exec == -1) printf("ERROR\n");
@@ -476,6 +444,34 @@ int main()
 		printf("ERROR\n");
 	}
 	printf("STRESS ... END \n");
+}
+
+void send_tab_in_one_packet() 
+{
+	printf("STRESS SEND TAB IN SEND \n");
+	TOHT *tr = ht_new(10);
+	char buf[BO_MAX_TAB_BUF] = {0};
+	int len = 0; int i = 0;
+	
+	ht_put(tr, "000", "NULL");
+	ht_put(tr, "001", "127.001.000.001:1");
+	ht_put(tr, "020", "NULL");
+	ht_put(tr, "100", "255.255.255.255:2");
+	ht_put(tr, "102", "NULL");
+	
+	len = bo_master_crtPacket(tr, buf);
+	printf("buf[%d] = [", len);
+	for(; i < len; i++) {
+		printf("%c",buf[i]);
+	}
+	printf("]\n");
+	printf("END STRESS\n");
+}
+
+int main() 
+{
+//	one_row_one_set();
+	send_tab_in_one_packet();
 }
 
 void recvNullTab(struct thr_arg *arg) 

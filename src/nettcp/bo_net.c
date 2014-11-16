@@ -1,4 +1,7 @@
 #include "bo_net.h"
+
+static int bo_sendXXXMsg(int sock, char *head, char *buf, int dataSize);
+
 /*
  * @brief		откр сокет
  * @return		возвращает socket или -1 вслучае ошибки 
@@ -166,34 +169,50 @@ error:
 
 /* ----------------------------------------------------------------------------
  * @brief	устанав соед с узлом -> отпр SET|LEN|DATA -> ждем ответ OK 
+ *					
  * @return	[-1] - error; [1] - OK  
  */
 int bo_sendSetMsg(int sock, char *data, unsigned int dataSize)
 {
 	int ans  = -1;
-	int exec = -1;
 	char *head = "SET";
+	ans = bo_sendXXXMsg(sock, head, data, dataSize);
+	return ans;
+}
+/* @brief	устанав соед с узлом -> отпр TAB|LEN|DATA -> ждем ответ OK */
+int bo_sendTabMsg(int sock, char *data, unsigned int dataSize)
+{
+	int ans  = -1;
+	char *head = "TAB";
+	ans = bo_sendXXXMsg(sock, head, data, dataSize);
+	return ans;
+}
+
+static int bo_sendXXXMsg(int sock, char *head, char *data, int dataSize)
+{
+	int ans  = -1;
+	int exec = -1;
 	unsigned char len[2] = {0};
 	char buf[4] = {0};
 	
 	boIntToChar(dataSize, len);
 	exec = bo_sendAllData(sock, (unsigned char*)head, 3);
 	if(exec == -1) {
-		bo_log("bo_sendSetMsg() %s send[head] errno[%s]",
+		bo_log("bo_sendXXXMsg() %s send[head] errno[%s]",
 			"WARN",
 			strerror(errno));
 		goto end;
 	}
 	exec = bo_sendAllData(sock, len, 2);
 	if(exec == -1) {
-		bo_log("bo_sendSetMsg() %s send[len] errno[%s]",
+		bo_log("bo_sendXXXMsg() %s send[len] errno[%s]",
 			"WARN",
 			strerror(errno));
 		goto end;
 	}
 	exec = bo_sendAllData(sock, (unsigned char*)data, dataSize);
 	if(exec == -1) {
-		bo_log("bo_sendSetMsg() %s send[data] errno[%s]",
+		bo_log("bo_sendXXXMsg() %s send[data] errno[%s]",
 			"WARN",
 			strerror(errno));
 		goto end;
@@ -201,20 +220,19 @@ int bo_sendSetMsg(int sock, char *data, unsigned int dataSize)
 
 	exec = bo_recvAllData(sock, (unsigned char*)buf, 3, 3);
 	if(exec == -1) {
-		bo_log("bo_sendSetMsg() %s recv ans errno[%s]",
+		bo_log("bo_sendXXXMsg() %s recv ans errno[%s]",
 			"WARN",
 			strerror(errno));
 	} else {
 		if(strstr(buf, "OK")) ans = 1;
 		else {
-			bo_log("bo_sendSetMsg() wait[OK] but recv[%s]:\n%s", 
+			bo_log("bo_sendXXXMsg() wait[OK] but recv[%s]:\n%s", 
 				buf, "data don't send to client.");
 		}
 	}
 	end:
 	return ans;
 }
-
 /* ----------------------------------------------------------------------------
  * @brief	созд сокет 
  */

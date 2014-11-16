@@ -1,5 +1,7 @@
 #include "bo_net_master_core.h"
 
+STATIC int checkCRC(struct paramThr *p);
+
 static void coreReadHead(struct paramThr *p);
 static void coreSet	(struct paramThr *p);
 static void coreQuit    (struct paramThr *p);
@@ -7,12 +9,15 @@ static void coreOk	(struct paramThr *p);
 static void coreErr     (struct paramThr *p);
 static void coreAdd	(struct paramThr *p);
 static void coreReadCRC (struct paramThr *p);
-
+static void coreTab	(struct paramThr *p);
+static void coreReadCRC_Tab (struct paramThr *p);
+STATIC void coreReadRow (struct paramThr *p);
 /* ----------------------------------------------------------------------------
  *	КОНЕЧНЫЙ АВТОМАТ
  */
 static char *coreStatusTxt[] = {"READHEAD", "SET", "QUIT", "ANSOK",
-				  "ERR", "ADD", "READCRC"};
+				"ERR", "ADD", "READCRC", "TAB", 
+				"READCRC_TAB"};
 
 static void(*statusTable[])(struct paramThr *) = {
 	coreReadHead,
@@ -21,13 +26,16 @@ static void(*statusTable[])(struct paramThr *) = {
 	coreOk,
 	coreErr,
 	coreAdd,
-	coreReadCRC
+	coreReadCRC,
+	coreTab,
+	coreReadCRC_Tab,
+	coreReadRow
 };
 
 /* ----------------------------------------------------------------------------
  * @brief	принимаем данные от клиента SET - изменения для табл роутов
  *					    LOG - лог команд для устр 485
- * @return	[] тип пришедшего сообщения SET[1]
+ * @return	[] тип пришедшего сообщения SET/TAB[1]
  *					    LOG[2]
  *					    ERR[-1]
  */
@@ -42,6 +50,9 @@ int bo_master_core(struct paramThr *p)
 		if(p->status == SET) { 
 		/*	dbgout("KA[%s]", coreStatusTxt[p->status]);
 		*/	typeMSG = 1; 
+		}
+		if(p->status == TAB) {
+			typeMSG = 1;
 		}
 		if(p->status == ERR) { 
 		/*	dbgout("[%s]", coreStatusTxt[p->status]);
@@ -79,7 +90,7 @@ static void coreReadHead(struct paramThr *p)
 }
 
 /* ----------------------------------------------------------------------------
- * @brief	обработка SET|LEN|DATA
+ * @brief	обработка SET|LEN|DATA прием таблицы построчно
  *			  LEN - 2 byte
  *			  DATA - XXX:XXX.XXX.XXX.XXX:XXX
  */
@@ -116,27 +127,7 @@ static void coreSet(struct paramThr *p)
 
 static void coreReadCRC(struct paramThr *p)
 {
-	int crc = -1;
-	int count = -1;
-	unsigned char crcTxt[2] = {0};
-	char *msg = (char *)p->buf;
-	int msg_len = p->length - 2;
-/*	int i = 0; */
-	crcTxt[0] = p->buf[p->length - 2];
-	crcTxt[1] = p->buf[p->length - 1];
-	
-	crc = boCharToInt(crcTxt);
-/*	printf("crc[%02x %02x] = [%d]\n", crcTxt[0], crcTxt[1], crc); */ 
-	count = crc16modbus(msg, msg_len);
-/*	dbgout(" msg["); 
-	
-	for(; i < msg_len; i++) {
-		printf("%c", msg[i]);
-	}
-	dbgout("] ");
-*/	
-	p->length = msg_len;
-	if(crc != count) p->status = ERR;
+	if(checkCRC(p) == -1) p->status = ERR;
 	else p->status = ADD;
 }
 
@@ -180,4 +171,183 @@ static void coreOk(struct paramThr *p)
 	if(exec == -1) bo_log("coreOk() errno[%s]", strerror(errno));
 	p->status = QUIT;
 }
+/* ----------------------------------------------------------------------------
+ * @brief       проверка CRC
+ * @return	[1] - OK [-1] ERR  
+ */
+STATIC int checkCRC(struct paramThr *p) 
+{
+	int ans = -1;
+	int crc = -1;
+	int count = -1;
+	unsigned char crcTxt[2] = {0};
+	char *msg = (char *)p->buf;
+	int msg_len = p->length - 2;
+	crcTxt[0] = p->buf[p->length - 2];
+	crcTxt[1] = p->buf[p->length - 1];
+	
+	crc = boCharToInt(crcTxt);
+	count = crc16modbus(msg, msg_len);
+	p->length = msg_len;
+	
+	if(crc != count) ans = -1;
+	else ans = 1;
+	return ans;
+}
+/* ----------------------------------------------------------------------------
+ * @brief	обработка TAB|LEN|ROW|LEN|DATA|...ROW|LEN|DATA|CRC
+ * @buf		буфер куда будет записана таблица
+ * @return	[0]  - таблица пустая, пакет не сформ
+ *		[>0] - строка создана, размер пакета
+ *		[-1] - ошибка, все данные не помещ в буфер 
+ */
+int bo_master_crtPacket(TOHT *tr, char *buf)
+{
+	int ans = 0;
+	int i;
+	int ptr = 0; int data_len;
+	char *key, *val;
+	char row[50] = {0};
+	unsigned char lenStr[2] = {0};
+	
+	for(i = 0; i < tr->size; i++) {
+		key = *(tr->key + i);
+		if(key != NULL) {
+			/* check buf overflow */
+			if(ptr >= BO_MAX_TAB_BUF) {
+				ans = -1; 
+				goto end;
+			}
+			/* create |DATA| = {KEY:VAL} */
+			val = *(tr->val + i);
+			data_len = 0;
+			memset(row, 0, 50);
+			memcpy(row, key, 3);
+			row[3] = ':';
+			memcpy(row + 4, val, strlen(val));
+			data_len = 4 + strlen(val);
+			
+			/*ROW(3byte)+LEN(2byte)*/
+			boIntToChar(data_len, lenStr);
+			memcpy(buf + ptr, "ROW", 3);
+			ptr +=3;
+			memcpy(buf + ptr, lenStr, 2);
+			ptr +=2;
+			memcpy(buf + ptr, row, data_len);
+			ptr += data_len;
+		}
+	}
+	ans = ptr;
+	end:
+	return ans;
+}
+
+/* ----------------------------------------------------------------------------
+ * @brief	отправка таблицы одним пакетом
+ * @return	[-1] - ошибка
+ *		[1]  - успешно
+ */
+int bo_master_sendTab(int sock, TOHT *tr, char *buf)
+{
+	int ans = -1;
+	int len = -1;
+	len = bo_master_crtPacket(tr, buf);
+	if(len == -1) {
+		bo_log("bo_master_sendTab() error can't set all value in buffer");
+	} else if(len > 0) {
+		ans = bo_sendTabMsg(sock, buf, len);
+		if(ans == -1) {
+			bo_log("bo_master_sendTab() error when send Tab");
+		}
+	}
+	return ans;
+}
+
+/* ----------------------------------------------------------------------------
+ * @brief	обработка TAB|LEN|DATA прием таблицы построчно
+ *			  LEN - 2 byte
+ *			  DATA - ROW|LEN|DATA
+ */
+static void coreTab(struct paramThr *p)
+{
+	int length = 0;
+	int flag  = -1;
+	int count = 0;
+	length = bo_readPacketLength(p->sock);
+	/* длина сообщения минимум 11 байта = 9(ROW|LEN(2)|NULL) байт информации + 2 байта CRC */
+	memset(p->buf, 0, p->bufSize);
+	if((length > 10) & (length <= p->bufSize)) {
+		count = bo_recvAllData(p->sock, 
+				       p->buf,
+			               p->bufSize,
+				       length);
+		if((count > 0) & (count == length)) flag = 1; 
+		else {
+			bo_log("bo_net_master_core.c coreSet() count[%d]!=length[%d]", count, length);
+			bo_log("bo_net_master_core.c coreSet() buf[%s]", p->buf);
+		}
+	} else {
+		bo_log("bo_net_master_core.c coreTab() bad length[%d] ", 
+			length, 
+			p->bufSize);
+	}
+	if(flag == 1) {
+		p->length = length;
+		p->status = READCRC_TAB;
+	} else {
+		p->status = ERR;
+	}
+}
+
+static void coreReadCRC_Tab(struct paramThr *p)
+{
+	if(checkCRC(p) == -1) p->status = ERR;
+	else p->status = READROW;
+}
+
+STATIC void coreReadRow(struct paramThr *p)
+{
+	unsigned char *ptr;
+	char head[4] = {0};
+	unsigned char lenStr[2];
+	char row[18] = {0}; /* XXX.XXX.XXX.XXX:X*/
+	char addr485[4] = {0};
+	int len;
+	int i = 0, error = 1;
+	
+	ptr = p->buf;
+	while(i < p->length) {
+		memset(head, 0, 4);
+		memset(row, 0, 18);
+		memset(addr485, 0, 3);
+		memcpy(head, ptr, 3);
+		ptr += 3; i +=3;
+		if(!strstr(head, "ROW")) goto error;
+		memcpy(lenStr, ptr, 2);
+		ptr += 2; 
+		i+=2;
+		len = boCharToInt(lenStr);
+		if(len > 0) {
+			i+= len;
+			memcpy(addr485, ptr, 3);
+			ptr += 4; /* XXX + ':' (3 + 1) */
+			memcpy(row, ptr, len-4);
+			ptr += len-4;
+			printf("%s:%s\n", addr485, row);
+		} else goto error;
+	}
+	
+	if(error == -1) {
+error:
+		bo_log("coreReadRow() bad tab format recv");
+	}
+}
+
+
+
+
+
+
+
+
 

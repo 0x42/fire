@@ -401,6 +401,18 @@ static int m_recvClientMsg(int sock, TOHT *tr)
 	memset(ppp, 0, 33);
 	memcpy(ppp, buf, p.length);
 	bo_log("recv[%s]", ppp);
+	printf("recv[%s]\n", ppp);
+	
+	printf("==== TAB ROUTE ==== \n");
+	int i; char *key; char *val;
+	for(i = 0; i < tr->size; i++) {
+		key = *(tr->key + i);
+		if(key != NULL) {
+			val = *(tr->val + i);
+			printf("[%s:%s]\n", key, val);
+		}
+	}
+	printf("==== END TAB ==== \n");
 	return t_msg;
 }
 

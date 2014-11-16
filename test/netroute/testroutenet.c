@@ -49,22 +49,6 @@ TEST(route, simpleTest)
 	TEST_ASSERT_EQUAL(1, ans);
 }
 
-TEST(route, getTest)
-{
-	printf("getTest ... \n");
-	int ans = 1;
-	int exec = -1;
-	struct sockaddr_in saddr;
-	int sock = bo_crtSock("127.0.0.1", 8891, &saddr);
-	if(sock < 1) ans = -1;
-	exec = connect(sock, (struct sockaddr *)&saddr, sizeof(struct sockaddr));
-	if(exec != 0) printf("can't connect to 8891\n");
-	
-	sleep(1);
-	bo_closeSocket(sock);
-	TEST_ASSERT_EQUAL(1, ans);
-}
-
 TEST(route, sendgetTest)
 {
 	printf("sendgetTest() ...\n");
@@ -104,7 +88,6 @@ TEST(route, sendgetTest)
 	
 	packet[21] = txt[0];
 	packet[22] = txt[1];
-	bo_log("send msg ... test");
 	printf("send msg ..");
 	exec = bo_sendSetMsg(sock_out, packet, 23);
 	if(exec == -1) goto end;
@@ -121,60 +104,6 @@ TEST(route, sendgetTest)
 	end:
 	close(sock_in );
 	close(sock_out);	
-	TEST_ASSERT_EQUAL(1, ans);
-}
-
-
-TEST(route, send1get5Test)
-{
-	printf("send1get5Test() ...\n");
-	struct sockaddr_in saddr;
-	struct sockaddr_in saddr2, s2_a, s3_a, s4_a, s5_a;
-	int ans = -1;
-	int exec = -1;
-	int size = -1;
-	int sock_out = -1, sock_in = -1;
-	int s2, s3, s4, s5;
-	
-	char packet[23] = {0};
-	unsigned char txt[2] = {0};
-	char *msg  = "110:192.168.100.100:2";
-	char *msg2 = "123:192.168.123.123:1";
-	char *tab1[21] = {"110:192.168.100.100:2"};
-	char *tab2[21] = {"110:192.168.100.100:2", "123:192.168.123.123:1"};
-	
-	sock_in  = bo_crtSock("127.0.0.1", 8891, &saddr);
-	sock_out = bo_crtSock("127.0.0.1", 8890, &saddr2);
-
-	exec = connect(sock_out, (struct sockaddr *)&saddr2, sizeof(struct sockaddr));
-	if(exec != 0) printf("can't connect to 8890\n");
-	
-	exec = connect(sock_in,  (struct sockaddr *)&saddr,  sizeof(struct sockaddr));
-	if(exec != 0) printf("can't connect to 8891\n");
-	
-	/* Получаем данные которые уже есть в таблице и сравниваем */
-	exec = t_getMsg(sock_in, tab1, 1);
-	if(exec == -1) { printf("error when s_in recv data from tab \n"); goto end; }
-	
-	memcpy(packet, msg2, 21);
-	int crc = crc16modbus(msg2, 21);
-	boIntToChar(crc, txt);
-	
-	packet[21] = txt[0];
-	packet[22] = txt[1];
-
-	exec = bo_sendSetMsg(sock_out, packet, 23);
-	
-	if(exec == -1) goto end;
-	printf("send msg ... ok\n");
-	
-	exec = t_getMsg(sock_in, tab2, 2);
-	if(exec == -1) { printf("error when sock_in recv msg2 from tab \n"); goto end; }
-	exec = t_getMsg(sock_in, tab2, 2);
-	if(exec == -1) { printf("error when sock_in recv msg2-2 from tab \n"); goto end; }
-
-	ans = 1;
-	end:
 	TEST_ASSERT_EQUAL(1, ans);
 }
 
@@ -456,75 +385,6 @@ error:
 	printf("end\n");
 }
 
-TEST(route, stress1Test)
-{
-	int cl1_in  = bo_setConnect("127.0.0.1", 8890);
-	int cl1_out = bo_setConnect("127.0.0.1", 8891);
-	
-	int cl2_in  = bo_setConnect("127.0.0.1", 8890);
-	int cl2_out = bo_setConnect("127.0.0.1", 8891);
-	
-	char tab[100][23];
-	test_crtTR(tab, 100, 23);
-	
-	sendTR(cl1_in,  tab, 100);
-	recvTR(cl1_out, tab, 100);
-	recvTR(cl2_out, tab, 100);
-
-}
-
-void sendTR(int s, char **tab, int n)
-{
-	char *msg = NULL;
-	int exec = -1;
-	int i = 0;
-	for(;i < n; i++) {
-		msg = *(tab + i);
-		exec = bo_sendSetMsg(s, msg, 23);
-		if(exec == -1) {
-			printf("ERROR when SEND msg[%s]", msg);
-			break;
-		}
-	}
-}
-
-void recvTR(int sock, char **tab, int n)
-{
-	struct paramThr p;
-	char buf[30];
-	p.sock = sock;
-	p.buf = buf;
-	p.bufSize = 30;
-	p.route_tab = ht_new(10);
-	int exec = -1;
-	int i = 0;
-	struct timeval tval; tval.tv_sec = 0; tval.tv_usec = 100;
-	for(; i < n; i++) {
-		exec = bo_master_core(p);
-		if(exec == -1) {
-			printf("ERROR recvTR \n"); 
-			break;
-		}
-	}
-	exec = select(sock + 1, NULL, NULL, &tval);
-	if(exec != 0) {
-		printf("ERROR recvTR big tab in server\n");
-	}
-}
-
-void test_crtTR(char **tr, int n, int l)
-{
-	int i = 0;
-	int crc = 0;
-	char b[2] = {0};
-	for(; i < n; i++) {
-		sprintf(*(tr + i), "%03d:127.000.000.001:1", i);
-		crc = crc16modbus( *(tr+i), 21);
-		boIntToChar(crc, b);
-		*(tr+i)[l-2] = b[0];
-		*(tr+i)[l-1] = b[1];
-	}
-}
 
 /* send with blck signal */
 static int bo_sendAllData_NoSig(int sock, char *buf, int len)

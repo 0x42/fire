@@ -16,4 +16,4 @@ SRC1 = \
     main.c
 
 default:
-	$(CC) -lpthread $(INC_DIRS) $(SRC1) -o $(TARGET)
+	$(CC)  $(INC_DIRS) $(SRC1) -lpthread -o $(TARGET)
