@@ -405,6 +405,8 @@ static int m_recvClientMsg(int sock, TOHT *tr)
 	unsigned char buf[bufSize];
 	unsigned char ppp[33];
 	int t_msg = 0;
+	int i; char *key; char *val;
+
 	dbgout("m_recvClientMsg() sock is set[%d] \n", sock);
 	p.sock = sock;
 	p.route_tab = tr;
@@ -416,7 +418,6 @@ static int m_recvClientMsg(int sock, TOHT *tr)
 	memcpy(ppp, buf, p.length);
 	
 	printf("==== TAB ROUTE ==== \n");
-	int i; char *key; char *val;
 	for(i = 0; i < tr->size; i++) {
 		key = *(tr->key + i);
 		if(key != NULL) {
