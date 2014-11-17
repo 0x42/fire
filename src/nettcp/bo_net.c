@@ -1,6 +1,5 @@
 #include "bo_net.h"
 
-static int bo_sendXXXMsg(int sock, char *head, char *buf, int dataSize);
 
 /*
  * @brief		откр сокет
@@ -188,7 +187,7 @@ int bo_sendTabMsg(int sock, char *data, unsigned int dataSize)
 	return ans;
 }
 
-static int bo_sendXXXMsg(int sock, char *head, char *data, int dataSize)
+int bo_sendXXXMsg(int sock, char *head, char *data, int dataSize)
 {
 	int ans  = -1;
 	int exec = -1;

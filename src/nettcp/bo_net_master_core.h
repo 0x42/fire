@@ -9,7 +9,7 @@
 #include "../tools/dbgout.h"
 #include "../tools/ocrc.h"
 
-enum m_coreStatus {READHEAD = 0, SET, QUIT, ANSOK, ERR, ADD, READCRC, LOG,
+enum m_coreStatus {READHEAD = 0, SET, QUIT, ANSOK, ERR, ADD, READCRC,
                    TAB, READCRC_TAB, READROW};
 
 struct paramThr {
@@ -32,6 +32,13 @@ struct paramThr {
  */
 int bo_master_core(struct paramThr *p);
 
-#endif	/* BO_NET_MASTER_CORE_H */
+/* ----------------------------------------------------------------------------
+ * @brief	отправка таблицы одним пакетом
+ * @buf         буфер для формирования пакета size(BO_MAX_TAB_BUF) 
+ * @return	[-1] - ошибка
+ *		[1]  - успешно      
+ */
+int bo_master_sendTab(int sock, TOHT *tr, char *buf);
 
+#endif	/* BO_NET_MASTER_CORE_H */
 /* 0x42 */

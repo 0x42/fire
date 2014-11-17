@@ -18,6 +18,10 @@ TEST_TEAR_DOWN(route) {};
 
 static int bo_sendAllData_NoSig(int sock, char *buf, int len);
 static void *cltSendRoute(void *arg);
+static void *cltSendTabRoute(void *arg);
+static void *cltSendBadTabRoute(void *arg);
+
+
 void recvTR(int sock, char **tab, int n);
 void sendTR(int s, char **tab, int n);
 void test_crtTR(char **tr, int n, int l);
@@ -249,6 +253,166 @@ static void *cltSendRoute(void *arg)
 	bo_closeSocket(s_cl);
 	if(exec == -1) {printf("ERR cltSendRoute bo_closeSocket");goto error;}
 	ans = 1;
+	error:
+	return ans;
+}
+
+TEST(route, boMasterCoreTabTest)
+{
+	printf("boMasterCoreTabTest ... \n");
+	bo_log("boMasterCoreTabTest ... RUN");
+	TOHT *tab = ht_new(10);
+	struct paramThr p;
+	pthread_t thr_cl;
+	int s_serv = -1, s_cl = -1, res = -1, ans = -1; 
+	char buf[BO_MAX_TAB_BUF];
+	
+	s_serv = bo_servStart(9900, 2);
+	if(s_serv == -1) {printf("ERR bo_servStart()\n"); goto error; }
+	
+	res = pthread_create(&thr_cl, NULL, &cltSendTabRoute, NULL);
+	if(res != 0) { printf("ERR can't crt thread"); goto error;}
+	
+	char *err;
+	res = bo_waitConnect(s_serv, &s_cl, &err);
+	if(res == -1) {printf("ERR bo_waitConnect()\n");}
+	
+	p.sock = s_cl;
+	p.route_tab = tab;
+	p.buf  = buf;
+	p.bufSize = sizeof(buf);
+	res = bo_master_core(&p);
+	if(res == -1) { printf("ERR bo_master_core\n"); goto error;}
+	if(res == 1)  { printf("recv TAB msg ok \n"); }
+	
+	/* Compare data */
+	TOHT *tr = ht_new(10);
+	char buf_test[BO_MAX_TAB_BUF] = {0};
+	char buf_test_recv[BO_MAX_TAB_BUF] = {0};
+	ht_put(tr, "000", "NULL");
+	ht_put(tr, "001", "192.001.001.002:2");
+	ht_put(tr, "002", "255.255.255.255:1");
+	ht_put(tr, "003", "192.168.111.001:2");
+	ht_put(tr, "004", "NULL");
+	
+	res = bo_master_crtPacket(tr, buf_test);
+	if(res < 1) { printf("ERROR can't crtPacket\n"); goto error;}
+	
+	
+	res = bo_master_crtPacket(p.route_tab, buf_test_recv);
+	if(res < 1) { printf("ERROR can't crtPacket from recv data\n"); goto error;}
+	
+	int ii = 0;
+	for(;ii < res; ii++) {
+		if(buf_test[ii] != buf_test_recv[ii]) {
+			printf("recv bad data \n");
+			goto error;
+		}
+	}
+	ans = 1;
+	ht_free(tab);
+	bo_closeSocket(s_serv);
+	error:
+	TEST_ASSERT_EQUAL(1, ans);
+}
+
+static void *cltSendTabRoute(void *arg)
+{
+	gen_tbl_crc16modbus();
+	int ans  = -1;
+	int s_cl = -1;
+	int exec = -1;
+	TOHT *tr = ht_new(10);
+	char buf[BO_MAX_TAB_BUF] = {0};
+	ht_put(tr, "000", "NULL");
+	ht_put(tr, "001", "192.001.001.002:2");
+	ht_put(tr, "002", "255.255.255.255:1");
+	ht_put(tr, "003", "192.168.111.001:2");
+	ht_put(tr, "004", "NULL");
+	
+	s_cl = bo_setConnect("127.0.0.1", 9900);
+	if(s_cl == -1) {printf("ERR cltSendTabRoute bo_setConnect\n"); goto error; }
+	
+	exec = bo_master_sendTab(s_cl, tr, buf);
+	if(exec == -1) {printf("ERR cltSendTabRoute bo_sendSetMsg");goto error;}
+	
+	
+	ans = 1;
+	ht_free(tr);
+	
+	error:
+	bo_closeSocket(s_cl);
+	if(exec == -1) {printf("ERR cltSendTabRoute bo_closeSocket");goto error;}
+	
+	return ans;
+}
+
+/* send bad data */
+TEST(route, boMasterCoreBadTabTest)
+{
+	printf("boMasterCoreBadTabTest ... RUN\n");
+	bo_log("boMasterCoreBadTabTest ... RUN\n");
+	// start SERVER
+	int ans = -1, res = -1, s_serv = -1, s_cl = -1;
+	struct paramThr p;
+	pthread_t thr_cl;
+	TOHT *tab = ht_new(10);
+	s_serv = bo_servStart(9900, 2);
+	char buf[BO_MAX_TAB_BUF];
+	if(s_serv == -1) {printf("ERR bo_servStart()\n"); goto error; }
+	// Start client
+	res = pthread_create(&thr_cl, NULL, &cltSendBadTabRoute, NULL);
+	if(res != 0) { printf("ERR can't crt thread"); goto error;}
+
+	char *err;
+	res = bo_waitConnect(s_serv, &s_cl, &err);
+	if(res == -1) {printf("ERR bo_waitConnect()\n");}
+
+	p.sock = s_cl;
+	p.route_tab = tab;
+	p.buf  = buf;
+	p.bufSize = sizeof(buf);
+	res = bo_master_core(&p);
+	if(res == -1) { printf("OK\n"); ans = 1;}
+	if(res == 1)  { printf("ERR bo_master_core return 1\n"); goto error; }
+	
+	error:
+	TEST_ASSERT_EQUAL(1, ans);
+}
+
+static void *cltSendBadTabRoute(void *arg)
+{
+	gen_tbl_crc16modbus();
+	int ans  = -1; int s_cl = -1; int exec = -1;
+	unsigned int crc = -1;
+	
+	unsigned char packet[21] = {0};
+	unsigned char value[16] = {0}; // ROW|LEN|NULL|ROW|LENCRC
+	unsigned char bb[2] = {0};
+	
+	memcpy(value, "ROW", 3);
+	boIntToChar(4, bb);
+	memcpy((value + 3), bb, 2);
+	memcpy(value+5, "NULLROW", 7);
+	boIntToChar(30, bb);
+	memcpy(value+12, bb, 2);
+	
+	crc = crc16modbus(value, 14);
+	boIntToChar(crc, bb);
+	memcpy(value+14, bb, 2);
+	
+	
+	
+	s_cl = bo_setConnect("127.0.0.1", 9900);
+	if(s_cl == -1) {printf("ERR cltSendTabRoute bo_setConnect\n"); goto error; }
+	
+	exec = bo_sendXXXMsg(s_cl, "TAB", value, 16);
+	if(exec == -1) {printf("ERR cltSendTabRoute bo_sendSetMsg");goto error;}
+	
+	bo_closeSocket(s_cl);
+	if(exec == -1) {printf("ERR cltSendTabRoute bo_closeSocket");goto error;}
+	ans = 1;
+	
 	error:
 	return ans;
 }

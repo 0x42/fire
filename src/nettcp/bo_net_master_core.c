@@ -17,7 +17,7 @@ STATIC void coreReadRow (struct paramThr *p);
  */
 static char *coreStatusTxt[] = {"READHEAD", "SET", "QUIT", "ANSOK",
 				"ERR", "ADD", "READCRC", "TAB", 
-				"READCRC_TAB"};
+				"READCRC_TAB", "READROW"};
 
 static void(*statusTable[])(struct paramThr *) = {
 	coreReadHead,
@@ -46,23 +46,24 @@ int bo_master_core(struct paramThr *p)
 	p->status = READHEAD;
 	
 	while(stop) {
-		
+		dbgout("KA[%s]", coreStatusTxt[p->status]);
 		if(p->status == SET) { 
-		/*	dbgout("KA[%s]", coreStatusTxt[p->status]);
-		*/	typeMSG = 1; 
+		/*	dbgout("KA[%s]", coreStatusTxt[p->status]); */
+			typeMSG = 1; 
 		}
 		if(p->status == TAB) {
+		/*	dbgout("KA[%s]", coreStatusTxt[p->status]); */
 			typeMSG = 1;
 		}
 		if(p->status == ERR) { 
-		/*	dbgout("[%s]", coreStatusTxt[p->status]);
-		*/	typeMSG = -1; 
+		/*	dbgout("[%s]", coreStatusTxt[p->status]); */
+			typeMSG = -1; 
 		}
 		if(p->status == ANSOK) {
-		/*	dbgout("[%s]", coreStatusTxt[p->status]); */
+		/*	dbgout("[%s]", coreStatusTxt[p->status]); */ 
 		}
 		if(p->status == QUIT) {
-		/*	dbgout("\n"); */
+		/*	dbgout("\n"); */ 
 			break;
 		}
 		statusTable[p->status](p);
@@ -84,6 +85,7 @@ static void coreReadHead(struct paramThr *p)
 		p->status = ERR;
 	} else {
 		if(strstr(buf, "SET")) p->status = SET;
+		else if(strstr(buf, "TAB")) p->status = TAB;
 		else if(strstr(buf, "OK"))  p->status = QUIT;
 		else p->status = ERR;
 	}
@@ -189,13 +191,13 @@ STATIC int checkCRC(struct paramThr *p)
 	crc = boCharToInt(crcTxt);
 	count = crc16modbus(msg, msg_len);
 	p->length = msg_len;
-	
+	printf("crc[%d]=[%02x %02x]\n", crc, crcTxt[0],  crcTxt[1]);
 	if(crc != count) ans = -1;
 	else ans = 1;
 	return ans;
 }
 /* ----------------------------------------------------------------------------
- * @brief	обработка TAB|LEN|ROW|LEN|DATA|...ROW|LEN|DATA|CRC
+ * @brief	обработка ROW|LEN|DATA|...ROW|LEN|DATA|CRC
  * @buf		буфер куда будет записана таблица
  * @return	[0]  - таблица пустая, пакет не сформ
  *		[>0] - строка создана, размер пакета
@@ -237,13 +239,15 @@ int bo_master_crtPacket(TOHT *tr, char *buf)
 			ptr += data_len;
 		}
 	}
+	
 	ans = ptr;
 	end:
 	return ans;
 }
 
 /* ----------------------------------------------------------------------------
- * @brief	отправка таблицы одним пакетом
+ * @brief	отправка таблицы одним пакетом. Один раз нужно вызвать 
+ *		gen_tbl_crc16modbus() для создания CRC
  * @return	[-1] - ошибка
  *		[1]  - успешно
  */
@@ -251,10 +255,17 @@ int bo_master_sendTab(int sock, TOHT *tr, char *buf)
 {
 	int ans = -1;
 	int len = -1;
+	int crc = 0;
+	unsigned char crcTxt[2] = {0};
 	len = bo_master_crtPacket(tr, buf);
 	if(len == -1) {
 		bo_log("bo_master_sendTab() error can't set all value in buffer");
 	} else if(len > 0) {
+		crc = crc16modbus(buf, len);
+		boIntToChar(crc, crcTxt);
+		len +=2;
+		*(buf + len - 2) = crcTxt[0];
+		*(buf + len - 1) = crcTxt[1];
 		ans = bo_sendTabMsg(sock, buf, len);
 		if(ans == -1) {
 			bo_log("bo_master_sendTab() error when send Tab");
@@ -301,8 +312,10 @@ static void coreTab(struct paramThr *p)
 
 static void coreReadCRC_Tab(struct paramThr *p)
 {
-	if(checkCRC(p) == -1) p->status = ERR;
-	else p->status = READROW;
+	if(checkCRC(p) == -1) {
+		p->status = ERR;
+		bo_log("coreReadCRC_Tab() bad CRC");
+	} else p->status = READROW;
 }
 
 STATIC void coreReadRow(struct paramThr *p)
@@ -320,26 +333,32 @@ STATIC void coreReadRow(struct paramThr *p)
 		memset(head, 0, 4);
 		memset(row, 0, 18);
 		memset(addr485, 0, 3);
+		printf("i[%d], length[%d]\n",i, p->length);
+		
 		memcpy(head, ptr, 3);
 		ptr += 3; i +=3;
 		if(!strstr(head, "ROW")) goto error;
 		memcpy(lenStr, ptr, 2);
 		ptr += 2; 
-		i+=2;
+		i += 2;
 		len = boCharToInt(lenStr);
 		if(len > 0) {
+			if(i >= p->length) goto error;
 			i+= len;
 			memcpy(addr485, ptr, 3);
 			ptr += 4; /* XXX + ':' (3 + 1) */
 			memcpy(row, ptr, len-4);
 			ptr += len-4;
 			printf("%s:%s\n", addr485, row);
+			ht_put(p->route_tab, addr485, row);
 		} else goto error;
 	}
 	
+	p->status = ANSOK;
 	if(error == -1) {
 error:
 		bo_log("coreReadRow() bad tab format recv");
+		p->status = ERR;
 	}
 }
 

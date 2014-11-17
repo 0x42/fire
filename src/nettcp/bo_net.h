@@ -35,6 +35,7 @@ int bo_sendDataFIFO(char *ip, unsigned int port, char *data, unsigned int size);
 int bo_sendSetMsg(int sock, char *data, unsigned int dataSize);
 int bo_sendTabMsg(int sock, char *data, unsigned int dataSize);
 
+int bo_sendXXXMsg(int sock, char *head, char *data, int dataSize);
 /* получить данные в FIFO */
 int bo_recvDataFIFO(char *ip, unsigned int port, unsigned char *buf, int bufSize);
 

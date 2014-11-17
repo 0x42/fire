@@ -33,10 +33,14 @@ static void m_workClient(struct bo_llsock *list_in, struct bo_llsock *list_out,
 			   fd_set *r_set, fd_set *w_set, TOHT *tr);
 static int  m_recvClientMsg(int sock, TOHT *tr);
 static void m_sendClientMsg(int sock, TOHT *tr, struct bo_llsock *llist_out);
+static void m_sendTabPacket(int sock, TOHT *tr, struct bo_llsock *list);
 static void m_repeatSendRoute(struct bo_llsock *list_out, TOHT *tr);
 static void m_delRoute(struct bo_sock *val, TOHT *tr);
 static void m_addSockToSet(struct bo_llsock *list_in, fd_set *r_set);
 static int  m_isClosed(struct bo_llsock *list_in, int sock);
+
+static char *recvBuf;
+static int  recvBufLen = BO_MAX_TAB_BUF;
 /* ----------------------------------------------------------------------------
  * @brief	старт сервера, чтение конфига, созд списка сокетов(текущ подкл) 
  */
@@ -59,6 +63,13 @@ void bo_master_main(int argc, char **argv)
 	
 	list_out = m_crtLL(servconf.max_con);
 	if(list_out == NULL) goto end;
+	
+	recvBuf = (char *)malloc(recvBufLen);
+	if(recvBuf == NULL) {
+		bo_log("bo_master_main() ERROR %s",
+		"can't alloc mem for recvBuf");
+		goto end;
+	}
 	
 	tab_routes = ht_new(50);
 	if(tab_routes == NULL) {
@@ -89,7 +100,8 @@ end:
 	if(list_out != NULL) bo_del_lsock(list_out);
 
 	if(tab_routes != NULL) ht_free(tab_routes);
-	
+	if(recvBuf != NULL) free(recvBuf);
+
 	if(cfg != NULL) {
 		cfg_free(cfg);
 		cfg = NULL;
@@ -253,7 +265,8 @@ static void m_addClientOut(struct bo_llsock *list, int servSock, fd_set *set,
 			 * чтобы искл блокировки */
 			bo_setTimerRcv2(sock, 5, 500);
 			bo_addll(list, sock);
-			m_sendClientMsg(sock, tr, list);
+			/* m_sendClientMsg(sock, tr, list); */
+			m_sendTabPacket(sock, tr, list);
 		}
 	} else {
 		dbgout("m_addClientOut-> not serv sock \n");
@@ -322,7 +335,8 @@ static void m_workClient(struct bo_llsock *list_in, struct bo_llsock *list_out,
 				sock = val->sock;
 				if(FD_ISSET(sock, w_set) == 1) {
 					dbgout(" sock[%d] ", sock);
-					m_sendClientMsg(sock, tr, list_out);
+					/*m_sendClientMsg(sock, tr, list_out);*/
+					m_sendTabPacket(sock, tr, list_out);
 				}
 				i = exec;
 			}
@@ -456,7 +470,7 @@ static void m_sendClientMsg(int sock, TOHT *tr, struct bo_llsock *list)
 				
 				packet[p_len] = cbuf[0];
 				packet[p_len + 1] = cbuf[1];
-				p_len +=2;
+				p_len += 2;
 				exec = bo_sendSetMsg(sock, packet, p_len);
 				printf("send>%s\n", packet);
 				if(exec == -1) {
@@ -478,6 +492,24 @@ static void m_sendClientMsg(int sock, TOHT *tr, struct bo_llsock *list)
 }
 
 /* ----------------------------------------------------------------------------
+ * @brief	отправка таблицы одним пакетом
+ */
+static void m_sendTabPacket(int sock, TOHT *tr, struct bo_llsock *list)
+{
+	int exec = 1;
+	char ip[BO_IP_MAXLEN] = "null";
+	
+	memset(recvBuf, 0, recvBufLen);
+	exec = bo_master_sendTab(sock, tr, recvBuf);
+	if(exec == -1) {
+		bo_getip_bysock(list, sock, ip);
+		bo_setflag_bysock(list, sock, -1);
+		bo_log("m_sendTabPacket() can't send data to ip[%s]", ip);
+	} else {
+		bo_setflag_bysock(list, sock, 1);
+	}
+}
+/* ----------------------------------------------------------------------------
  * @brief 
  */
 static void m_repeatSendRoute(struct bo_llsock *list_out, TOHT *tr)
@@ -493,7 +525,8 @@ static void m_repeatSendRoute(struct bo_llsock *list_out, TOHT *tr)
 		exec = bo_get_val(list_out, &val, i);
 		if(val->flag == -1 ) {
 			sock = val->sock;
-			m_sendClientMsg(sock, tr, list_out);
+		/*	m_sendClientMsg(sock, tr, list_out); */
+			m_sendTabPacket(sock, tr, list_out);
 		}
 		i = exec;
 	}
