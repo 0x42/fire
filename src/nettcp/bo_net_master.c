@@ -414,8 +414,6 @@ static int m_recvClientMsg(int sock, TOHT *tr)
 	t_msg = bo_master_core(&p);
 	memset(ppp, 0, 33);
 	memcpy(ppp, buf, p.length);
-	bo_log("recv[%s]", ppp);
-	printf("recv[%s]\n", ppp);
 	
 	printf("==== TAB ROUTE ==== \n");
 	int i; char *key; char *val;
@@ -472,7 +470,6 @@ static void m_sendClientMsg(int sock, TOHT *tr, struct bo_llsock *list)
 				packet[p_len + 1] = cbuf[1];
 				p_len += 2;
 				exec = bo_sendSetMsg(sock, packet, p_len);
-				printf("send>%s\n", packet);
 				if(exec == -1) {
 					bo_getip_bysock(list, sock, ip);
 					bo_setflag_bysock(list, sock, -1);
@@ -498,9 +495,20 @@ static void m_sendTabPacket(int sock, TOHT *tr, struct bo_llsock *list)
 {
 	int exec = 1;
 	char ip[BO_IP_MAXLEN] = "null";
+	int i = 0;
+	char *key = NULL; char *val = NULL;
 	
 	memset(recvBuf, 0, recvBufLen);
 	exec = bo_master_sendTab(sock, tr, recvBuf);
+	dbgout("==== SEND TAB ====\n");
+	for(i = 0; i < tr->size; i++) {
+		key = *(tr->key + i);
+		if(key != NULL) {
+			val = *(tr->val + i);
+			dbgout("[%s:%s]\n", key, val);
+		}
+	}
+	dbgout("==== SEND END ====\n");
 	if(exec == -1) {
 		bo_getip_bysock(list, sock, ip);
 		bo_setflag_bysock(list, sock, -1);

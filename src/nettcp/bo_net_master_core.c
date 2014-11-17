@@ -46,7 +46,7 @@ int bo_master_core(struct paramThr *p)
 	p->status = READHEAD;
 	
 	while(stop) {
-		dbgout("KA[%s]", coreStatusTxt[p->status]);
+		/*dbgout("KA[%s]", coreStatusTxt[p->status]);*/
 		if(p->status == SET) { 
 		/*	dbgout("KA[%s]", coreStatusTxt[p->status]); */
 			typeMSG = 1; 
@@ -191,7 +191,6 @@ STATIC int checkCRC(struct paramThr *p)
 	crc = boCharToInt(crcTxt);
 	count = crc16modbus(msg, msg_len);
 	p->length = msg_len;
-	printf("crc[%d]=[%02x %02x]\n", crc, crcTxt[0],  crcTxt[1]);
 	if(crc != count) ans = -1;
 	else ans = 1;
 	return ans;
@@ -333,7 +332,6 @@ STATIC void coreReadRow(struct paramThr *p)
 		memset(head, 0, 4);
 		memset(row, 0, 18);
 		memset(addr485, 0, 3);
-		printf("i[%d], length[%d]\n",i, p->length);
 		
 		memcpy(head, ptr, 3);
 		ptr += 3; i +=3;
@@ -349,7 +347,6 @@ STATIC void coreReadRow(struct paramThr *p)
 			ptr += 4; /* XXX + ':' (3 + 1) */
 			memcpy(row, ptr, len-4);
 			ptr += len-4;
-			printf("%s:%s\n", addr485, row);
 			ht_put(p->route_tab, addr485, row);
 		} else goto error;
 	}
