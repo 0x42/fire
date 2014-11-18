@@ -347,7 +347,6 @@ TEST(fifo, send100MSGSET10)
 /* ----------------------------------------------------------------------------
  * @brief	Test queue FIFO
  */
-
 TEST(fifo, addOneGetOne)
 {
 	printf("addOneGetOne() ...\n");

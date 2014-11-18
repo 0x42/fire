@@ -120,7 +120,7 @@ int  bo_addFIFO(unsigned char *val, int size) /*THREAD SAFE*/
  * @bufSize     размер буфера
  * @return	[-1] - нет данных в очереди [N] - размер данных
  */
-int bo_getFIFO(unsigned char *buf, int bufSize) /*NO THREAD SAFE*/
+int bo_getFIFO(unsigned char *buf, int bufSize) /* NO THREAD SAFE */
 {
 	int ans = -1;
 	struct BO_ITEM_FIFO *ptr = NULL;
@@ -143,7 +143,7 @@ int bo_getFIFO(unsigned char *buf, int bufSize) /*NO THREAD SAFE*/
 /* ----------------------------------------------------------------------------
  * @brief	берем голову удал голову
  */
-int bo_getFifoVal(unsigned char *buf, int bufSize) /*THREAD SAFE*/
+int bo_getFifoVal(unsigned char *buf, int bufSize) /* THREAD SAFE */
 {
 	int ans = -1;
 	pthread_mutex_lock(&fifo_lock);

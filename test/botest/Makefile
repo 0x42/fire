@@ -56,6 +56,12 @@ SRC5 = \
     ../../src/tools/ocrc.c \
     ../../src/tools/dbgout.c
 
+SRC6 = \
+    ../cycarr/test_runners/Test_cycarr_Runners.c \
+    ../cycarr/test_runners/all_tests.c \
+    ../cycarr/testcycarr.c             \
+    ../../src/nettcp/bo_cycle_arr.c    
+
 INC_DIRS = -Isrc -I$(UNITY_ROOT)/src -I$(UNITY_ROOT)/extras/fixture/src \
 -Isrc/nettcp -Isrc/tools
 
@@ -79,6 +85,10 @@ log:
 master:
 	$(CC) $(INC_DIRS) $(SRC_FILES_UNITY) $(SRC5) -o $(TARGET)
 	./$(TARGET)
-	
+
+cycarr:
+	$(CC) $(INC_DIRS) $(SRC_FILES_UNITY) $(SRC6) -o $(TARGET)
+	./$(TARGET)
+
 clean:
 	rm $(TARGET)

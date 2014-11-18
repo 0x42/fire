@@ -12,12 +12,16 @@ static void coreReadCRC (struct paramThr *p);
 static void coreTab	(struct paramThr *p);
 static void coreReadCRC_Tab (struct paramThr *p);
 STATIC void coreReadRow (struct paramThr *p);
+static void coreLog     (struct paramThr *p);
+static void coreReadCRC_Log (struct paramThr *p);
+static void coreReadLog (struct paramThr *p);
 /* ----------------------------------------------------------------------------
  *	КОНЕЧНЫЙ АВТОМАТ
  */
 static char *coreStatusTxt[] = {"READHEAD", "SET", "QUIT", "ANSOK",
-				"ERR", "ADD", "READCRC", "TAB", 
-				"READCRC_TAB", "READROW"};
+				"ERR", "ADD", "READCRC", 
+				"TAB", "READCRC_TAB", "READROW", 
+				"LOG", "READCRC_LOG", "READLOG"};
 
 static void(*statusTable[])(struct paramThr *) = {
 	coreReadHead,
@@ -29,7 +33,10 @@ static void(*statusTable[])(struct paramThr *) = {
 	coreReadCRC,
 	coreTab,
 	coreReadCRC_Tab,
-	coreReadRow
+	coreReadRow,
+	coreLog,
+	coreReadCRC_Log,
+	coreReadLog
 };
 
 /* ----------------------------------------------------------------------------
@@ -86,6 +93,7 @@ static void coreReadHead(struct paramThr *p)
 	} else {
 		if(strstr(buf, "SET")) p->status = SET;
 		else if(strstr(buf, "TAB")) p->status = TAB;
+		else if(strstr(buf, "LOG")) p->status = LOG;
 		else if(strstr(buf, "OK"))  p->status = QUIT;
 		else p->status = ERR;
 	}
@@ -293,8 +301,8 @@ static void coreTab(struct paramThr *p)
 				       length);
 		if((count > 0) & (count == length)) flag = 1; 
 		else {
-			bo_log("bo_net_master_core.c coreSet() count[%d]!=length[%d]", count, length);
-			bo_log("bo_net_master_core.c coreSet() buf[%s]", p->buf);
+			bo_log("bo_net_master_core.c coreTab() count[%d]!=length[%d]", count, length);
+			bo_log("bo_net_master_core.c coreTab() buf[%s]", p->buf);
 		}
 	} else {
 		bo_log("bo_net_master_core.c coreTab() bad length[%d] ", 
@@ -359,7 +367,62 @@ error:
 	}
 }
 
+/* ----------------------------------------------------------------------------
+ * @brief	обработка LOG|LEN|DATA|CRC - принимаем лог устр 485
+ *			  
+ */
+static void coreLog(struct paramThr *p)
+{
+	int length = 0;
+	int flag  = -1;
+	int count = 0;
+	length = bo_readPacketLength(p->sock);
+	/*LOG|LEN|DATA(HEADER=10 + VALUE)  + CRC*/
+	memset(p->bufLog, 0, p->bufLogSize);
+	if((length > 10) & (length <= p->bufLogSize)) {
+		count = bo_recvAllData(p->sock, 
+				       p->bufLog,
+			               p->bufLogSize,
+				       length);
+		if((count > 0) & (count == length)) flag = 1; 
+		else {
+			bo_log("bo_net_master_core.c coreLog() count[%d]!=length[%d]", count, length);
+			bo_log("bo_net_master_core.c coreLog() buf[%s]", p->bufLog);
+		}
+	} else {
+		bo_log("bo_net_master_core.c coreLog() bad length[%d] ", 
+			length, 
+			p->bufLogSize);
+	}
+	if(flag == 1) {
+		p->length = length;
+		p->status = READCRC_LOG;
+	} else {
+		p->status = ERR;
+	}
+}
 
+static void coreReadCRC_Log(paramThr *p)
+{
+	if(checkCRC(p) == -1) {
+		p->status = ERR;
+		bo_log("coreReadCRC_Log() bad CRC");
+	} else p->status = READLOG;
+}
+
+/* ----------------------------------------------------------------------------
+ * @brief	сохраняем Лог в цикл связ список  
+ */
+static void coreReadLog(paramThr *p)
+{
+	int i = 0;
+	printf("coreReadLog = [");
+	for(; i < p->length; i++) {
+		printf(" %c ", *(p->bufLog+i));
+	}
+	printf("]\n");
+	p->status  = ANSOK;
+}
 
 
 
