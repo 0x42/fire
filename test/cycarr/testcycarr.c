@@ -57,6 +57,43 @@ TEST(cycarr, addGet2)
 	TEST_ASSERT_EQUAL(1, ans);
 }
 
-TEST(cycarr, )
+TEST(cycarr, addTen)
 {
+	int ans = -1; int exec = -1;
+	printf("addTen ... run\n");
+	int i = 0; char val[10][20] = {0}; char buf[20] = {0}; 
+	char *str;
+	for(i = 0; i < 10; i++) {
+		str = val[i];
+		sprintf(str, "%d %s", i, "0x42");
+		printf("val[%s]\n", val[i]);
+	}
+	
+	struct bo_cycle_arr *arr = bo_initCycleArr(10);
+	
+	for(i = 0; i < 10; i++) {
+		exec = bo_cycle_arr_add(arr, val[i], strlen(val[i]));
+		if(exec == -1) { printf(" add error\n "); goto exit;}
+	}
+	
+	exec = bo_cycle_arr_get(arr, buf, 0);
+	if(exec < 1) { printf("get error\n"); goto exit;}
+	for(; i < exec; i++) {
+		if(buf[i] != val[8][i]) { 
+			printf("compare error \n"); 
+			goto exit;
+		}
+	}
+	
+	exec = bo_cycle_arr_get(arr, buf, 0);
+	if(exec < 1) { printf("get error\n"); goto exit;}
+	for(; i < exec; i++) {
+		if(buf[i] != val[9][i]) { 
+			printf("compare error \n"); 
+			goto exit;
+		}
+	}
+	ans = 1;
+	exit:
+	TEST_ASSERT_EQUAL(1, ans);
 }

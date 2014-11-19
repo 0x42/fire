@@ -500,23 +500,26 @@ static void m_sendTabPacket(int sock, TOHT *tr, struct bo_llsock *list)
 	char *key = NULL; char *val = NULL;
 	
 	memset(recvBuf, 0, recvBufLen);
-	exec = bo_master_sendTab(sock, tr, recvBuf);
-	dbgout("==== SEND TAB ====\n");
-	for(i = 0; i < tr->size; i++) {
-		key = *(tr->key + i);
-		if(key != NULL) {
-			val = *(tr->val + i);
-			dbgout("[%s:%s]\n", key, val);
+	if(tr->size > 0) {
+		exec = bo_master_sendTab(sock, tr, recvBuf);
+		dbgout("==== SEND TAB ====\n");
+		for(i = 0; i < tr->size; i++) {
+			key = *(tr->key + i);
+			if(key != NULL) {
+				val = *(tr->val + i);
+				dbgout("[%s:%s]\n", key, val);
+			}
+		}
+		dbgout("==== SEND END ====\n");
+		if(exec == -1) {
+			bo_getip_bysock(list, sock, ip);
+			bo_setflag_bysock(list, sock, -1);
+			bo_log("m_sendTabPacket() can't send data to ip[%s]", ip);
+		} else {
+			bo_setflag_bysock(list, sock, 1);
 		}
 	}
-	dbgout("==== SEND END ====\n");
-	if(exec == -1) {
-		bo_getip_bysock(list, sock, ip);
-		bo_setflag_bysock(list, sock, -1);
-		bo_log("m_sendTabPacket() can't send data to ip[%s]", ip);
-	} else {
-		bo_setflag_bysock(list, sock, 1);
-	}
+	
 }
 /* ----------------------------------------------------------------------------
  * @brief 
