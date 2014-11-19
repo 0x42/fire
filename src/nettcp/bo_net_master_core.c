@@ -402,7 +402,7 @@ static void coreLog(struct paramThr *p)
 	}
 }
 
-static void coreReadCRC_Log(paramThr *p)
+static void coreReadCRC_Log(struct paramThr *p)
 {
 	if(checkCRC(p) == -1) {
 		p->status = ERR;
@@ -413,7 +413,7 @@ static void coreReadCRC_Log(paramThr *p)
 /* ----------------------------------------------------------------------------
  * @brief	сохраняем Лог в цикл связ список  
  */
-static void coreReadLog(paramThr *p)
+static void coreReadLog(struct paramThr *p)
 {
 	int i = 0;
 	printf("coreReadLog = [");

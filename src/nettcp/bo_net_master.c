@@ -498,11 +498,20 @@ static void m_sendTabPacket(int sock, TOHT *tr, struct bo_llsock *list)
 	char ip[BO_IP_MAXLEN] = "null";
 	int i = 0;
 	char *key = NULL; char *val = NULL;
-	
+	int tab_not_empty = -1;
 	memset(recvBuf, 0, recvBufLen);
-	if(tr->size > 0) {
+	/* провер-м чтобы таблица не была пустой */
+	for(i = 0; i < tr->size; i++) {
+		key =  *(tr->key + i);
+		if(key != NULL) {
+			tab_not_empty = 1;
+			break;
+		}
+	}
+	
+	if(tab_not_empty == 1) {
 		exec = bo_master_sendTab(sock, tr, recvBuf);
-		dbgout("==== SEND TAB ====\n");
+		dbgout("\n==== SEND TAB ====\n");
 		for(i = 0; i < tr->size; i++) {
 			key = *(tr->key + i);
 			if(key != NULL) {
