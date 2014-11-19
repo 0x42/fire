@@ -47,5 +47,8 @@ TEST(ofnv1a, GetHashQuLS)
 	TEST_ASSERT_EQUAL(0x2C, mfnv1a("StoreDeployPoint"));
 	TEST_ASSERT_EQUAL(0x20, mfnv1a("Disable"));
 	TEST_ASSERT_EQUAL(0xD5, mfnv1a("Enable"));
+	TEST_ASSERT_EQUAL(0xE6, mfnv1a("AccessGranted"));
+	TEST_ASSERT_EQUAL(0x29, mfnv1a("GetNetworkStatus"));
+	TEST_ASSERT_EQUAL(0x0E, mfnv1a("GetLog"));
 }
 

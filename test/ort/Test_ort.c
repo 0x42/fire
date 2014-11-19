@@ -9,6 +9,7 @@ TEST_GROUP(ort);
 
 TOHT *rt;
 char line [10];
+char ip [16];
 
 
 void rt_dump(TOHT *ht, FILE *out)
@@ -53,50 +54,59 @@ TEST(ort, RtGetPort)
 {
 	rt = rt_load("rt_load_test");
 	
-	TEST_ASSERT_EQUAL(1, rt_getport(rt, "011:144", -1));
-	TEST_ASSERT_EQUAL(-1, rt_getport(rt, "007:129", -1));
-	TEST_ASSERT_EQUAL(2, rt_getport(rt, "212:074", -1));
+	TEST_ASSERT_EQUAL(1, rt_getport(rt, "144"));
+	TEST_ASSERT_EQUAL(0, rt_getport(rt, "129"));
+	TEST_ASSERT_EQUAL(2, rt_getport(rt, "074"));
 }
 
-TEST(ort, RtGetPortDefvalue)
+TEST(ort, RtGetIP)
 {
-	TEST_ASSERT_EQUAL(-1, rt_getport(rt, "001:022", -1));
+	rt = rt_load("rt_load_test");
+	
+	rt_getip(rt, "144", ip);
+	TEST_ASSERT_EQUAL_STRING("192.168.1.011", ip);
+	
+	rt_getip(rt, "129", ip);
+	TEST_ASSERT_EQUAL_STRING("NULL", ip);
+
+	rt_getip(rt, "074", ip);
+	TEST_ASSERT_EQUAL_STRING("192.168.1.212", ip);
 }
 
 
 TEST(ort, RtCreateFile1)
 {
-	TEST_ASSERT_EQUAL(0, rt_put(rt, "007:128", "1"));
-	TEST_ASSERT_EQUAL(0, rt_put(rt, "007:129", "1"));
-	TEST_ASSERT_EQUAL(0, rt_put(rt, "007:012", "2"));
-	TEST_ASSERT_EQUAL(0, rt_put(rt, "007:013", "2"));
-	TEST_ASSERT_EQUAL(0, rt_put(rt, "007:014", "2"));
-	TEST_ASSERT_EQUAL(0, rt_put(rt, "007:015", "2"));
+	TEST_ASSERT_EQUAL(0, rt_put(rt, "128", "192.168.1.007:1"));
+	TEST_ASSERT_EQUAL(0, rt_put(rt, "129", "192.168.1.203:1"));
+	TEST_ASSERT_EQUAL(0, rt_put(rt, "012", "192.168.1.007:2"));
+	TEST_ASSERT_EQUAL(0, rt_put(rt, "013", "192.168.1.007:2"));
+	TEST_ASSERT_EQUAL(0, rt_put(rt, "014", "192.168.1.203:2"));
+	TEST_ASSERT_EQUAL(0, rt_put(rt, "015", "192.168.1.203:2"));
 	
-	rt_remove(rt, "007:014");
-	rt_remove(rt, "007:129");
+	rt_remove(rt, "014");
+	rt_remove(rt, "129");
 	
-	TEST_ASSERT_EQUAL(0, rt_put(rt, "007:013", "1"));
+	TEST_ASSERT_EQUAL(0, rt_put(rt, "013", "192.168.1.007:1"));
 	
-	TEST_ASSERT_EQUAL(0, rt_put(rt, "203:134", "1"));
-	TEST_ASSERT_EQUAL(0, rt_put(rt, "203:024", "2"));
-	TEST_ASSERT_EQUAL(0, rt_put(rt, "203:025", "2"));
+	TEST_ASSERT_EQUAL(0, rt_put(rt, "134", "192.168.1.203:1"));
+	TEST_ASSERT_EQUAL(0, rt_put(rt, "024", "192.168.1.007:2"));
+	TEST_ASSERT_EQUAL(0, rt_put(rt, "025", "192.168.1.203:2"));
 	
 	rt_save(rt, "rt_glob1");
 }
 
 TEST(ort, RtCreateFile2)
 {
-	TEST_ASSERT_EQUAL(0, rt_put(rt, "007:128", "1"));
-	TEST_ASSERT_EQUAL(0, rt_put(rt, "007:129", "1"));
-	TEST_ASSERT_EQUAL(0, rt_put(rt, "007:012", "2"));
-	TEST_ASSERT_EQUAL(0, rt_put(rt, "007:013", "2"));
-	TEST_ASSERT_EQUAL(0, rt_put(rt, "007:014", "2"));
-	TEST_ASSERT_EQUAL(0, rt_put(rt, "007:015", "2"));
+	TEST_ASSERT_EQUAL(0, rt_put(rt, "128", "192.168.1.007:1"));
+	TEST_ASSERT_EQUAL(0, rt_put(rt, "129", "192.168.1.007:1"));
+	TEST_ASSERT_EQUAL(0, rt_put(rt, "012", "192.168.1.007:2"));
+	TEST_ASSERT_EQUAL(0, rt_put(rt, "013", "192.168.1.007:2"));
+	TEST_ASSERT_EQUAL(0, rt_put(rt, "014", "192.168.1.007:2"));
+	TEST_ASSERT_EQUAL(0, rt_put(rt, "015", "192.168.1.007:2"));
 	
-	TEST_ASSERT_EQUAL(0, rt_put(rt, "203:134", "1"));
-	TEST_ASSERT_EQUAL(0, rt_put(rt, "203:024", "2"));
-	TEST_ASSERT_EQUAL(0, rt_put(rt, "203:025", "2"));
+	TEST_ASSERT_EQUAL(0, rt_put(rt, "134", "192.168.1.203:1"));
+	TEST_ASSERT_EQUAL(0, rt_put(rt, "024", "192.168.1.203:2"));
+	TEST_ASSERT_EQUAL(0, rt_put(rt, "025", "192.168.1.203:2"));
 	
 	rt_save(rt, "rt_glob2");
 }

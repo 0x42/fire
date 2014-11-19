@@ -19,9 +19,9 @@
 
 
 struct rtbl {
-	int adr;
-	char ip[16];
-	int port;
+	int adr;      /** Адрес устройства на шине RS485 */
+	char ip[16];  /** IP узла */
+	int port;     /** Порт интерфейса RS485 */
 };
 
 

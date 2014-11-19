@@ -10,6 +10,7 @@ TARGET2 = all_tests_ocfg.out
 TARGET3 = all_tests_ofnv1a.out
 TARGET4 = all_tests_ocrc.out
 TARGET5 = all_tests_ort.out
+TARGET6 = all_tests_ocs.out
 
 SRC_FILES_UNITY = \
 $(UNITY_ROOT)/src/unity.c \
@@ -47,9 +48,19 @@ SRC_FILES5 = \
 	../ort/test_runners/Test_ort_Runner.c \
 	../ort/test_runners/all_tests.c
 
-INC_DIRS = -Isrc -I$(UNITY_ROOT)/src -I$(UNITY_ROOT)/extras/fixture/src -I../../src/tools
+SRC_FILES6 = \
+	../../src/tools/ocrc.c \
+	../../src/tools/ocs.c \
+	../../src/log/bologging.c \
+	../../src/pclib/serial.c \
+	../ocs/Test_ocs.c \
+	../ocs/test_runners/Test_ocs_Runner.c \
+	../ocs/test_runners/all_tests.c
 
-CLEANUP = rm -f build/*.o ; rm -f $(TARGET1) $(TARGET2) $(TARGET3) $(TARGET4)
+INC_DIRS = -Isrc -I$(UNITY_ROOT)/src -I$(UNITY_ROOT)/extras/fixture/src -I../../src/tools \
+	-I../../src/log -I../../src/pclib
+
+CLEANUP = rm -f build/*.o ; rm -f $(TARGET1) $(TARGET2) $(TARGET3) $(TARGET4) $(TARGET5) $(TARGET6)
 
 all:	clean default
 
@@ -59,11 +70,13 @@ default:
 	$(CC) $(INC_DIRS) $(SRC_FILES_UNITY) $(SRC_FILES3) -o $(TARGET3)
 	$(CC) $(INC_DIRS) $(SRC_FILES_UNITY) $(SRC_FILES4) -o $(TARGET4)
 	$(CC) $(INC_DIRS) $(SRC_FILES_UNITY) $(SRC_FILES5) -o $(TARGET5)
+	$(CC) $(INC_DIRS) $(SRC_FILES_UNITY) $(SRC_FILES6) -o $(TARGET6)
 	./$(TARGET1)
 	./$(TARGET2)
 	./$(TARGET3)
 	./$(TARGET4)
 	./$(TARGET5)
+	./$(TARGET6)
 
 clean:
 	$(CLEANUP)

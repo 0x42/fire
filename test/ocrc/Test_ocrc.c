@@ -8,6 +8,10 @@ TEST_GROUP(ocrc);
 
 char *str = "123456789";
 unsigned short check = 0x4B37;
+
+char *str2 = "\x05\x82\xE6\xC2\x01\x08\x30\x30\x30\x30\x30\x37\x33\x38";
+unsigned short check2 = 0xC0C0;
+
 /*
 unsigned short width = 16;
 unsigned short poly = 0x8005;
@@ -30,5 +34,10 @@ TEST_TEAR_DOWN(ocrc)
 TEST(ocrc, GetCRC_123456789)
 {
 	TEST_ASSERT_EQUAL(check, crc16modbus(str, 9));
+}
+
+TEST(ocrc, GetCRC_738)
+{
+	TEST_ASSERT_EQUAL(check2, crc16modbus(str2, 14));
 }
 

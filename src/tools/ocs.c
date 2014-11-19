@@ -12,7 +12,10 @@
 #include "serial.h"
 
 
-/** Инициализация структуры thr_rx_buf{} */
+/**
+ * init_thrRxBuf - Инициализация структуры thr_rx_buf{}.
+ * @b: Указатель на структуру thr_rx_buf{}.
+ */
 void init_thrRxBuf(struct thr_rx_buf *b)
 {
 	pthread_mutex_init(&b->mx, NULL);
@@ -23,7 +26,10 @@ void init_thrRxBuf(struct thr_rx_buf *b)
 	b->fl = 0;
 }
 
-/** Разрушение структуры thr_rx_buf{} */
+/**
+ * destroy_thrRxBuf - Разрушение структуры thr_rx_buf{}.
+ * @b: Указатель на структуру thr_rx_buf{}.
+ */
 void destroy_thrRxBuf(struct thr_rx_buf *b)
 {
 	pthread_mutex_destroy(&b->mx);
@@ -31,7 +37,11 @@ void destroy_thrRxBuf(struct thr_rx_buf *b)
 	pthread_cond_destroy(&b->full);
 }
 
-/** Получить элемент из буфера buf по текущей позиции rpos */
+/**
+ * get_rxBuf - Получить элемент из буфера buf по текущей позиции rpos.
+ * @b: Указатель на структуру thr_rx_buf{}.
+ * @return: Байт данных кадра.
+ */
 char get_rxBuf(struct thr_rx_buf *b)
 {
 	char data;
@@ -42,7 +52,11 @@ char get_rxBuf(struct thr_rx_buf *b)
 	return data;
 }
 
-/** Записать элемент в буфер buf по текущей позиции wpos */
+/**
+ * put_rxBuf - Записать элемент в буфер buf по текущей позиции wpos.
+ * @b:    Указатель на структуру thr_rx_buf{}.
+ * @data: Байт данных кадра.
+ */
 void put_rxBuf(struct thr_rx_buf *b, char data)
 {
 	pthread_mutex_lock(&b->mx);
@@ -51,7 +65,11 @@ void put_rxBuf(struct thr_rx_buf *b, char data)
 	pthread_mutex_unlock(&b->mx);
 }
 
-/** Получить fl */
+/**
+ * get_rxFl - Получить значение флага состояния приема кадра.
+ * @b: Указатель на структуру thr_rx_buf{}.
+ * @return  Состояние флага.
+ */
 int get_rxFl(struct thr_rx_buf *b)
 {
 	int fl;
@@ -61,7 +79,11 @@ int get_rxFl(struct thr_rx_buf *b)
 	return fl;
 }
 
-/** Записать fl */
+/**
+ * put_rxFl - Записать значение флага состояния приема кадра.
+ * @b:  Указатель на структуру thr_rx_buf{}.
+ * @fl: Флаг состояния приема кадра.
+ */
 void put_rxFl(struct thr_rx_buf *b, int fl)
 {
 	pthread_mutex_lock(&b->mx);
@@ -70,7 +92,10 @@ void put_rxFl(struct thr_rx_buf *b, int fl)
 }
 
 
-/** Инициализация структуры thr_tx_buf{} */
+/**
+ * init_thrTxBuf - Инициализация структуры thr_tx_buf{}.
+ * @b: Указатель на структуру thr_tx_buf{}.
+ */
 void init_thrTxBuf(struct thr_tx_buf *b)
 {
 	pthread_mutex_init(&b->mx, NULL);
@@ -80,7 +105,10 @@ void init_thrTxBuf(struct thr_tx_buf *b)
 	b->wpos = 0;
 }
 
-/** Разрушение структуры thr_tx_buf{} */
+/**
+ * destroy_thrTxBuf - Разрушение структуры thr_tx_buf{}.
+ * @b: Указатель на структуру thr_tx_buf{}.
+ */
 void destroy_thrTxBuf(struct thr_tx_buf *b)
 {
 	pthread_mutex_destroy(&b->mx);
@@ -88,7 +116,11 @@ void destroy_thrTxBuf(struct thr_tx_buf *b)
 	pthread_cond_destroy(&b->full);
 }
 
-/** Получить элемент из буфера buf по текущей позиции rpos */
+/**
+ * get_txBuf - Получить элемент из буфера buf по текущей позиции rpos.
+ * @b: Указатель на структуру thr_tx_buf{}.
+ * @return: Байт данных кадра.
+ */
 char get_txBuf(struct thr_tx_buf *b)
 {
 	char data;
@@ -99,7 +131,11 @@ char get_txBuf(struct thr_tx_buf *b)
 	return data;
 }
 
-/** Записать элемент в буфер buf по текущей позиции wpos */
+/**
+ * put_txBuf - Записать элемент в буфер buf по текущей позиции wpos.
+ * @b:    Указатель на структуру thr_tx_buf{}.
+ * @data: Байт данных кадра.
+ */
 void put_txBuf(struct thr_tx_buf *b, char data)
 {
 	pthread_mutex_lock(&b->mx);
@@ -124,9 +160,8 @@ void put_txBuf(struct thr_tx_buf *b, char data)
  */
 int read_byte(struct thr_rx_buf *b, char data, int fl)
 {
-	unsigned int crc, icrc;
-
-	/* bo_log("reader: data= %d", (unsigned int)data); */
+	unsigned int icrc;  /** Принятая контрольная сумма */
+	unsigned int crc;   /** Подсчитанная контрольная сумма */
 	
 	switch (fl) {
 	case 0:
@@ -139,6 +174,7 @@ int read_byte(struct thr_rx_buf *b, char data, int fl)
 			put_rxFl(b, 1);
 		}
 		break;
+		
 	case 1:  /** Прием данных */
 		if (data == '\xDB') {
 			/** Разбор stuffing байтов */
@@ -153,8 +189,8 @@ int read_byte(struct thr_rx_buf *b, char data, int fl)
 				crc = crc16modbus(b->buf, b->wpos-2);
 				if (icrc != crc) {
 					/** Ошибка CRC */
-					bo_log("reader: icrc= %d, crc= %d", icrc, crc);
-					bo_log("reader crc: wpos= %d", b->wpos);
+					bo_log("read_byte: icrc= %d, crc= %d",
+					       icrc, crc);
 					b->wpos = 0;
 					put_rxFl(b, 4);
 				} else {
@@ -171,12 +207,12 @@ int read_byte(struct thr_rx_buf *b, char data, int fl)
 		} else
 			put_rxBuf(b, data);
 		break;
+		
 	case 2:  /** Разбор stuffing байтов */
 		if (data == '\xDC') data = '\xC0';
 		else if (data == '\xDD') data = '\xDB';
 		else {
-			/** Кадр поврежден
-			bo_log("reader: data= %d", (unsigned int)data); */
+			/** Кадр поврежден */
 			b->wpos = 0;
 			put_rxFl(b, 4);
 			break;
@@ -216,20 +252,19 @@ int reader(struct thr_rx_buf *b, char *buf, int port, int ptout)
 			tout = 0;
 			break;
 		} else if (nq < 0) {
-			bo_log("trx: nq <= 0 exit");
+			bo_log("reader: nq <= 0 exit");
 			return -1;
 		}
 	}
 	
 	if (tout > 0) {
-		/** Ответ не получен за допустимый период
-		    bo_log("rx: timeout"); */
+		/** Ответ не получен за допустимый период */
 		put_rxFl(b, 5);
 		
 	} else {
 		n = SerialNonBlockRead(port, buf, BUF485_SZ);
 		if (n < 0) {
-			bo_log("trx: SerialNonBlockRead exit");
+			bo_log("reader: SerialNonBlockRead exit");
 			return -1;
 		}
 
@@ -262,11 +297,12 @@ int prepare_buf_tx(struct thr_tx_buf *b, char *buf)
 	int n = 0;
 
 	b->rpos = 0;
+	buf[n++] = '\xFF';
+	buf[n++] = '\xC0';
 	
 	while (len--) {
 		data = get_txBuf(b);
-		if ((data == '\xC0') &&
-		    ((n > 1) && (n < b->wpos-1))) {
+		if (data == '\xC0') {
 			buf[n++] = '\xDB';
 			buf[n++] = '\xDC';
 		} else if (data == '\xDB') {
@@ -275,6 +311,8 @@ int prepare_buf_tx(struct thr_tx_buf *b, char *buf)
 		} else
 			buf[n++] = data;
 	}
+
+	buf[n++] = '\xC0';
 	
 	return n;
 }

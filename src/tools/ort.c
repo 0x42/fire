@@ -10,9 +10,7 @@
 #include "ort.h"
 
 
-/** Размер буфера для строки файла таблицы маршрутов
- * "123:192.168.100.127:2"
- */
+/** Размер буфера для строки таблицы маршрутов */
 #define RT_LSIZE 21
 
 /** Плохой ключ */
@@ -198,7 +196,7 @@ void rt_getip(TOHT *ht, const char *key, char *ip)
 	struct rtbl rt;
 	char *sval;
 
-	sval = rt_getstring(ht, key, "0:0");
+	sval = rt_getstring(ht, key, "NULL:0");
 	str_splitVal(&rt, sval, ":");
 	strcpy(ip, rt.ip);
 }
@@ -207,7 +205,7 @@ void rt_getip(TOHT *ht, const char *key, char *ip)
  * rt_getport - Получить значение порта RS485 по входящему ключу.
  * @ht:  Таблица для поиска.
  * @key: Ключ в виде - "adr".
- * @return   Найденое значение порта.
+ * @return   Найденое значение порта, 0- ключ не существует.
  *
  */
 int rt_getport(TOHT *ht, const char *key)
@@ -215,7 +213,7 @@ int rt_getport(TOHT *ht, const char *key)
 	struct rtbl rt;
 	char *sval;
 
-	sval = rt_getstring(ht, key, "0:0");
+	sval = rt_getstring(ht, key, "NULL:0");
 	str_splitVal(&rt, sval, ":");
 	
 	return rt.port;
@@ -303,7 +301,7 @@ TOHT *rt_load(const char *rtname)
 	int err = 0;
 
 	if ((in = fopen(rtname, "r")) == NULL) {
-		fprintf(stderr, "rt: cannot open %s\n", rtname);
+		fprintf(stderr, "rt_load: cannot open %s\n", rtname);
 		return NULL;
 	}
 
@@ -325,7 +323,7 @@ TOHT *rt_load(const char *rtname)
 				break;
 			} else {
 				/** Произошла ошибка чтения из файла */
-				fprintf(stderr, "rt: cannot read %s\n",
+				fprintf(stderr, "rt_load: cannot read %s\n",
 					rtname);
 				err = -1;
 				break;
@@ -344,7 +342,7 @@ TOHT *rt_load(const char *rtname)
 		err = ht_put(ht, key, val);
 		
 		if (err < 0) {
-			fprintf(stderr, "rt: error in rt_load()\n");
+			fprintf(stderr, "rt_load: error in rt_load()\n");
 			break;
 		}
 		/** Очистили буфер для очередной строки файла */
@@ -357,7 +355,7 @@ TOHT *rt_load(const char *rtname)
 	}
 	/** Закрываем файл */
 	if (fclose(in) == EOF)
-		fprintf(stderr, "rt: cannot close %s\n", rtname);
+		fprintf(stderr, "rt_load: cannot close %s\n", rtname);
 	
 	return ht;
 }
