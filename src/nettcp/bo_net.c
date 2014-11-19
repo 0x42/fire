@@ -167,7 +167,7 @@ error:
 
 
 /* ----------------------------------------------------------------------------
- * @brief	устанав соед с узлом -> отпр SET|LEN|DATA -> ждем ответ OK 
+ * @brief	 отпр SET|LEN|DATA -> ждем ответ OK 
  *					
  * @return	[-1] - error; [1] - OK  
  */
@@ -178,11 +178,21 @@ int bo_sendSetMsg(int sock, char *data, unsigned int dataSize)
 	ans = bo_sendXXXMsg(sock, head, data, dataSize);
 	return ans;
 }
-/* @brief	устанав соед с узлом -> отпр TAB|LEN|DATA -> ждем ответ OK */
+
+/* @brief	 отпр TAB|LEN|DATA -> ждем ответ OK */
 int bo_sendTabMsg(int sock, char *data, unsigned int dataSize)
 {
 	int ans  = -1;
 	char *head = "TAB";
+	ans = bo_sendXXXMsg(sock, head, data, dataSize);
+	return ans;
+}
+
+/* @brief	 отпр LOG|LEN|DATA -> ждем ответ OK */
+int bo_sendLogMsg(int sock, char *data, unsigned int dataSize)
+{
+	int ans  = -1;
+	char *head = "LOG";
 	ans = bo_sendXXXMsg(sock, head, data, dataSize);
 	return ans;
 }

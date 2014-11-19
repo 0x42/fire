@@ -76,20 +76,69 @@ TEST(cycarr, addTen)
 		if(exec == -1) { printf(" add error\n "); goto exit;}
 	}
 	
-	exec = bo_cycle_arr_get(arr, buf, 0);
+	exec = bo_cycle_arr_get(arr, buf, 8);
 	if(exec < 1) { printf("get error\n"); goto exit;}
-	for(; i < exec; i++) {
+	for(i = 0; i < exec; i++) {
 		if(buf[i] != val[8][i]) { 
-			printf("compare error \n"); 
+			printf("compare 8 error \n"); 
 			goto exit;
 		}
 	}
 	
-	exec = bo_cycle_arr_get(arr, buf, 0);
+	exec = bo_cycle_arr_get(arr, buf, 9);
 	if(exec < 1) { printf("get error\n"); goto exit;}
-	for(; i < exec; i++) {
+	for(i = 0; i < exec; i++) {
 		if(buf[i] != val[9][i]) { 
-			printf("compare error \n"); 
+			printf("compare 9 error \n"); 
+			goto exit;
+		}
+	}
+	ans = 1;
+	exit:
+	TEST_ASSERT_EQUAL(1, ans);
+}
+
+TEST(cycarr, add100getLast)
+{
+	printf("add100getLast ... run\n");
+	int ans = -1; int exec = -1;
+	int i = 0; char val[100][20] = {0}; char buf[20] = {0}; 
+	char *str;
+	
+	for(i = 0; i < 100; i++) {
+		str = val[i];
+		sprintf(str, "%d %s", i, "0x42");
+	}
+	
+	struct bo_cycle_arr *arr = bo_initCycleArr(10);
+	
+	for(i = 0; i < 100; i++) {
+		exec = bo_cycle_arr_add(arr, val[i], strlen(val[i]));
+		if(exec == -1) { printf(" add error\n "); goto exit;}
+	}
+	int j = 0;
+	exec = bo_cycle_arr_get(arr, buf, 8);
+	if(exec < 1) { printf("get error\n"); goto exit;}
+	for(i = 0; i < exec; i++) {
+		if(buf[i] != val[98][i]) {
+			printf("buf[");
+			for(j = 0; j < exec; j++) {
+				printf("%c", buf[j]);
+			}
+			printf("]\n val[");
+			for(j = 0; j < exec; j++) {
+				printf("%c", val[98][j]);
+			}
+			printf("]\ncompare 8 error \n"); 
+			goto exit;
+		}
+	}
+	
+	exec = bo_cycle_arr_get(arr, buf, 9);
+	if(exec < 1) { printf("get error\n"); goto exit;}
+	for(i = 0; i < exec; i++) {
+		if(buf[i] != val[99][i]) { 
+			printf("compare 9 error \n"); 
 			goto exit;
 		}
 	}

@@ -34,3 +34,17 @@ TEST(master, simpleTest)
 	}
 	TEST_ASSERT_EQUAL(1, ans);
 }
+
+TEST(master, setConnectTest)
+{
+	int ans = -1;
+	char *ip = "192.168.1.128";
+	printf("master->setConnectTest ... \n");
+	int in = bo_setConnect(ip, 8890);
+	if(in > 0) ans = 1;
+	else printf("can't connect to %s", ip);
+	TEST_ASSERT_EQUAL(1, ans);
+}
+
+
+

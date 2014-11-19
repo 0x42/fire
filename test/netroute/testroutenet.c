@@ -28,7 +28,7 @@ void test_crtTR(char **tr, int n, int l);
 
 char *MSG[21] = {"003:192.168.100.127:2", "111:192.168.100.102:1"};
 
-TEST(route, simpleTest)
+TEST(route, simpleTest) /* NEED RUN SERVER */
 {
 	gen_tbl_crc16modbus();
 	printf("simpleTest() ... \n");
@@ -53,7 +53,8 @@ TEST(route, simpleTest)
 	TEST_ASSERT_EQUAL(1, ans);
 }
 
-TEST(route, sendgetTest)
+/* нужно переписать тест */
+TEST(route, sendgetTest) /* NEED RUN SERVER */
 {
 	printf("sendgetTest() ...\n");
 	struct sockaddr_in saddr;
@@ -417,7 +418,7 @@ static void *cltSendBadTabRoute(void *arg)
 	return ans;
 }
 
-TEST(route, sendNULLTest)
+TEST(route, sendNULLTest) /* NEED RUN SERVER */
 {
 	printf("sendNULLTest() ...\n");
 	struct sockaddr_in saddr;
@@ -481,6 +482,40 @@ TEST(route, sendNULLTest)
 	end:
 	close(sock_in );
 	close(sock_out);	
+	TEST_ASSERT_EQUAL(1, ans);
+}
+
+TEST(route, sendLogTest) /* NEED SERVER */
+{
+	printf("sendLogTest ... RUN\n");
+	int ans = -1, in = -1, exec = -1;
+	char *log = "0x42: test log message";
+	char packet[24] = {0};
+	unsigned char crcTxt[2] = {0};
+	int crc = 0;
+	
+	gen_tbl_crc16modbus();
+		
+	in = bo_setConnect("127.0.0.1", 8890);
+	if(in == -1) {
+		printf("bo_setConnect ERROR\n"); goto exit;
+	}
+	
+	crc = crc16modbus(log, strlen(log));
+	boIntToChar(crc, crcTxt);
+	
+	memcpy(packet, log, 22);
+	
+	packet[22] = crcTxt[0];
+	packet[23] = crcTxt[1];
+	
+	exec = bo_sendLogMsg(in, packet, 24);
+	if(exec == -1) {
+		printf("bo_sendLogMsg() ERROR\n");
+	}
+	
+	ans = 1;
+	exit:
 	TEST_ASSERT_EQUAL(1, ans);
 }
 
@@ -548,7 +583,6 @@ error:
 	}
 	printf("end\n");
 }
-
 
 /* send with blck signal */
 static int bo_sendAllData_NoSig(int sock, char *buf, int len)

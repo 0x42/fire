@@ -1,10 +1,10 @@
 TARGET		     = build/master
 
-CC = arm-elf-gcc
-LDFLAGS	     = -Wl, -elf2flt -lpthread
+#CC = arm-elf-gcc
+#LDFLAGS	     = -Wl, -elf2flt -lpthread
 
-#CC = gcc
-#LDFLAGS		     = -lpthread
+CC = gcc
+LDFLAGS		     = -lpthread
 
 CFLAGS		     = -Wall -c -g
 
@@ -21,6 +21,7 @@ SRC7   = ../src/tools/listsock.c
 SRC8   = ../src/nettcp/bo_net_master_core.c
 SRC9   = ../src/tools/ocrc.c
 SRC10  = ../src/tools/ort.c
+SRC11  = ../src/nettcp/bo_cycle_arr.c
 
 OBJ    = build/main.o
 OBJ1   = build/bologging.o
@@ -33,6 +34,7 @@ OBJ7   = build/listsock.o
 OBJ8   = build/bo_net_master_core.o
 OBJ9   = build/ocrc.o
 OBJ10  = build/ort.o
+OBJ11  = build/bo_cycle_arr.o
 
 default:
 	$(CC) $(INC_DIR) $(CFLAGS) $(SRC1)  -o $(OBJ1)
@@ -45,11 +47,12 @@ default:
 	$(CC) $(INC_DIR) $(CFLAGS) $(SRC8)  -o $(OBJ8)
 	$(CC) $(INC_DIR) $(CFLAGS) $(SRC9)  -o $(OBJ9)
 	$(CC) $(INC_DIR) $(CFLAGS) $(SRC10) -o $(OBJ10)
-
+	$(CC) $(INC_DIR) $(CFLAGS) $(SRC11) -o $(OBJ11)
+	
 	$(CC) $(INC_DIR) $(CFLAGS) $(SRC)  -o $(OBJ)
 	$(CC) $(LDFLAGS) -g   $(OBJ1) $(OBJ2) $(OBJ3) $(OBJ4) \
 	      $(OBJ5) $(OBJ6) $(OBJ7) $(OBJ8) $(OBJ9) $(OBJ10) \
-	      $(OBJ) -o $(TARGET)
+	      $(OBJ11) $(OBJ) -o $(TARGET)
 
 memtrace:
 	MALLOC_TRACE=trace.log $(TARGET)

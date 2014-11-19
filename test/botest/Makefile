@@ -32,7 +32,8 @@ SRC2 = \
     ../../src/tools/ocrc.c \
     ../../src/tools/oht.c \
     ../../src/nettcp/bo_net_master_core.c \
-    ../../src/tools/dbgout.c
+    ../../src/tools/dbgout.c \
+    ../../src/nettcp/bo_cycle_arr.c
 
 SRC3 = \
     ../bolog/test_runners/Test_log_Runners.c \

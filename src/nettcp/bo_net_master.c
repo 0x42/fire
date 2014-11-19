@@ -39,8 +39,10 @@ static void m_delRoute(struct bo_sock *val, TOHT *tr);
 static void m_addSockToSet(struct bo_llsock *list_in, fd_set *r_set);
 static int  m_isClosed(struct bo_llsock *list_in, int sock);
 
-static char *recvBuf;
+/* Buffer for recieve data */
+static unsigned char *recvBuf;
 static int  recvBufLen = BO_MAX_TAB_BUF;
+static struct bo_cycle_arr *logArr;
 /* ----------------------------------------------------------------------------
  * @brief	старт сервера, чтение конфига, созд списка сокетов(текущ подкл) 
  */
@@ -64,7 +66,7 @@ void bo_master_main(int argc, char **argv)
 	list_out = m_crtLL(servconf.max_con);
 	if(list_out == NULL) goto end;
 	
-	recvBuf = (char *)malloc(recvBufLen);
+	recvBuf = (unsigned char *)malloc(recvBufLen);
 	if(recvBuf == NULL) {
 		bo_log("bo_master_main() ERROR %s",
 		"can't alloc mem for recvBuf");
@@ -75,6 +77,14 @@ void bo_master_main(int argc, char **argv)
 	if(tab_routes == NULL) {
 		bo_log("bo_master_main() ERROR %s",
 		"can't create tab_routes haven't free memory");
+		goto end;
+	}
+	
+	logArr = NULL;
+	logArr = bo_initCycleArr(1024);
+	if(logArr == NULL) {
+		bo_log("bo_master_main() ERROR %s",
+		"can't create logArr haven't free memory");
 		goto end;
 	}
 	
@@ -89,7 +99,8 @@ void bo_master_main(int argc, char **argv)
 		fcntl(sock_out, F_SETFL, O_NONBLOCK);
 
 		m_servWork(sock_in, sock_out, 
-			   list_in, list_out, tab_routes);
+			   list_in, list_out, 
+			   tab_routes);
 	}
 	
 	if(sock_in  != -1) bo_closeSocket(sock_in);
@@ -100,7 +111,10 @@ end:
 	if(list_out != NULL) bo_del_lsock(list_out);
 
 	if(tab_routes != NULL) ht_free(tab_routes);
+
 	if(recvBuf != NULL) free(recvBuf);
+
+	if(logArr != NULL) bo_cycle_arr_del(logArr);
 
 	if(cfg != NULL) {
 		cfg_free(cfg);
@@ -166,7 +180,8 @@ static struct bo_llsock *m_crtLL(int size)
  */
 static void m_servWork(int sock_in, int sock_out,
 	               struct bo_llsock *llist_in,
-		       struct bo_llsock *llist_out, TOHT *tr)
+		       struct bo_llsock *llist_out, 
+		       TOHT *tr)
 {
 	int stop = 1;
 	int exec = -1;
@@ -277,7 +292,7 @@ static void m_addClientOut(struct bo_llsock *list, int servSock, fd_set *set,
  * @tr		таблица роутов(для маршрутизации)
  */
 static void m_workClient(struct bo_llsock *list_in, struct bo_llsock *list_out,
-			   fd_set *r_set, fd_set *w_set, TOHT *tr)
+			fd_set *r_set, fd_set *w_set, TOHT *tr)
 {
 	int i = -1;
 	int exec = -1;
@@ -400,22 +415,20 @@ static int m_isClosed(struct bo_llsock *list, int sock)
 static int m_recvClientMsg(int sock, TOHT *tr)
 {
 	struct paramThr p;
-	/* при передачи лога ПР придется увеличить до 1200 */
-	int bufSize = 80;
-	unsigned char buf[bufSize];
-	unsigned char ppp[33];
+	/*  */
 	int t_msg = 0;
 	int i; char *key; char *val;
 
 	dbgout("m_recvClientMsg() sock is set[%d] \n", sock);
 	p.sock = sock;
 	p.route_tab = tr;
-	p.buf = buf;
-	p.bufSize = bufSize;
+	p.buf = recvBuf;
+	p.bufSize = recvBufLen;
 	p.length = 0;
+	p.log = logArr;
+	
 	t_msg = bo_master_core(&p);
-	memset(ppp, 0, 33);
-	memcpy(ppp, buf, p.length);
+
 	
 	printf("==== TAB ROUTE ==== \n");
 	for(i = 0; i < tr->size; i++) {
@@ -426,11 +439,13 @@ static int m_recvClientMsg(int sock, TOHT *tr)
 		}
 	}
 	printf("==== END TAB ==== \n");
+
 	return t_msg;
 }
 
 /* ----------------------------------------------------------------------------
- * @brief	отправ всю таблицу роутов клиенту(чтобы искл возм коллизии)
+ * @DEPRICATED
+ * @brief	отправ всю таблицу роутов клиенту(построчно)
  */
 static void m_sendClientMsg(int sock, TOHT *tr, struct bo_llsock *list)
 {
@@ -510,7 +525,7 @@ static void m_sendTabPacket(int sock, TOHT *tr, struct bo_llsock *list)
 	}
 	
 	if(tab_not_empty == 1) {
-		exec = bo_master_sendTab(sock, tr, recvBuf);
+		exec = bo_master_sendTab(sock, tr, (char *)recvBuf);
 		dbgout("\n==== SEND TAB ====\n");
 		for(i = 0; i < tr->size; i++) {
 			key = *(tr->key + i);
