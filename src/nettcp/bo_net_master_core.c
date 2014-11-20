@@ -455,6 +455,7 @@ static void coreReturnLog(struct paramThr *p)
 	int index = -1;
 	unsigned char *val = NULL;
 	index = bo_readPacketLength(p->sock);
+	if(index == -1) p->status = ERR;
 	
 }
 

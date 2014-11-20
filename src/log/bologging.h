@@ -24,7 +24,7 @@
 /*THR SAFE*/
 int  bo_log(char *msg, ...);
 
-/* NO THR SAFE*/
+/* THR SAFE*/
 void bo_setLogParam(char *fname, char *oldfname, int nrow, int maxrow);
 /* NO THR SAFE*/
 void bo_resetLogInit();

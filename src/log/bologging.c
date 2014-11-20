@@ -37,12 +37,14 @@ static int logInit = -1;
  */
 void bo_setLogParam(char *fname, char *oldfname, int nrow, int maxrow)
 {
+	pthread_mutex_lock(&bolog_mutex);
 	log.pid = getpid();
 	log.name = fname;
         log.oldname = oldfname;
 	log.nrow = nrow;
 	log.maxrow = maxrow;
 	logInit = 1;
+	pthread_mutex_unlock(&bolog_mutex);
 }
 /* ----------------------------------------------------------------------------
  * @brief		сбрасываем флаг logInit
@@ -79,9 +81,9 @@ int bo_log(char *msg, ...)
 	int err = 0, ans = 0;
 	/* указывает на очередной безымян-ый аргумент */
 	va_list ap; 
-	
+
 	pthread_mutex_lock(&bolog_mutex);
-	
+
 	/* защита если msg = null */
 	if(msg == NULL) msg = " ";
 	if(strlen(msg) < 1) msg = " ";
@@ -102,9 +104,9 @@ int bo_log(char *msg, ...)
 	} else ans = 1;
 	/* очистка */
 	va_end(ap);
-	
+
 	pthread_mutex_unlock(&bolog_mutex);
-	
+
 	return ans;
 }
 

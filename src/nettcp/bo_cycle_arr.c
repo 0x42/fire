@@ -76,6 +76,7 @@ int bo_cycle_arr_get(struct bo_cycle_arr *arr, unsigned char *value, int i)
 	struct bo_cycle_arr_item *item = NULL;
 	
 	if(i >= arr->itemN) goto exit;
+	if(i < 0 ) goto exit;
 	
 	item = (arr->mem + i);
 	ans = item->n;
