@@ -167,7 +167,7 @@ int bo_getFifoVal(unsigned char *buf, int bufSize) /*THREAD SAFE */
 
 	if(fifo.mem != NULL) {
 		ans = bo_get_fifo(buf, bufSize);
-		if(ans != -1) bo_delHead();
+		if(ans != -1) bo_del_head();
 	}
 
 	pthread_mutex_unlock(&fifo_mut);
