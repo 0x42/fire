@@ -453,15 +453,27 @@ static void coreReadLog(struct paramThr *p)
 static void coreReturnLog(struct paramThr *p) 
 {
 	int index = -1;
-	unsigned char *val = NULL;
+	int exec = -1;
+	
 	index = bo_readPacketLength(p->sock);
 	if(index == -1) p->status = ERR;
-	else if(index == 0) p->status = ERR;
-	else if(index == 1) {
-		
+	else {
+		exec = bo_cycle_arr_get(p->log, val, p->buf, index);
+		p->length = exec;
+		if(exec == 0) {
+			p->status = ERR;
+		} else if(exec == -1) {
+			p->status = ERR;
+		} else {
+			p->status = SENDLOG;
+		}
 	}
 }
 
+static void coreSendLog(struct paramThr *p)
+{
+	
+}
 
 
 
