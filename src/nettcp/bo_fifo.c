@@ -23,9 +23,10 @@ static struct FIFO {
 	int free;
 } fifo = {0};
 
-/*
-static pthread_mutex_t fifo_lock = PTHREAD_MUTEX_INITIALIZER;
-*/
+static int bo_get_fifo(unsigned char *buf, int bufSize);
+static void bo_del_head();
+
+static pthread_mutex_t fifo_mut = PTHREAD_MUTEX_INITIALIZER;
 
 /* ----------------------------------------------------------------------------
  * @brief	Вывод очереди FIFO
@@ -58,13 +59,13 @@ void bo_printFIFO()
  * @brief	Создаем очередь 
  * @itemN	размер очередь в байтах
  * @return	[1] - OK; [-1] - ERROR
- */
-int bo_initFIFO(int itemN)
+ */	
+int bo_initFIFO(int itemN)	/*THREAD SAFE */
 {
 	int ans = -1;
-/*
-	pthread_mutex_lock(&fifo_lock);
-*/	
+
+	pthread_mutex_lock(&fifo_mut);
+	
 	fifo.mem = (struct BO_ITEM_FIFO *)
 		malloc(sizeof(struct BO_ITEM_FIFO)*itemN);
 	if(fifo.mem == NULL) goto exit;
@@ -76,10 +77,10 @@ int bo_initFIFO(int itemN)
 	fifo.count = 0;
 	fifo.free = itemN;
 	ans = 1;
+	
 	exit:
-/*	
-	pthread_mutex_unlock(&fifo_lock);
-*/	return ans;
+	pthread_mutex_unlock(&fifo_mut);
+	return ans;
 }
 /* ----------------------------------------------------------------------------
  * @brief	добавляем элем val размером size в очередь fifo  
@@ -88,13 +89,13 @@ int bo_initFIFO(int itemN)
  *		[-1] - не коррект. значение size(больше макс допустимого 
  *			или меньше 1)
  */
-int  bo_addFIFO(unsigned char *val, int size) /* NO THREAD SAFE */ 
+int  bo_addFIFO(unsigned char *val, int size) /* THREAD SAFE */ 
 {
 	int ans = -1;
 	struct BO_ITEM_FIFO *ptr = NULL;	
-/*	
-	pthread_mutex_lock(&fifo_lock);
-*/	
+
+	pthread_mutex_lock(&fifo_mut);
+	
 	if(val == NULL) goto exit;
 	if(size < 1) goto exit;
 	if(size > BO_FIFO_ITEM_VAL) goto exit;
@@ -114,8 +115,8 @@ int  bo_addFIFO(unsigned char *val, int size) /* NO THREAD SAFE */
 	}
 	
 	exit:
-/*	pthread_mutex_unlock(&fifo_lock);
-*/	return ans;
+	pthread_mutex_unlock(&fifo_mut);
+	return ans;
 }
 /* ----------------------------------------------------------------------------
  * @brief	берем элемент из очереди
@@ -123,11 +124,21 @@ int  bo_addFIFO(unsigned char *val, int size) /* NO THREAD SAFE */
  * @bufSize     размер буфера
  * @return	[-1] - нет данных в очереди [N] - размер данных
  */
-int bo_getFIFO(unsigned char *buf, int bufSize) /* NO THREAD SAFE */
+int bo_getFIFO(unsigned char *buf, int bufSize) /* THREAD SAFE */
+{
+	int ans = -1;
+	pthread_mutex_lock(&fifo_mut);
+	
+	ans = bo_get_fifo(buf, bufSize); 
+	
+	pthread_mutex_unlock(&fifo_mut);
+	return ans;
+}
+
+static int bo_get_fifo(unsigned char *buf, int bufSize)
 {
 	int ans = -1;
 	struct BO_ITEM_FIFO *ptr = NULL;
-	
 	
 	if(fifo.count != 0) {
 		ptr = fifo.mem + fifo.head;
@@ -145,29 +156,35 @@ int bo_getFIFO(unsigned char *buf, int bufSize) /* NO THREAD SAFE */
 	
 	return ans;
 }
-
 /* ----------------------------------------------------------------------------
  * @brief	берем голову удал голову
  */
 int bo_getFifoVal(unsigned char *buf, int bufSize) /*THREAD SAFE */
 {
 	int ans = -1;
-/*	
-	pthread_mutex_lock(&fifo_lock);
-*/
+	
+	pthread_mutex_lock(&fifo_mut);
+
 	if(fifo.mem != NULL) {
-		ans = bo_getFIFO(buf, bufSize);
+		ans = bo_get_fifo(buf, bufSize);
 		if(ans != -1) bo_delHead();
 	}
-/*	
-	pthread_mutex_unlock(&fifo_lock);
-*/
+
+	pthread_mutex_unlock(&fifo_mut);
+
 	return ans;
 }
 /* ----------------------------------------------------------------------------
  * @brief		Делаем головой очереди следующий элемент
  */
-void bo_delHead() /*NO THREAD SAFE*/
+void bo_delHead() /*THREAD SAFE*/
+{
+	pthread_mutex_lock(&fifo_mut);
+	bo_del_head();
+	pthread_mutex_unlock(&fifo_mut);
+}
+
+static void bo_del_head()
 {
 	if(fifo.count != 0) {
 		memset(fifo.mem+fifo.head, 0, sizeof(struct BO_ITEM_FIFO));
@@ -196,8 +213,8 @@ int bo_getCount()
  */
 void bo_delFIFO()
 {
-/*	pthread_mutex_lock(&fifo_lock);
-*/
+	pthread_mutex_lock(&fifo_mut);
+
 	free(fifo.mem);
 	fifo.mem = NULL;
 	fifo.head = 0;
@@ -205,7 +222,6 @@ void bo_delFIFO()
 	fifo.last = 0;
 	fifo.count = 0;
 	fifo.free = 0;
-/*	
-	pthread_mutex_unlock(&fifo_lock);
-*/
+	
+	pthread_mutex_unlock(&fifo_mut);
 }
