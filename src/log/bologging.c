@@ -44,6 +44,7 @@ void bo_setLogParam(char *fname, char *oldfname, int nrow, int maxrow)
 	log.nrow = nrow;
 	log.maxrow = maxrow;
 	logInit = 1;
+	log.nrow = readNRow(log.name);
 	pthread_mutex_unlock(&bolog_mutex);
 }
 /* ----------------------------------------------------------------------------
