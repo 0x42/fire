@@ -22,6 +22,7 @@ SRC8   = ../src/nettcp/bo_net_master_core.c
 SRC9   = ../src/tools/ocrc.c
 SRC10  = ../src/tools/ort.c
 SRC11  = ../src/nettcp/bo_cycle_arr.c
+SRC12  = ../src/nettcp/bo_net_master_core_log.c
 
 OBJ    = build/main.o
 OBJ1   = build/bologging.o
@@ -35,6 +36,7 @@ OBJ8   = build/bo_net_master_core.o
 OBJ9   = build/ocrc.o
 OBJ10  = build/ort.o
 OBJ11  = build/bo_cycle_arr.o
+OBJ12  = build/bo_net_master_core_log.o
 
 default:
 	$(CC) $(INC_DIR) $(CFLAGS) $(SRC1)  -o $(OBJ1)
@@ -48,11 +50,12 @@ default:
 	$(CC) $(INC_DIR) $(CFLAGS) $(SRC9)  -o $(OBJ9)
 	$(CC) $(INC_DIR) $(CFLAGS) $(SRC10) -o $(OBJ10)
 	$(CC) $(INC_DIR) $(CFLAGS) $(SRC11) -o $(OBJ11)
+	$(CC) $(INC_DIR) $(CFLAGS) $(SRC12) -o $(OBJ12)
 	
 	$(CC) $(INC_DIR) $(CFLAGS) $(SRC)  -o $(OBJ)
 	$(CC) $(LDFLAGS) -g   $(OBJ1) $(OBJ2) $(OBJ3) $(OBJ4) \
 	      $(OBJ5) $(OBJ6) $(OBJ7) $(OBJ8) $(OBJ9) $(OBJ10) \
-	      $(OBJ11) $(OBJ) -o $(TARGET)
+	      $(OBJ11) $(OBJ12) $(OBJ) -o $(TARGET)
 
 memtrace:
 	MALLOC_TRACE=trace.log $(TARGET)

@@ -9,12 +9,13 @@
 #include "../tools/oht.h"
 #include "../tools/dbgout.h"
 #include "../tools/ocrc.h"
+#include "bo_net_master_core_log.h"
 #include "bo_cycle_arr.h"
 
 enum m_coreStatus {READHEAD = 0, SET, QUIT, ANSOK, ERR, ADD, READCRC,
                    TAB, READCRC_TAB, READROW, 
-                   LOG, READCRC_LOG, READLOG,
-                   RLO};
+                   LOG, SAVELOG,
+                   RLO, SENDLOG, SENDNUL};
 
 struct paramThr {
     int sock;

@@ -519,6 +519,51 @@ TEST(route, sendLogTest) /* NEED SERVER */
 	TEST_ASSERT_EQUAL(1, ans);
 }
 
+TEST(route, sendGetLogTest) /* NEED SERVER */
+{
+	int ans = -1;
+	printf("sendGetLogTest ... run \n");
+	char *log = "0x42: test log message";
+	
+	int in = bo_setConnect("127.0.0.1", 8890);
+	if(in == -1) { printf("bo_setConnect ERROR\n"); goto exit; }
+	
+	char buf[BO_ARR_ITEM_VAL] = {0};
+	
+	int exec = bo_master_core_logRecv(in, 0, buf, BO_ARR_ITEM_VAL);
+	if(exec == -1) { printf("bo_master_core_logRecv() ERROR\n"); goto exit;}
+	int i = 0;
+	if(exec != strlen(log)) { printf("bad exec[%d]!=len[%d] ERROR\n", exec, strlen(log)); goto exit;}
+	
+	for(; i < strlen(log); i++) {
+		if(buf[i] != *(log+i) ) { 
+			printf("recv bad log ERROR \n"); goto exit;
+		}
+	}
+	ans = 1;
+	exit:
+	TEST_ASSERT_EQUAL(1, ans);
+}
+
+TEST(route, getNullLogTest) /* NEED SERVER */
+{
+	int ans = -1;
+	printf("getNullLogTest ... run \n");
+	int in = bo_setConnect("127.0.0.1", 8890);
+	if(in == -1) { printf("bo_setConnect ERROR\n"); goto exit; }
+	
+	char buf[BO_ARR_ITEM_VAL] = {0};
+	
+	int exec = bo_master_core_logRecv(in, 100, buf, BO_ARR_ITEM_VAL);
+	if(exec == -1) { printf("bo_master_core_logRecv() ERROR\n"); goto exit;}
+	else if(exec > 0) {printf("bo_master_core_logRecv() ERROR\n"); goto exit;}
+
+
+	ans = 1;
+	exit:
+	TEST_ASSERT_EQUAL(1, ans);
+}
+
 /*
  * тест на ошибки  
  */
@@ -615,7 +660,7 @@ static int bo_sendAllData_NoSig(int sock, char *buf, int len)
 
 */
 
-
+/* 0x42 */
 
 
 

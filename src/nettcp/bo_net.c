@@ -197,6 +197,34 @@ int bo_sendLogMsg(int sock, char *data, unsigned int dataSize)
 	return ans;
 }
 
+/* @brief	отпр RLO|INDEX(2bytes) */
+int bo_sendRloMsg(int sock, int index)
+{
+	int ans = -1;
+	char *head = "RLO";
+	unsigned char ind[2] = {0};
+	int exec = -1;
+	
+	boIntToChar(index, ind);
+	exec = bo_sendAllData(sock, (unsigned char*)head, 3);
+	if(exec == -1) {
+		bo_log("bo_sendRloMsg() %s send[head] errno[%s]",
+			"WARN",
+			strerror(errno));
+		goto end;
+	}
+	exec = bo_sendAllData(sock, ind, 2);
+	if(exec == -1) {
+		bo_log("bo_sendRloMsg() %s send[index] errno[%s]",
+			"WARN",
+			strerror(errno));
+		goto end;
+	}
+	ans = 1;
+	end:
+	return ans;
+}
+
 int bo_sendXXXMsg(int sock, char *head, char *data, int dataSize)
 {
 	int ans  = -1;

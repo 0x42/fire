@@ -13,17 +13,18 @@ static void coreTab	    (struct paramThr *p);
 static void coreReadCRC_Tab (struct paramThr *p);
 STATIC void coreReadRow     (struct paramThr *p);
 static void coreLog	    (struct paramThr *p);
-static void coreReadCRC_Log (struct paramThr *p);
-static void coreReadLog     (struct paramThr *p);
+static void coreSaveLog     (struct paramThr *p);
 static void coreReturnLog   (struct paramThr *p);
+static void coreSendLog	    (struct paramThr *p);
+static void coreSendNul	    (struct paramThr *p);
 /* ----------------------------------------------------------------------------
  *	КОНЕЧНЫЙ АВТОМАТ
  */
 static char *coreStatusTxt[] = {"READHEAD", "SET", "QUIT", "ANSOK",
 				"ERR", "ADD", "READCRC", 
 				"TAB", "READCRC_TAB", "READROW", 
-				"LOG", "READCRC_LOG", "READLOG", 
-				"RLO"};
+				"LOG", "SAVELOG", 
+				"RLO", "SENDLOG", "SENDNUL"};
 
 static void(*statusTable[])(struct paramThr *) = {
 	coreReadHead,
@@ -37,9 +38,10 @@ static void(*statusTable[])(struct paramThr *) = {
 	coreReadCRC_Tab,
 	coreReadRow,
 	coreLog,
-	coreReadCRC_Log,
-	coreReadLog,
-	coreReturnLog
+	coreSaveLog,
+	coreReturnLog,
+	coreSendLog,
+	coreSendNul
 };
 
 /* ----------------------------------------------------------------------------
@@ -88,19 +90,30 @@ static void coreReadHead(struct paramThr *p)
 {
 	int exec = -1;
 	char buf[3] = {0};
-	exec = bo_recvAllData(p->sock, (unsigned char *)buf, 3, 3);
+	/* если пришел LOG то в сокете надо оставить заголовок для коррект
+	   работы bo_master_core_log */
+	exec = recv(p->sock, buf, 3, MSG_PEEK);
 	if(exec == -1) {
 		bo_log("bo_net_master_core.c coreReadHead() errno[%s]", 
 			strerror(errno));
 		p->status = ERR;
 	} else {
-		if(strstr(buf, "SET")) p->status = SET;
-		else if(strstr(buf, "TAB")) p->status = TAB;
-		else if(strstr(buf, "LOG")) p->status = LOG;
-		else if(strstr(buf, "RLO")) p->status = RLO;
-		else if(strstr(buf, "OK"))  p->status = QUIT;
-		else p->status = ERR;
-	}
+		if(strstr(buf, "LOG")) p->status = LOG;
+		else {
+			exec = bo_recvAllData(p->sock, (unsigned char *)buf, 3, 3);
+			if(exec == -1) {
+				bo_log("bo_net_master_core.c coreReadHead() errno[%s]", 
+					strerror(errno));
+				p->status = ERR;
+			} else {
+				if(strstr(buf, "SET")) p->status = SET;
+				else if(strstr(buf, "TAB")) p->status = TAB;
+				else if(strstr(buf, "RLO")) p->status = RLO;
+				else if(strstr(buf, "OK"))  p->status = QUIT;
+				else p->status = ERR;
+			}
+		}
+	}	
 }
 
 /* ----------------------------------------------------------------------------
@@ -379,65 +392,25 @@ error:
 static void coreLog(struct paramThr *p)
 {
 	int length = 0;
-	int flag  = -1;
-	int count = 0;
-	length = bo_readPacketLength(p->sock);
-	/*LOG|LEN|DATA(HEADER=10 + VALUE)  + CRC*/
-	memset(p->buf, 0, p->bufSize);
-	if((length > 10) & (length <= p->bufSize)) {
-		count = bo_recvAllData(p->sock, 
-				       p->buf,
-			               p->bufSize,
-				       length);
-		if((count > 0) & (count == length)) flag = 1; 
-		else {
-			bo_log("bo_net_master_core.c coreLog() count[%d]!=length[%d]", count, length);
-			bo_log("bo_net_master_core.c coreLog() buf[%s]", p->buf);
-		}
+	length = bo_master_core_log(p->sock, (char *)p->buf, p->bufSize);
+	if(length == -1) {
+		p->status = ERR;
+		bo_log("coreLog() can't read Log");
 	} else {
-		bo_log("bo_net_master_core.c coreLog() bad length[%d] ", 
-			length, 
-			p->bufSize);
-	}
-	if(flag == 1) {
 		p->length = length;
-		p->status = READCRC_LOG;
-	} else {
-		p->status = ERR;
+		p->status = SAVELOG;
 	}
-}
-
-static void coreReadCRC_Log(struct paramThr *p)
-{
-	int crc = -1;
-	int count = -1;
-	unsigned char crcTxt[2] = {0};
-	char *msg = (char *)p->buf;
-	int msg_len = p->length - 2;
-	
-	crcTxt[0] = p->buf[p->length - 2];
-	crcTxt[1] = p->buf[p->length - 1];
-	
-	crc = boCharToInt(crcTxt);
-	count = crc16modbus(msg, msg_len);
-	printf("\ncrc[%d][%02x %02x] count[%d]\n", crc,crcTxt[0], crcTxt[1], count);
-	p->length = msg_len;
-	
-	if(crc != count) { 
-		p->status = ERR;
-		bo_log("coreReadCRC_Log() bad CRC");
-	} else p->status = READLOG; 
 }
 
 /* ----------------------------------------------------------------------------
  * @brief	сохраняем Лог в цикл связ список  
  */
-static void coreReadLog(struct paramThr *p)
+static void coreSaveLog(struct paramThr *p)
 {
 	int i = 0;
 	int exec = -1;
 
-	printf("coreReadLog = [");
+	printf("\nlen[%d]\ncoreSaveLog = [", p->length);
 	for(; i < p->length; i++) {
 		printf("%c", *(p->buf + i));
 	}
@@ -446,8 +419,8 @@ static void coreReadLog(struct paramThr *p)
 	exec = bo_cycle_arr_add(p->log, p->buf, p->length);
 	if(exec == -1) {
 		p->status = ERR;
-		bo_log("coreReadLog() ERROR bo_cycle_arr_add() log");
-	} else p->status  = ANSOK;
+		bo_log("coreSaveLog() ERROR bo_cycle_arr_add() log");
+	} else p->status  = QUIT;
 }
 
 static void coreReturnLog(struct paramThr *p) 
@@ -458,10 +431,10 @@ static void coreReturnLog(struct paramThr *p)
 	index = bo_readPacketLength(p->sock);
 	if(index == -1) p->status = ERR;
 	else {
-		exec = bo_cycle_arr_get(p->log, val, p->buf, index);
+		exec = bo_cycle_arr_get(p->log, p->buf, index);
 		p->length = exec;
 		if(exec == 0) {
-			p->status = ERR;
+			p->status = SENDNUL;
 		} else if(exec == -1) {
 			p->status = ERR;
 		} else {
@@ -472,9 +445,32 @@ static void coreReturnLog(struct paramThr *p)
 
 static void coreSendLog(struct paramThr *p)
 {
+	unsigned int crc = 0;
+	unsigned char crcTxt[2] = {0};
+	int ptr = p->length;
+	int exec = -1;
 	
+	crc = crc16modbus((char *)p->buf, ptr);
+	boIntToChar(crc, crcTxt);
+	memcpy( (p->buf+ptr), crcTxt, 2);
+	p->length += 2;
+	
+	exec = bo_sendLogMsg(p->sock, (char *)p->buf, p->length);
+	if(exec == -1) { 
+		p->status = ERR;
+		bo_log("coreSendLog() can't send log");
+	} else {
+		/* wait recv OK */
+		p->status = QUIT;
+	}
 }
 
-
-
+static void coreSendNul(struct paramThr *p)
+{
+	int exec = -1;
+	unsigned char msg[] = "NUL";
+	exec = bo_sendAllData(p->sock, msg, 3);
+	if(exec == -1) bo_log("coreSendNul() errno[%s]", strerror(errno));
+	p->status = QUIT;
+}
 
