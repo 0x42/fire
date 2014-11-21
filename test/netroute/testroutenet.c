@@ -564,6 +564,61 @@ TEST(route, getNullLogTest) /* NEED SERVER */
 	TEST_ASSERT_EQUAL(1, ans);
 }
 
+TEST(route, set2000getLast) /* NEED SERVER */
+{
+	int ans = -1;
+	printf("set2048getLast ... run \n");
+	char log[2000][1100] = {0};
+	int i = 0;
+	char *str;
+	
+	for(i = 0; i < 2000; i++) {
+		str = log[i];
+		sprintf(str, "%d %s", i, "0x42 .....");
+	}
+		
+	int in = bo_setConnect("127.0.0.1", 8890);
+	if(in == -1) { printf("bo_setConnect ERROR\n"); goto exit; }
+	
+	int crc; unsigned char crcTxt[2] = {0}; 
+	char buf[BO_ARR_ITEM_VAL] = {0};
+	
+	int len; int exec = -1;
+	for(i = 0; i < 10; i++) {
+		len = strlen(log[i]);
+
+		crc = crc16modbus(log[i], len);
+		boIntToChar(crc, crcTxt);
+
+		memcpy(buf, log[i], len);
+		buf[len] = crcTxt[0];
+		buf[len+1] = crcTxt[1];
+
+		exec = bo_sendLogMsg(in, buf, len + 2);
+		if(exec == -1) {
+			printf("bo_sendLogMsg() ERROR\n");
+			goto exit;
+		}
+	}
+	
+	
+	
+	exec = bo_master_core_logRecv(in, 1023, buf, BO_ARR_ITEM_VAL);
+	if(exec == -1) { printf("bo_master_core_logRecv() ERROR\n"); goto exit;}
+	if(exec != strlen(log[2000])) { printf("bad exec[%d]!=len[%d] ERROR\n", exec, strlen(log)); goto exit;}
+	
+	for(i = 0; i < strlen(log[2000]); i++) {
+		if(buf[i] != *(log+2000) ) { 
+			printf("recv bad log ERROR \n"); goto exit;
+		}
+	}
+	
+	ans = 1;
+	exit:
+	TEST_ASSERT_EQUAL(1, ans);
+}
+
+
 /*
  * тест на ошибки  
  */
