@@ -429,14 +429,17 @@ static void coreReturnLog(struct paramThr *p)
 	int exec = -1;
 	
 	index = bo_readPacketLength(p->sock);
-	if(index == -1) p->status = ERR;
-	else {
+	if(index == -1) {
+		p->status = ERR;
+		bo_log("coreReturnLog() RLO length[%d]", index);
+	} else {
 		exec = bo_cycle_arr_get(p->log, p->buf, index);
 		p->length = exec;
 		if(exec == 0) {
 			p->status = SENDNUL;
 		} else if(exec == -1) {
 			p->status = ERR;
+			bo_log("coreReturnLog()->bo_cycle_arr_get() return -1");
 		} else {
 			p->status = SENDLOG;
 		}
