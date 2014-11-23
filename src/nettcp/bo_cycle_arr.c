@@ -21,7 +21,7 @@ struct bo_cycle_arr {
  * @brief	созд цикл массива
  * @return	[NULL] - ERROR; [*ptr] - указатель на массив
  */
-struct bo_cycle_arr *bo_initCycleArr(int n)
+struct bo_cycle_arr *bo_cycle_arr_init(int n)
 {
 	struct bo_cycle_arr *cl = NULL;
 	
@@ -61,6 +61,7 @@ int bo_cycle_arr_add(struct bo_cycle_arr *arr, unsigned char *value, int n)
 		if(arr->tail == arr->itemN) arr->tail = 0;
 		ans = 1;
 	}
+	
 	return ans;
 }
 
@@ -94,5 +95,25 @@ void bo_cycle_arr_del(struct bo_cycle_arr *arr)
 		arr->mem = NULL;
 		free(arr);
 	}
+}
+
+void bo_cycle_arr_print(struct bo_cycle_arr *arr)
+{
+	int i = 0, j = 0;
+	struct bo_cycle_arr_item *item = NULL;
+	unsigned char *l;
+	int n = 0;
+	printf("ARR:[\n");
+	for(; i < arr->itemN; i++) {
+		item = (arr->mem + i);
+		l = item->log;
+		n = item->n;
+		printf("%d ->", i);
+		for(j = 0; j < n; j++) {
+			printf("%c", *(l + j) );
+		}
+		printf("\n");
+	}
+	printf("]\n");
 }
 /* 0x42 */

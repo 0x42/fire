@@ -58,7 +58,7 @@ unsigned int boCharToInt(unsigned char *buf)
 	return x;
 }
 
-TEST(fifo, sendOneByte)
+TEST(fifo, sendOneByte) /* NEED RUN SERVER*/
 {
 	printf("sendOneByte() ... \n");
 	int ans = 0;
@@ -93,7 +93,7 @@ TEST(fifo, sendOneByte)
 	TEST_ASSERT_EQUAL(1, ans);
 }
 
-TEST(fifo, getFromEmptyFifo)
+TEST(fifo, getFromEmptyFifo) /* NEED RUN SERVER*/
 {
 	int exec = -1;
 	char buf[20] = {0};
@@ -202,7 +202,7 @@ unsigned char *getMSG(int *s, int *retLength)
 	return buf;
 }
 
-TEST(fifo, sendSETL10MSG10)
+TEST(fifo, sendSETL10MSG10) /* NEED RUN SERVER*/
 {
 	printf("sendSETL10MSG10() ... \n");
 	int ans = 0;
@@ -245,7 +245,7 @@ TEST(fifo, sendSETL10MSG10)
 /* ----------------------------------------------------------------------------
  * @brief	отправляем сообщение SET length=10 msg size = 9
  */
-TEST(fifo, sendSETL10MSG9)
+TEST(fifo, sendSETL10MSG9) /* NEED RUN SERVER*/
 {
 	printf("sendSETL10MSG9() ... \n");
 	int ans = 0;
@@ -260,7 +260,7 @@ TEST(fifo, sendSETL10MSG9)
 	TEST_ASSERT_EQUAL(-100, ans);
 }
 
-TEST(fifo, sendOnlyHead)
+TEST(fifo, sendOnlyHead) /* NEED RUN SERVER*/
 {
 	printf("sendOnlyHead() ... \n");
 	int ans = 0;
@@ -299,7 +299,7 @@ TEST(fifo, sendOnlyHead)
 	TEST_ASSERT_EQUAL(1, ans);
 }
 
-TEST(fifo, send100MSGSET10)
+TEST(fifo, send100MSGSET10) /* NEED RUN SERVER*/
 {
 	printf("send100MSGSET10() ... \n");
 	int ans = 0;
@@ -379,20 +379,24 @@ TEST(fifo, fifo2add3)
 	if(bo_initFIFO(2) == 1) {
 		char msg[3] = "abc";
 		char buf[10] = {0};
-		if(bo_addFIFO(msg, 3) == -1) goto exit;
-		if(bo_addFIFO(msg, 3) == -1) goto exit;
-		if(bo_addFIFO(msg, 3) == -1) {
-			for(i=0; i<2; i++) {
+		if(bo_addFIFO(msg, 3) == -1) { printf("can't add value 1\n"); goto exit;}
+//		bo_printFIFO();
+		if(bo_addFIFO(msg, 3) == -1) { printf("can't add value 2\n"); goto exit;}
+		if(bo_addFIFO(msg, 3) != -1) {
+			for(i = 0; i < 2; i++) {
 				if((n = bo_getFIFO(buf, 10)) == -1) goto exit;
 				else if(n == 3) {
 					for(i = 0; i < 3; i++) {
-						if(buf[i] != msg[i]) goto exit;
+						if(buf[i] != msg[i]) {
+							printf("recv bad value from fifo\n");
+							goto exit;
+						}
 					}
 				}
 			}
 			flag = 1;
-		} else goto exit;
-	}
+		} else { printf("can't add value 3 \n"); goto exit;}
+	} else printf("can't init fifo\n");
 	exit:
 	TEST_ASSERT_EQUAL(1, flag);
 }

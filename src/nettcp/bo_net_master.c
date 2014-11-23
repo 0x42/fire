@@ -81,7 +81,7 @@ void bo_master_main(int argc, char **argv)
 	}
 	
 	logArr = NULL;
-	logArr = bo_initCycleArr(1024);
+	logArr = bo_cycle_arr_init(1024);
 	if(logArr == NULL) {
 		bo_log("bo_master_main() ERROR %s",
 		"can't create logArr haven't free memory");

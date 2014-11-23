@@ -25,26 +25,29 @@ static struct FIFO {
 
 static int bo_get_fifo(unsigned char *buf, int bufSize);
 static void bo_del_head();
-/*
+
 static pthread_mutex_t fifo_mut = PTHREAD_MUTEX_INITIALIZER;
-*/
+
 /* ----------------------------------------------------------------------------
  * @brief	Вывод очереди FIFO
  */
 void bo_printFIFO() 
 {
-	/*
-		int i = 0, j = 0;
-		struct BO_ITEM_FIFO *item_fifo;
-	*/
-	printf("\n=========================================================\n");
-	printf("FIFO:\n itemN[%d]\nhead[%d]\ntail[%d]\nlast[%d]\ncount[%d]\nfree[%d]\n",
+/*	
+	int i = 0, j = 0;
+	struct BO_ITEM_FIFO *item_fifo;
+*/	
+	pthread_mutex_lock(&fifo_mut);
+/*	printf("FIFO:\n itemN[%d]\nhead[%d]\ntail[%d]\nlast[%d]\ncount[%d]\nfree[%d]\n",
 		   fifo.itemN, fifo.head, fifo.tail, fifo.last, fifo.count, fifo.free);
-	printf("FIFO item size[%d]\n", BO_FIFO_ITEM_VAL);
+*/
+	printf("FIFO: itemN[%d] free[%d]\n",
+		   fifo.itemN, fifo.free);
+/*	printf("FIFO item size[%d]\n", BO_FIFO_ITEM_VAL); */
 /*
 	printf("  ---------------------------------------------------------\n");
 	
-	for(i = 0; i < fifo.itemN; i++) {
+	for(i = 0; i < 10; i++) {
 		item_fifo = fifo.mem + i;
 		printf("\n=====\ni=%d\n=====\n", i);
 		for(j = 0; j < BO_FIFO_ITEM_VAL; j++) {
@@ -52,8 +55,9 @@ void bo_printFIFO()
 			printf("0x%02x ", item_fifo->val[j]);
 		}
 	}
- */
-	printf("\n=========================================================\n");
+
+*/
+	pthread_mutex_unlock(&fifo_mut);
 }
 /* ----------------------------------------------------------------------------
  * @brief	Создаем очередь 
@@ -64,8 +68,8 @@ int bo_initFIFO(int itemN)	/*THREAD SAFE */
 {
 	int ans = -1;
 
-/*	pthread_mutex_lock(&fifo_mut);
-*/	
+	pthread_mutex_lock(&fifo_mut);
+	
 	fifo.mem = (struct BO_ITEM_FIFO *)
 		malloc(sizeof(struct BO_ITEM_FIFO)*itemN);
 	if(fifo.mem == NULL) goto exit;
@@ -79,8 +83,8 @@ int bo_initFIFO(int itemN)	/*THREAD SAFE */
 	ans = 1;
 	
 	exit:
-/*	pthread_mutex_unlock(&fifo_mut);
-*/	return ans;
+	pthread_mutex_unlock(&fifo_mut);
+	return ans;
 }
 /* ----------------------------------------------------------------------------
  * @brief	добавляем элем val размером size в очередь fifo  
@@ -93,11 +97,11 @@ int  bo_addFIFO(unsigned char *val, int size) /* THREAD SAFE */
 {
 	int ans = -1;
 	struct BO_ITEM_FIFO *ptr = NULL;	
-/*
+
 	pthread_mutex_lock(&fifo_mut);
-*/	
+
 	if(val == NULL) goto exit;
-	if(size < 1) goto exit;
+	if(size < 1)  goto exit;
 	if(size > BO_FIFO_ITEM_VAL) goto exit;
 	
 	if(fifo.free != 0) {
@@ -115,8 +119,8 @@ int  bo_addFIFO(unsigned char *val, int size) /* THREAD SAFE */
 	}
 	
 	exit:
-/*	pthread_mutex_unlock(&fifo_mut);
-*/	return ans;
+	pthread_mutex_unlock(&fifo_mut);
+	return ans;
 }
 /* ----------------------------------------------------------------------------
  * @brief	берем элемент из очереди
@@ -127,12 +131,12 @@ int  bo_addFIFO(unsigned char *val, int size) /* THREAD SAFE */
 int bo_getFIFO(unsigned char *buf, int bufSize) /* THREAD SAFE */
 {
 	int ans = -1;
-/*	pthread_mutex_lock(&fifo_mut);
-*/	
+	pthread_mutex_lock(&fifo_mut);
+	
 	ans = bo_get_fifo(buf, bufSize); 
 	
-/*	pthread_mutex_unlock(&fifo_mut);
-*/	return ans;
+	pthread_mutex_unlock(&fifo_mut);
+	return ans;
 }
 
 static int bo_get_fifo(unsigned char *buf, int bufSize)
@@ -162,16 +166,16 @@ static int bo_get_fifo(unsigned char *buf, int bufSize)
 int bo_getFifoVal(unsigned char *buf, int bufSize) /*THREAD SAFE */
 {
 	int ans = -1;
-/*	
+	
 	pthread_mutex_lock(&fifo_mut);
-*/
+
 	if(fifo.mem != NULL) {
 		ans = bo_get_fifo(buf, bufSize);
 		if(ans != -1) bo_del_head();
 	}
-/*
+
 	pthread_mutex_unlock(&fifo_mut);
-*/
+
 	return ans;
 }
 /* ----------------------------------------------------------------------------
@@ -179,9 +183,9 @@ int bo_getFifoVal(unsigned char *buf, int bufSize) /*THREAD SAFE */
  */
 void bo_delHead() /*THREAD SAFE*/
 {
-/*	pthread_mutex_lock(&fifo_mut); */
+	pthread_mutex_lock(&fifo_mut); 
 	bo_del_head();
-/*	pthread_mutex_unlock(&fifo_mut); */
+	pthread_mutex_unlock(&fifo_mut); 
 }
 
 static void bo_del_head()
@@ -213,8 +217,8 @@ int bo_getCount()
  */
 void bo_delFIFO()
 {
-/*	pthread_mutex_lock(&fifo_mut);
-*/
+	pthread_mutex_lock(&fifo_mut);
+
 	free(fifo.mem);
 	fifo.mem = NULL;
 	fifo.head = 0;
@@ -223,5 +227,5 @@ void bo_delFIFO()
 	fifo.count = 0;
 	fifo.free = 0;
 	
-/*	pthread_mutex_unlock(&fifo_mut); */
+	pthread_mutex_unlock(&fifo_mut); 
 }
