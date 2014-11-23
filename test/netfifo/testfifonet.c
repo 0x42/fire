@@ -7,6 +7,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <errno.h>
+#include <pthread.h>
 #include "../../src/nettcp/bo_net.h"
 #include "../../src/nettcp/bo_fifo.h"
 #include "../../src/tools/ocrc.h"
@@ -18,6 +19,10 @@ TEST_GROUP(fifo);
 TEST_SETUP(fifo) {}
 
 TEST_TEAR_DOWN(fifo) {}
+
+void *testThr(void *arg);
+void *get10thr(void *arg);
+void *startServer(void *arg);
 
 static struct sockaddr_in saddr;
 static int startSock()
@@ -34,28 +39,6 @@ static int startSock()
 		ans = sock;
 	} else ans = -1;
 	return ans;
-}
-
-void boIntToChar(unsigned int x, unsigned char *ans)
-{
-	unsigned int a = 0;
-	a = x >> 8;
-	a = a & 0xFF;
-	*ans = (char)a;
-	a = x & 0xFF;
-	*(ans + 1) = (char)a;
-}
-
-unsigned int boCharToInt(unsigned char *buf) 
-{
-	unsigned int x = 0;
-	x = x | buf[0];
-	x = x << 8;
-	x = x & 0xFF00;
-	x = x | buf[1];
-	/*делаем маску выделяем последние 2 байта*/
-	x = x & 0xFFFF;
-	return x;
 }
 
 TEST(fifo, sendOneByte) /* NEED RUN SERVER*/
@@ -299,7 +282,7 @@ TEST(fifo, sendOnlyHead) /* NEED RUN SERVER*/
 	TEST_ASSERT_EQUAL(1, ans);
 }
 
-TEST(fifo, send100MSGSET10) /* NEED RUN SERVER*/
+TEST(fifo, send100MSGSET10) /* NEED RUN SERVER */
 {
 	printf("send100MSGSET10() ... \n");
 	int ans = 0;
@@ -344,6 +327,78 @@ TEST(fifo, send100MSGSET10) /* NEED RUN SERVER*/
 	}
 	TEST_ASSERT_EQUAL(1, ans);
 }
+
+TEST(fifo, testThrModel) /* NEED RUN SERVER */
+{
+	int ans = -1, exec = -1, err = 1; 
+	pthread_t thr1, thr2;
+	printf("testThrModel ... run \n");
+	bo_setLogParam("thr.log", "thr.log_old", 0, 1000);
+	exec = pthread_create(&thr1, NULL, &startServer, NULL);
+	if(exec == -1) { printf("create thr1 startServer ... "); goto error;}
+	
+	exec = pthread_create(&thr2, NULL, &testThr, NULL);
+	if(exec == -1) { printf("create thr2 testThr ... "); goto error;}
+	
+	pthread_join(thr2, NULL);
+	printf("... test finish\n");
+	ans = 1;
+	if(err == -1) {
+		error: printf("ERROR\n"); ans = -1;
+	}
+	TEST_ASSERT_EQUAL(1, ans);
+}
+
+void *get10thr(void *arg)
+{
+	unsigned char msg[20] = "123456789 123456789 ";
+	unsigned char buf[30] = {0};
+	int i = 0, exec = -1, j = 0;
+	while(i < 10000) {
+		exec = bo_getFifoVal(buf, 30);
+		if(exec != -1) {
+			printf("[%d]get10thr[%s]\n", i, buf);
+			bo_log("[%d] get10thr [%s]", i, buf);
+			i++;
+		} else {
+//			bo_log("get10thr fifo no data");
+		}
+	}
+}
+
+void *testThr(void *arg)
+{
+	int exec = -1, err = -1;
+	printf("testThr ... \n");
+	int Nsize = 20, i = 0;
+	unsigned char msg[20] = "123456789 123456789 "; 
+	pthread_t thr3; int st_thr = -1;
+	
+	for(i = 0; i < 10000; i++) {
+		bo_log("testThr send data ->[%d]", i);
+		exec = bo_sendDataFIFO("127.0.0.1", 8888, msg, Nsize);
+		if(exec == -1) { printf("testThr send %s\n", strerror(errno)); goto error; }
+		if(st_thr == -1) {
+			exec = pthread_create(&thr3, NULL, &get10thr, NULL);
+			if(exec == -1) { printf("create thr3 get10thr ... "); goto error;}
+			st_thr = 1;
+		}
+		
+	}
+	bo_log("TEST THR <====== END ");
+	pthread_join(thr3, NULL);
+	if(err == 1) {
+		error: printf("ERROR");
+	}
+}
+
+extern void bo_fifo_thrmode(int port, int queue_len, int fifo_len);
+void *startServer(void *arg)
+{
+	printf("startServer ...\n");
+	bo_fifo_thrmode(8888, 10, 1000);
+}
+
 /* ----------------------------------------------------------------------------
  * @brief	Test queue FIFO
  */
@@ -544,3 +599,5 @@ TEST(fifo, addBigMsgThanItemFifo)
 	exit:
 	TEST_ASSERT_EQUAL(1, flag);
 }
+
+/* 0x42 */

@@ -19,6 +19,10 @@ SRC1 = \
     ../../src/nettcp/bo_fifo.c \
     ../../src/nettcp/bo_net_get.c \
     ../../src/nettcp/bo_net.c \
+    ../../src/tools/ocfg.c \
+    ../../src/tools/oht.c \
+    ../../src/tools/dbgout.c \
+    ../../src/nettcp/bo_net_fifo_server.c \
     ../../src/log/bologging.c \
     ../../src/tools/ocrc.c
 
@@ -68,7 +72,7 @@ INC_DIRS = -Isrc -I$(UNITY_ROOT)/src -I$(UNITY_ROOT)/extras/fixture/src \
 
 
 fifo:
-	$(CC) $(INC_DIRS) $(SRC_FILES_UNITY) $(SRC1) -o $(TARGET)
+	$(CC)  $(INC_DIRS) $(SRC_FILES_UNITY) $(SRC1) -lpthread -o  $(TARGET)
 	./$(TARGET)
 
 route:
