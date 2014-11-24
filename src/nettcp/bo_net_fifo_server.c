@@ -6,6 +6,7 @@
 #include "bo_net.h"
 #include "bo_fifo.h"
 #include "../tools/ocfg.h"
+#include "../tools/oht.h"
 
 extern unsigned int boCharToInt(unsigned char *buf);
 
@@ -14,8 +15,7 @@ static void readConfig(TOHT *cfg, int n, char **argv);
 
 static void fifoServWork	(int sockfdMain);
 static void fifoReadPacket	(int clientSock, unsigned char *buffer, 
-				 int bufSize, 
-				 int *endPr);
+				 int bufSize, int *endPr, TOHT *tab);
 static void fifoReadHead	(struct ParamSt *param);
 static void fifoQuit		(struct ParamSt *param);
 static void fifoSetData		(struct ParamSt *param);
@@ -80,12 +80,14 @@ static void(*statusTable[])(struct ParamSt *) = {
  * @clientfd		сокет 
  * @buffer		буфер с запросом для FIFO
  * @bufSize		размер буфера
+ * @id_msg		Хеш табл IP-ID
  */
 struct ParamSt {
 	int packetLen;
 	int clientfd;
 	unsigned char *buffer;
 	int bufSize;
+	TOHT *id_msg;
 };
 /* ----------------------------------------------------------------------------
  * @brief	запуск сервера FIFO в потоке
@@ -113,8 +115,9 @@ void bo_fifo_thrmode(int port, int queue_len, int fifo_len)
 }
 /* ----------------------------------------------------------------------------
  * @brief		Запуск сервера FIFO
- *			request: SET|GET|DEL|MEM
- *			response: OK|ERR|
+ *			request: SET|GET|DEL|MEM|END
+ *			response: OK|ERR
+ *			PACKET = [SET|LEN|ID|VALUE|CRC]
  */
 void bo_fifo_main(int n, char **argv)
 {
@@ -178,19 +181,28 @@ static void fifoServWork(int sockfdMain)
 	/* размер ячейки в FIFO */
 	int bufferSize = BO_FIFO_ITEM_VAL;
 	unsigned char *buffer1 = NULL;
+	TOHT *tab = NULL;
 	bo_log(" %s %s %s", "FIFO", "INFO", " RUN ");
+	
 	/* создаем буфер */
 	buffer1 = (unsigned char *)malloc(bufferSize);
 	if(buffer1 == NULL) {
 		bo_log(" %s %s %s", "FIFO","ERROR", "fifoServWork() can't create buffer1");
-		return;
+		goto exit;
 	}
+	/* таблица IP-IDmsg*/
+	tab = ht_new(10);
+	if(tab == NULL) {
+		bo_log(" %s %s %s", "FIFO","ERROR", "fifoServWork() can't create tab");
+		goto exit;
+	}
+	
 	while(stop == 1) {
 		if(bo_waitConnect(sockfdMain, &clientfd, &errTxt) == 1) {
 			countErr = 0;
 			/* передаем флаг stop. Ф-ия может поменять его на -1
 			   если придет пакет END */
-			fifoReadPacket(clientfd, buffer1, bufferSize, &stop);
+			fifoReadPacket(clientfd, buffer1, bufferSize, &stop, tab);
 		} else {
 			countErr++;
 			bo_log(" %s %s %s errno[%s]", "FIFO","ERROR", 
@@ -198,7 +210,10 @@ static void fifoServWork(int sockfdMain)
 			if(countErr == 10) stop = -1;
 		}
 	}
-	free(buffer1);
+	
+	exit:
+	if(tab != NULL) ht_free(tab);
+	if(buffer1 != NULL) free(buffer1);
  }
  
 /* ---------------------------------------------------------------------------
@@ -207,17 +222,19 @@ static void fifoServWork(int sockfdMain)
   * @buffer		буфер в который пишем данные. 
   * @bufSize		bufSize = BO_FIFO_ITEM_VAL(bo_fifo.h)
   * @endPr		флаг прекращ работы сервера и заверш программы
+ *  @tab		хранит значен IP - ID сообщения(для искл дублирования)
   */
 static void fifoReadPacket(int clientSock, unsigned char *buffer, int bufSize,
-			int *endPr)
+			int *endPr, TOHT *tab)
 {
 	int stop = -1;
 	int i = 1;
 	struct ParamSt param;
 	param.clientfd = clientSock;
-	param.buffer = buffer;
-	param.bufSize = bufSize;
-	packetStatus = READHEAD;
+	param.buffer   = buffer;
+	param.bufSize  = bufSize;
+	param.id_msg   = tab;
+	packetStatus   = READHEAD;
 	/* устан максимальное время ожидания одного пакета */
 	bo_setTimerRcv(clientSock);
 	/* при перезапуске программы позволяет повторно использовать адрес 
@@ -271,7 +288,7 @@ static void fifoReadPacket(int clientSock, unsigned char *buffer, int bufSize,
 	}
  }
  /* ---------------------------------------------------------------------------
-  * @brief		читаем длину запроса, его тело и кладем в FIFO
+  * @brief		читаем длину запроса,
   * @param		ParamSt {packetLen = кол-во символов опред длину пакета
   *				 clientfd = сокет клиента}
   */
@@ -418,20 +435,21 @@ static void fifoAnsErr(struct ParamSt *param)
 		"FIFO",
 		strerror(errno));
 }
- /* ---------------------------------------------------------------------------
-  * @brief	добавляем данные в FIFO
-  */
- static void fifoAddToFIFO(struct ParamSt *param)
- {
+ 
+/* ---------------------------------------------------------------------------
+ * @brief	проверяем сообщение(был ли пакет с данным ID c данного IP)
+ *		добавляем в FIFO
+ */
+static void fifoAddToFIFO(struct ParamSt *param)
+{
 	int flag = -1;
-	/*
-	dbgout("--- --- fifoAddToFIFO len%d val:\n", param->packetLen);
-	for(; i < param->packetLen; i++) {
-		printf("%c ", param->buffer[i]);
-	}
-	printf("\n");
-	*/	
+	char buf_id[9] = {0};
 	bo_printFIFO();
+	
+	if( param->packetLen > 9 ) {
+		
+	}
+	
 	flag = bo_addFIFO(param->buffer, param->packetLen);
 	if(flag == -1) {
 		bo_log(" %s fifoAddToFIFO() can't add data to FIFO bad Length value[%d]",
@@ -444,11 +462,11 @@ static void fifoAnsErr(struct ParamSt *param)
 	} else {
 		packetStatus = ANSOK;
 	}
- }
- /* ---------------------------------------------------------------------------
-  * @brief		отправляем сообщение OK если сообщ отправ то удал Head
-  * status -> QUIT			
-  */
+}
+/* ---------------------------------------------------------------------------
+ * @brief		отправляем сообщение OK если сообщ отправ то удал Head
+ * status -> QUIT			
+ */
 static void fifoDelHead(struct ParamSt *param)
 {
 	int exec = -1;
@@ -486,7 +504,6 @@ static void fifoMem(struct ParamSt *param)
 	return ans;
  }
 
- 
  
  
  
