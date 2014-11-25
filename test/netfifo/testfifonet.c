@@ -351,18 +351,35 @@ TEST(fifo, testThrModel) /* NEED RUN SERVER */
 
 void *get10thr(void *arg)
 {
-	unsigned char msg[20] = "123456789 123456789 ";
+	unsigned char msg[21] = {0};
 	unsigned char buf[30] = {0};
 	int i = 0, exec = -1, j = 0;
-	while(i < 10000) {
+	const int err = -1;
+	while(i < 2000) {
 		exec = bo_getFifoVal(buf, 30);
 		if(exec != -1) {
-			printf("[%d]get10thr[%s]\n", i, buf);
-			bo_log("[%d] get10thr [%s]", i, buf);
+			sprintf(msg, "%20d", i);
+			printf("[%d]get10thr[%d][%s]\n", i, exec, buf);
+			
+			if(exec != 20) {
+				bo_log("get10thr() return length value from FIFO");
+				goto error;
+			}
+			for(j = 0; j < exec; j++) {
+				if(buf[j]!= msg[j]) {
+					bo_log("get10thr() return bad value from FIFO");
+					bo_log("value[%s] msg[%s]", buf, msg);
+					goto error;
+				}
+			}
 			i++;
 		} else {
 //			bo_log("get10thr fifo no data");
 		}
+	}
+	if(err == 1) {
+		error:
+		bo_log(" ERROR ");
 	}
 }
 
@@ -371,13 +388,30 @@ void *testThr(void *arg)
 	int exec = -1, err = -1;
 	printf("testThr ... \n");
 	int Nsize = 20, i = 0;
-	unsigned char msg[20] = "123456789 123456789 "; 
+	unsigned char msg[20] = {0};
+	unsigned char id[8] = {0};
+	unsigned char packet[28] = {0};
 	pthread_t thr3; int st_thr = -1;
+	int i_rand = 0;
+	srand( (unsigned) time(NULL));
 	
-	for(i = 0; i < 10000; i++) {
-		bo_log("testThr send data ->[%d]", i);
-		exec = bo_sendDataFIFO("127.0.0.1", 8888, msg, Nsize);
+	int n = 0;
+	for(i = 0; i < 2000; i++) {
+		n++;
+		if(n == 999) {sleep(5); n = 0;}
+//		i_rand = rand()%1000;
+		i_rand = i;
+		sprintf(id, "%08d", i_rand);
+		memcpy(packet, id, 8);
+		sprintf(msg, "%20d", i);
+		memcpy( (packet + 8) , msg, 20);
+		
+		exec = bo_sendDataFIFO("127.0.0.1", 8888, packet, 28);
 		if(exec == -1) { printf("testThr send %s\n", strerror(errno)); goto error; }
+		/* отправка дубликата */
+		exec = bo_sendDataFIFO("127.0.0.1", 8888, packet, 28);
+		if(exec == -1) { printf("testThr send %s\n", strerror(errno)); goto error; }
+		
 		if(st_thr == -1) {
 			exec = pthread_create(&thr3, NULL, &get10thr, NULL);
 			if(exec == -1) { printf("create thr3 get10thr ... "); goto error;}

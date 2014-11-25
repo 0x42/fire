@@ -165,7 +165,6 @@ error:
 	return ans;
 }
 
-
 /* ----------------------------------------------------------------------------
  * @brief	 отпр SET|LEN|DATA -> ждем ответ OK 
  *					
@@ -439,6 +438,33 @@ unsigned int bo_readPacketLength(int sock)
 }
 
 /* ----------------------------------------------------------------------------
+ * @ip		сюда будет записан результат, size = 16
+ * @return	[-1] ERROR [1] 
+ */
+int bo_getIp(int sock, char *ip) 
+{
+	int ans = -1, exec = -1;
+	struct sockaddr_in addr;
+	char *buf = NULL;
+	socklen_t addr_len = sizeof(addr);
+	
+	exec = getpeername(sock, (struct sockaddr *)&addr, &addr_len);
+	if(exec == 0) {
+		if(addr_len >16) {
+			bo_log("bo_getIp() ERROR addr_Len[%d] > 15", addr_len);
+			goto exit;
+		}
+		buf = inet_ntoa(addr.sin_addr);
+		memcpy(ip, buf, addr_len);
+		ans = 1;
+	} else {
+		bo_log("ERROR bo_getIp()->getpeername() errno[%s]", 
+			strerror(errno));
+	}
+	exit:
+	return ans;
+}
+/* ----------------------------------------------------------------------------
  * @brief		закрытие сокета
  */
 void bo_closeSocket(int sock)
@@ -449,3 +475,5 @@ void bo_closeSocket(int sock)
 		bo_log("bo_loseSock() errno[%s]", strerror(errno));
 	}
 }
+
+/* 0x42 */

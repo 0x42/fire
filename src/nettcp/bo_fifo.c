@@ -33,10 +33,9 @@ static pthread_mutex_t fifo_mut = PTHREAD_MUTEX_INITIALIZER;
  */
 void bo_printFIFO() 
 {
-/*	
-	int i = 0, j = 0;
+/*	int i = 0, j = 0;
 	struct BO_ITEM_FIFO *item_fifo;
-*/	
+*/
 	pthread_mutex_lock(&fifo_mut);
 /*	printf("FIFO:\n itemN[%d]\nhead[%d]\ntail[%d]\nlast[%d]\ncount[%d]\nfree[%d]\n",
 		   fifo.itemN, fifo.head, fifo.tail, fifo.last, fifo.count, fifo.free);
@@ -47,15 +46,15 @@ void bo_printFIFO()
 /*
 	printf("  ---------------------------------------------------------\n");
 	
-	for(i = 0; i < 10; i++) {
+	for(i = 0; i < 20; i++) {
 		item_fifo = fifo.mem + i;
-		printf("\n=====\ni=%d\n=====\n", i);
-		for(j = 0; j < BO_FIFO_ITEM_VAL; j++) {
-			if(j == 16) printf("\n");
+		printf("\n%d:[", i);
+		for(j = 0; j < 40; j++) {
+			printf("%c", item_fifo->val[j]);
 			printf("0x%02x ", item_fifo->val[j]);
 		}
+		printf("]\n");
 	}
-
 */
 	pthread_mutex_unlock(&fifo_mut);
 }
@@ -162,6 +161,7 @@ static int bo_get_fifo(unsigned char *buf, int bufSize)
 }
 /* ----------------------------------------------------------------------------
  * @brief	берем голову удал голову
+ * @return	[-1] - нет данных в очереди [N] - размер данных
  */
 int bo_getFifoVal(unsigned char *buf, int bufSize) /*THREAD SAFE */
 {

@@ -27,8 +27,9 @@ static void fifoAddToFIFO	(struct ParamSt *param);
 static void fifoDelHead		(struct ParamSt *param);
 static void fifoEnd		(struct ParamSt *param);
 static void fifoMem		(struct ParamSt *param);
-static unsigned int readPacketLength(struct ParamSt *param);
 
+static unsigned int readPacketLength(struct ParamSt *param);
+static int bo_checkDblMsg(struct ParamSt *param);
 /* ----------------------------------------------------------------------------
  * @port	- порт накотором висит слуш сокет
  * @queue_len	- кол-во необр запросов в очереди, при перепол вохзвращает 
@@ -81,6 +82,7 @@ static void(*statusTable[])(struct ParamSt *) = {
  * @buffer		буфер с запросом для FIFO
  * @bufSize		размер буфера
  * @id_msg		Хеш табл IP-ID
+ * @id			текущ ID пол-го сообщения
  */
 struct ParamSt {
 	int packetLen;
@@ -88,6 +90,7 @@ struct ParamSt {
 	unsigned char *buffer;
 	int bufSize;
 	TOHT *id_msg;
+	char *id;
 };
 /* ----------------------------------------------------------------------------
  * @brief	запуск сервера FIFO в потоке
@@ -230,10 +233,12 @@ static void fifoReadPacket(int clientSock, unsigned char *buffer, int bufSize,
 	int stop = -1;
 	int i = 1;
 	struct ParamSt param;
+	char idBuf[9] = {0};
 	param.clientfd = clientSock;
 	param.buffer   = buffer;
 	param.bufSize  = bufSize;
 	param.id_msg   = tab;
+	param.id       = idBuf;
 	packetStatus   = READHEAD;
 	/* устан максимальное время ожидания одного пакета */
 	bo_setTimerRcv(clientSock);
@@ -443,24 +448,41 @@ static void fifoAnsErr(struct ParamSt *param)
 static void fifoAddToFIFO(struct ParamSt *param)
 {
 	int flag = -1;
-	char buf_id[9] = {0};
+	int exec = -1;
+	const int err = -1;
 	bo_printFIFO();
 	
 	if( param->packetLen > 9 ) {
+		memset(param->id, 0, 9);
+		memcpy(param->id, param->buffer, 8);
+		param->buffer += 8;
+		param->packetLen -=8;
+		exec = bo_checkDblMsg(param);
+		if(exec == 1) {
+			flag = bo_addFIFO(param->buffer, param->packetLen);
+			if(flag == -1) {
+				bo_log(" %s fifoAddToFIFO() bo_addFIFO can't add data to FIFO bad Length value[%d]",
+					"FIFO", param->packetLen);
+				goto error;
+			} else if(flag == 0) {
+				bo_log(" FIFO fifoAddToFIFO() can't add data FIFO is full ");
+				goto error;
+			}
+		} else if(exec == 0) {
+			bo_log("FIFO fifoAddToFIFO() value don't push to FIFO");
+		} else goto error;
 		
+	} else {
+		bo_log(" %s fifoAddToFIFO() bo_addFIFO can't add data to FIFO bad Length value[%d]",
+			"FIFO", param->packetLen);
+		goto error;
 	}
 	
-	flag = bo_addFIFO(param->buffer, param->packetLen);
-	if(flag == -1) {
-		bo_log(" %s fifoAddToFIFO() can't add data to FIFO bad Length value[%d]",
-			"FIFO",
-			param->packetLen);
+	packetStatus = ANSOK;
+	
+	if(err == 1) {
+		error:
 		packetStatus = ANSERR;
-	} else if(flag == 0) {
-		bo_log(" FIFO fifoAddToFIFO() can't add data FIFO is full ");
-		packetStatus = ANSOK;
-	} else {
-		packetStatus = ANSOK;
 	}
 }
 /* ---------------------------------------------------------------------------
@@ -504,6 +526,38 @@ static void fifoMem(struct ParamSt *param)
 	return ans;
  }
 
- 
+ /* ---------------------------------------------------------------------------
+  * @return	[1] Not Double Msg [-1] ERROR [0] Double Msg 
+  */
+static int bo_checkDblMsg(struct ParamSt *param)
+{
+	int ans = -1;
+	int exec = -1;
+	char ip[16] = {0};
+	char *tab_id = NULL;
+	exec = bo_getIp(param->clientfd, ip);
+	if(exec == 1) {
+		tab_id = ht_get(param->id_msg, ip, tab_id);
+		if(tab_id != NULL) {
+			if(strstr(tab_id, param->id)) {
+				bo_log("bo_checkDblMsg() WARN %s [%s]",
+					"recv double msg from ip ", ip);
+				ans = 0;
+				goto exit;
+			}
+		}
+
+		exec = ht_put(param->id_msg, ip, param->id);
+		if(exec == -1) {
+			bo_log("bo_checkDblMsg() WARN can't add ID to table");
+			goto exit;
+		}
+		ans = 1;
+	} else {
+		bo_log("bo_checkDblMsg() ERROR can't get ip by sock");
+	}
+	exit:
+	return ans;
+}
  
  

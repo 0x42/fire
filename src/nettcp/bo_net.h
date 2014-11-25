@@ -65,6 +65,8 @@ void bo_setTimerRcv(int sock);
 
 void bo_setTimerRcv2(int sock, int sec, int mil);
 
+int bo_getIp(int sock, char *ip);
+
 /* закрытие сокета */
 void bo_closeSocket(int sock);
 
