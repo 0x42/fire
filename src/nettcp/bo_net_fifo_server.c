@@ -450,6 +450,7 @@ static void fifoAddToFIFO(struct ParamSt *param)
 	int flag = -1;
 	int exec = -1;
 	const int err = -1;
+	int i = 0;
 	bo_printFIFO();
 	
 	if( param->packetLen > 9 ) {
@@ -457,6 +458,11 @@ static void fifoAddToFIFO(struct ParamSt *param)
 		memcpy(param->id, param->buffer, 8);
 		param->buffer += 8;
 		param->packetLen -=8;
+		printf("FIFO recv msg[");
+		for(i = 0; i < param->packetLen; i++) {
+			printf("%c", *(param->buffer + i) );
+		}
+		printf("]\n");
 		exec = bo_checkDblMsg(param);
 		if(exec == 1) {
 			flag = bo_addFIFO(param->buffer, param->packetLen);
@@ -469,6 +475,7 @@ static void fifoAddToFIFO(struct ParamSt *param)
 				goto error;
 			}
 		} else if(exec == 0) {
+			dbgout("\n DOUBLE MESSAGE DOUBLE MESSAGE DOUBLE MESSAGE \n");
 			bo_log("FIFO fifoAddToFIFO() value don't push to FIFO");
 		} else goto error;
 		
@@ -505,10 +512,11 @@ static void fifoMem(struct ParamSt *param)
 {
 	packetStatus = QUIT;
 }
- /* ---------------------------------------------------------------------------
-  * @brief	читаем длину пакета
-  * @return	[-1] - ошибка, [>0] - длина сообщения
-  */
+
+/* ---------------------------------------------------------------------------
+ * @brief	читаем длину пакета
+ * @return	[-1] - ошибка, [>0] - длина сообщения
+ */
  static unsigned int readPacketLength(struct ParamSt *param)
  {
 	int sock = param->clientfd;
@@ -526,9 +534,9 @@ static void fifoMem(struct ParamSt *param)
 	return ans;
  }
 
- /* ---------------------------------------------------------------------------
-  * @return	[1] Not Double Msg [-1] ERROR [0] Double Msg 
-  */
+/* ---------------------------------------------------------------------------
+ * @return	[1] Not Double Msg [-1] ERROR [0] Double Msg 
+ */
 static int bo_checkDblMsg(struct ParamSt *param)
 {
 	int ans = -1;

@@ -51,7 +51,7 @@ void bo_printFIFO()
 		printf("\n%d:[", i);
 		for(j = 0; j < 40; j++) {
 			printf("%c", item_fifo->val[j]);
-			printf("0x%02x ", item_fifo->val[j]);
+			printf("0x%02x ", item_fifo->val[j]); 
 		}
 		printf("]\n");
 	}
