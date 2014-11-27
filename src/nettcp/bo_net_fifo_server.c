@@ -540,8 +540,11 @@ static int bo_checkDblMsg(struct ParamSt *param)
 		tab_id = ht_get(param->id_msg, ip, tab_id);
 		if(tab_id != NULL) {
 			if(strstr(tab_id, param->id)) {
-				bo_log("bo_checkDblMsg() WARN %s [%s]",
-					"recv double msg from ip ", ip);
+				bo_log("bo_checkDblMsg() WARN %s [%s] id[%s][%s]",
+					"recv double msg from ip ", 
+					ip,
+					param->id,
+					tab_id);
 				ans = 0;
 				goto exit;
 			}
