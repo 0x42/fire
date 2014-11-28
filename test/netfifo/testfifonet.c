@@ -140,6 +140,7 @@ int sendMSG(unsigned char *msg, int msgSize, int length)
 	}
 	return ans;
 }
+
 unsigned char *getMSG(int *s, int *retLength)
 {
 	unsigned char *buf = NULL;
@@ -228,7 +229,7 @@ TEST(fifo, sendSETL10MSG10) /* NEED RUN SERVER*/
 /* ----------------------------------------------------------------------------
  * @brief	отправляем сообщение SET length=10 msg size = 9
  */
-TEST(fifo, sendSETL10MSG9) /* NEED RUN SERVER*/
+TEST(fifo, sendSETL10MSG9) /* NEED RUN SERVER */
 {
 	printf("sendSETL10MSG9() ... \n");
 	int ans = 0;
@@ -243,7 +244,7 @@ TEST(fifo, sendSETL10MSG9) /* NEED RUN SERVER*/
 	TEST_ASSERT_EQUAL(-100, ans);
 }
 
-TEST(fifo, sendOnlyHead) /* NEED RUN SERVER*/
+TEST(fifo, sendOnlyHead) /* NEED RUN SERVER */
 {
 	printf("sendOnlyHead() ... \n");
 	int ans = 0;
@@ -408,9 +409,6 @@ void *testThr(void *arg)
 		
 		exec = bo_sendDataFIFO("127.0.0.1", 8888, packet, 28);
 		if(exec == -1) { printf("testThr send %s\n", strerror(errno)); goto error; }
-		/* отправка дубликата */
-		exec = bo_sendDataFIFO("127.0.0.1", 8888, packet, 28);
-		if(exec == -1) { printf("testThr send %s\n", strerror(errno)); goto error; }
 		
 		if(st_thr == -1) {
 			exec = pthread_create(&thr3, NULL, &get10thr, NULL);
@@ -433,6 +431,110 @@ void *startServer(void *arg)
 	bo_fifo_thrmode(8888, 10, 1000);
 }
 
+/* TEST send id msg 1,2,1,2,1,2 */
+void *getThrIDmsg(void *arg);
+void *testThrIDmsg(void *arg);
+
+TEST(fifo, testIDmsg)
+{
+	int ans = -1, exec = -1, err = 1; 
+	pthread_t thr1, thr2;
+	printf("testIDmsg ... run \n");
+	bo_setLogParam("thr.log", "thr.log_old", 0, 1000);
+	exec = pthread_create(&thr1, NULL, &startServer, NULL);
+	if(exec == -1) { printf("create thr1 startServer ... "); goto error;}
+	
+	exec = pthread_create(&thr2, NULL, &testThrIDmsg, NULL);
+	if(exec == -1) { printf("create thr2 testThrIDmsg ... "); goto error;}
+	
+	pthread_join(thr2, NULL);
+	printf("... test finish\n");
+	ans = 1;
+	if(err == -1) {
+		error: printf("ERROR\n"); ans = -1;
+	}
+	TEST_ASSERT_EQUAL(1, ans);
+}
+
+void *getThrIDmsg(void *arg)
+{
+	unsigned char msg[21] = {0};
+	unsigned char buf[30] = {0};
+	int i = 0, exec = -1, j = 0;
+	const int err = -1;
+	while(i < 10) {
+		exec = bo_getFifoVal(buf, 30);
+		if(exec != -1) {
+			sprintf(msg, "%20d", i);
+			printf("[%d]getThrIDmsg[%d][%s]\n", i, exec, buf);
+			
+			if(exec != 20) {
+				bo_log("get10thr() return length value from FIFO");
+				goto error;
+			}
+			for(j = 0; j < exec; j++) {
+				if(buf[j]!= msg[j]) {
+					bo_log("get10thr() return bad value from FIFO");
+					bo_log("value[%s] msg[%s]", buf, msg);
+					goto error;
+				}
+			}
+			i++;
+		} else {
+//			bo_log("get10thr fifo no data");
+		}
+	}
+	if(err == 1) {
+		error:
+		bo_log(" ERROR ");
+	}
+}
+
+void *testThrIDmsg(void *arg)
+{
+	int exec = -1, err = -1;
+	printf("testThr ... \n");
+	int Nsize = 20, i = 0;
+	unsigned char msg[20] = {0};
+	unsigned char id[8] = {0};
+	unsigned char packet[28] = {0};
+	pthread_t thr3; int st_thr = -1;
+	int i_rand = 0;
+	srand( (unsigned) time(NULL));
+	int ddd = 1;
+	int n = 0;
+	int j = 0;
+	for(i = 0; i < 10; i++) {
+		
+		sprintf(id, "%08d", ddd);
+		memcpy(packet, id, 8);
+		sprintf(msg, "%20d", i);
+		memcpy( (packet + 8) , msg, 20);
+		
+		if(ddd == 1) ddd = 2;
+		else ddd = 1;
+		
+		/*
+		printf("send to FIFO [");
+		for(j=0; j<28; j++) { printf("%c", packet[j]);} printf("]\n");
+		*/
+		
+		exec = bo_sendDataFIFO("127.0.0.1", 8888, packet, 28);
+		if(exec == -1) { printf("testThr send %s\n", strerror(errno)); goto error; }
+		
+		if(st_thr == -1) {
+			exec = pthread_create(&thr3, NULL, &getThrIDmsg, NULL);
+			if(exec == -1) { printf("create thr3 getThrIDmsg ... "); goto error;}
+			st_thr = 1;
+		}
+		
+	}
+	bo_log("TEST THR <====== END ");
+	pthread_join(thr3, NULL);
+	if(err == 1) {
+		error: printf("ERROR");
+	}
+}
 /* ----------------------------------------------------------------------------
  * @brief	Test queue FIFO
  */
