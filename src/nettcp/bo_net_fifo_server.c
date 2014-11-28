@@ -566,9 +566,9 @@ static int bo_checkDblMsg(struct ParamSt *param)
 		}
 		printf("===========\n");
 	*/
-		printf("IP[%s]", ip);
+	/*	printf("IP[%s]", ip); */
 		tab_id = ht_get(param->id_msg, ip, tab_id);
-		printf("tab_id[%s]\n", tab_id);
+	/*	printf("tab_id[%s]\n", tab_id); */
 		if(tab_id != NULL) {
 			if(strstr(tab_id, param->id)) {
 				bo_log("bo_checkDblMsg() WARN %s [%s] id[%s][%s]",
