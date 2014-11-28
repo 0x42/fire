@@ -33,9 +33,9 @@ static pthread_mutex_t fifo_mut = PTHREAD_MUTEX_INITIALIZER;
  */
 void bo_printFIFO() 
 {
-/*	int i = 0, j = 0;
+	int i = 0, j = 0;
 	struct BO_ITEM_FIFO *item_fifo;
-*/
+
 	pthread_mutex_lock(&fifo_mut);
 /*	printf("FIFO:\n itemN[%d]\nhead[%d]\ntail[%d]\nlast[%d]\ncount[%d]\nfree[%d]\n",
 		   fifo.itemN, fifo.head, fifo.tail, fifo.last, fifo.count, fifo.free);
@@ -44,7 +44,7 @@ void bo_printFIFO()
 		   fifo.itemN, fifo.free);
 /*	printf("FIFO item size[%d]\n", BO_FIFO_ITEM_VAL); */
 
-/*	printf("=====\nFIFO[head]:\n");
+	printf("=====\nFIFO[head]:\n");
 	for(i = 0; i < 1; i++) {
 		item_fifo = fifo.mem + fifo.head;
 		printf("\n%d:[", i);
@@ -53,7 +53,7 @@ void bo_printFIFO()
 		}
 		printf("]\n=====\n");
 	}
-*/
+
 	pthread_mutex_unlock(&fifo_mut);
 }
 /* ----------------------------------------------------------------------------
