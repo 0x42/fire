@@ -16,6 +16,13 @@
 /** Размер буферов приемника и передатчика RS485 */
 #define BUF485_SZ 1200
 
+#define RX_WAIT       0  /** ожидание данных */
+#define RX_READ       1  /** прием данных */
+#define RX_ESC        2  /** прием ESC(0xDB) */
+#define RX_DATA_READY 3  /** конец приема данных */
+#define RX_ERROR      4  /** кадр поврежден */
+#define RX_TIMEOUT    5  /** таймаут */
+
 
 struct thr_rx_buf {
 	char buf[BUF485_SZ];     /** Буфер приемника RS485 */
@@ -54,6 +61,7 @@ void init_thrTxBuf(struct thr_tx_buf *b);
 void destroy_thrTxBuf(struct thr_tx_buf *b);
 char get_txBuf(struct thr_tx_buf *b);
 void put_txBuf(struct thr_tx_buf *b, char data);
+void set_txBuf(struct thr_tx_buf *b, int pos, char data);
 
 int read_byte(struct thr_rx_buf *b, char data, int fl);
 int reader(struct thr_rx_buf *b, char *buf, int port, int ptout);
