@@ -89,4 +89,30 @@ unsigned int bo_uncode_len(char *len_ber)
 	return len;
 }
 
+/* ----------------------------------------------------------------------------
+ * @brief	кол-во байт необх-мые для хранения INTEGER
+ */
+int bo_int_size(int num)
+{
+	int ans = 1;
+	if(num < 256) {
+		ans = 1;
+	} else {
+		while(num != 0) {
+			num >>= 8;
+			ans++;
+		}
+	}
+	return ans;
+}
+
+/* ----------------------------------------------------------------------------
+ * @brief	кодируем INTEGER	
+ */
+int bo_code_int(char *buf, int num)
+{
+	int len = 1;
+	
+	return len;
+}
 /* 0x42 */

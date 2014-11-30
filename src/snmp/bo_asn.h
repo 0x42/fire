@@ -18,7 +18,7 @@ enum {
 int bo_len_size (int len);
 
 /* ----------------------------------------------------------------------------
- * @brief	кодируем len согласно BER(http://en.wikipedia.org/wiki/X.690)
+ * @brief	кодируем len согласно BER
  * @len_ber	массив куда будет записан рез-тат
  */
 void bo_code_len(char *len_ber, int len);
@@ -34,6 +34,9 @@ int bo_len_ber_size (char *len_ber);
  */
 unsigned int bo_uncode_len(char *len_ber);
 
-
+/* ----------------------------------------------------------------------------
+ * @brief	кол-во байт необх-мые для хранения INTEGER
+ */
+int bo_int_size(int num);
 #endif	/* BO_ASN_H */
 /* 0x42 */
