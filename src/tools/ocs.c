@@ -132,7 +132,8 @@ char get_txBuf(struct thr_tx_buf *b)
 }
 
 /**
- * put_txBuf - Записать элемент в буфер buf по текущей позиции wpos.
+ * put_txBuf - Записать элемент в буфер buf по текущей позиции wpos с
+ *             последующим инкрементом wpos.
  * @b:    Указатель на структуру thr_tx_buf{}.
  * @data: Байт данных кадра.
  */
@@ -144,18 +145,25 @@ void put_txBuf(struct thr_tx_buf *b, char data)
 	pthread_mutex_unlock(&b->mx);
 }
 
+/**
+ * set_txBuf - Записать элемент в буфер buf.
+ * @b:    Указатель на структуру thr_tx_buf{}.
+ * @pos:  Позиция для записи в буфер.
+ * @data: Байт данных кадра.
+ */
+void set_txBuf(struct thr_tx_buf *b, int pos, char data)
+{
+	pthread_mutex_lock(&b->mx);
+	b->buf[pos] = data;
+	pthread_mutex_unlock(&b->mx);
+}
+
 
 /**
  * read_byte - Чтение 1 байта по каналу RS485.
  * @b:    Указатель на структуру thr_rx_buf{} (ocs.h).
  * @data: Байт данных кадра, полученный приемником RS485.
- * @fl:   Флаг статуса приема 1 кадра
- *        0- ожидание данных,
- *        1- прием данных,
- *        2- получили ESC(0xDB),
- *        3- конец данных,
- *        4- кадр поврежден.
- *        5- таймаут reader().
+ * @fl:   Флаг статуса приема 1 кадра.
  * @return  Состояние флага статуса.
  */
 int read_byte(struct thr_rx_buf *b, char data, int fl)
@@ -164,21 +172,21 @@ int read_byte(struct thr_rx_buf *b, char data, int fl)
 	unsigned int crc;   /** Подсчитанная контрольная сумма */
 	
 	switch (fl) {
-	case 0:
+	case RX_WAIT:
 		if (data == '\xFF') {
 			/** Получили Sync */
-			put_rxFl(b, 0);
+			put_rxFl(b, RX_WAIT);
 		} else if (data == '\xC0') {
 			/** Начало приема данных */
 			b->wpos = 0;
-			put_rxFl(b, 1);
+			put_rxFl(b, RX_READ);
 		}
 		break;
 		
-	case 1:  /** Прием данных */
+	case RX_READ:  /** Прием данных */
 		if (data == '\xDB') {
 			/** Разбор stuffing байтов */
-			put_rxFl(b, 2);
+			put_rxFl(b, RX_ESC);
 			break;
 		} else if (data == '\xC0') {
 			if (b->wpos >= 4) {
@@ -192,33 +200,33 @@ int read_byte(struct thr_rx_buf *b, char data, int fl)
 					bo_log("read_byte: icrc= %d, crc= %d",
 					       icrc, crc);
 					b->wpos = 0;
-					put_rxFl(b, 4);
+					put_rxFl(b, RX_ERROR);
 				} else {
 					/** Обработка кадра */
-					put_rxFl(b, 3);
+					put_rxFl(b, RX_DATA_READY);
 				}
 				break;
 			} else {
 				/** Возможно это начало, а не конец данных */
 				b->wpos = 0;
-				put_rxFl(b, 1);
+				put_rxFl(b, RX_READ);
 				break;
 			}
 		} else
 			put_rxBuf(b, data);
 		break;
 		
-	case 2:  /** Разбор stuffing байтов */
+	case RX_ESC:  /** Разбор stuffing байтов */
 		if (data == '\xDC') data = '\xC0';
 		else if (data == '\xDD') data = '\xDB';
 		else {
 			/** Кадр поврежден */
 			b->wpos = 0;
-			put_rxFl(b, 4);
+			put_rxFl(b, RX_ERROR);
 			break;
 		}
 		put_rxBuf(b, data);
-		put_rxFl(b, 1);
+		put_rxFl(b, RX_READ);
 		break;
 	}
 
@@ -259,7 +267,7 @@ int reader(struct thr_rx_buf *b, char *buf, int port, int ptout)
 	
 	if (tout > 0) {
 		/** Ответ не получен за допустимый период */
-		put_rxFl(b, 5);
+		put_rxFl(b, RX_TIMEOUT);
 		
 	} else {
 		n = SerialNonBlockRead(port, buf, BUF485_SZ);
@@ -270,12 +278,12 @@ int reader(struct thr_rx_buf *b, char *buf, int port, int ptout)
 
 		for (i=0; i<n; i++) {
 			put_rxFl(b, read_byte(b, buf[i], get_rxFl(b)));
-			if (get_rxFl(b) >= 3)
+			if (get_rxFl(b) >= RX_DATA_READY)
 				break;
 		}
 	}
 	
-	if (get_rxFl(b) >= 3) {
+	if (get_rxFl(b) >= RX_DATA_READY) {
 		/** Данные приняты */
 		return 0;
 	}
@@ -293,7 +301,7 @@ int reader(struct thr_rx_buf *b, char *buf, int port, int ptout)
 int prepare_buf_tx(struct thr_tx_buf *b, char *buf)
 {
 	char data;
-	int len = b->wpos;  /** Кол-во байт в кадре */
+	int len = b->wpos;  /** Кол-во байт в буфере b->buf */
 	int n = 0;
 
 	b->rpos = 0;
