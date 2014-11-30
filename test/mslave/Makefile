@@ -4,6 +4,7 @@
 
 UNITY_ROOT = ../unity
 CC = gcc
+CFLAGS = -Wall -g -fPIC -D PC_TARGET
 
 TARGET1 = all_tests_oht.out
 TARGET2 = all_tests_ocfg.out
@@ -52,25 +53,25 @@ SRC_FILES6 = \
 	../../src/tools/ocrc.c \
 	../../src/tools/ocs.c \
 	../../src/log/bologging.c \
-	../../src/pclib/serial.c \
+	../../src/lib/serial.c \
 	../ocs/Test_ocs.c \
 	../ocs/test_runners/Test_ocs_Runner.c \
 	../ocs/test_runners/all_tests.c
 
 INC_DIRS = -Isrc -I$(UNITY_ROOT)/src -I$(UNITY_ROOT)/extras/fixture/src -I../../src/tools \
-	-I../../src/log -I../../src/pclib
+	-I../../src/log -I../../src/lib
 
 CLEANUP = rm -f build/*.o ; rm -f $(TARGET1) $(TARGET2) $(TARGET3) $(TARGET4) $(TARGET5) $(TARGET6)
 
 all:	clean default
 
 default:
-	$(CC) $(INC_DIRS) $(SRC_FILES_UNITY) $(SRC_FILES1) -o $(TARGET1)
-	$(CC) $(INC_DIRS) $(SRC_FILES_UNITY) $(SRC_FILES2) -o $(TARGET2)
-	$(CC) $(INC_DIRS) $(SRC_FILES_UNITY) $(SRC_FILES3) -o $(TARGET3)
-	$(CC) $(INC_DIRS) $(SRC_FILES_UNITY) $(SRC_FILES4) -o $(TARGET4)
-	$(CC) $(INC_DIRS) $(SRC_FILES_UNITY) $(SRC_FILES5) -o $(TARGET5)
-	$(CC) $(INC_DIRS) $(SRC_FILES_UNITY) $(SRC_FILES6) -o $(TARGET6)
+	$(CC) $(CFLAGS) $(INC_DIRS) $(SRC_FILES_UNITY) $(SRC_FILES1) -o $(TARGET1)
+	$(CC) $(CFLAGS) $(INC_DIRS) $(SRC_FILES_UNITY) $(SRC_FILES2) -o $(TARGET2)
+	$(CC) $(CFLAGS) $(INC_DIRS) $(SRC_FILES_UNITY) $(SRC_FILES3) -o $(TARGET3)
+	$(CC) $(CFLAGS) $(INC_DIRS) $(SRC_FILES_UNITY) $(SRC_FILES4) -o $(TARGET4)
+	$(CC) $(CFLAGS) $(INC_DIRS) $(SRC_FILES_UNITY) $(SRC_FILES5) -o $(TARGET5)
+	$(CC) $(CFLAGS) $(INC_DIRS) $(SRC_FILES_UNITY) $(SRC_FILES6) -o $(TARGET6)
 	./$(TARGET1)
 	./$(TARGET2)
 	./$(TARGET3)

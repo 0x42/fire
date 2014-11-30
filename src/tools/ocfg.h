@@ -26,6 +26,11 @@ int cfg_put(TOHT *ht, const char *key, const char *val);
 void cfg_remove(TOHT *ht, const char *key);
 
 void cfg_save(TOHT *ht, FILE *out);
+int cfg_parse_line(TOHT *ht,
+		   const char *cfgname,
+		   const char *line,
+		   int lno,
+		   char *sect);
 TOHT *cfg_load(const char *cfgname);
 
 
