@@ -30,7 +30,7 @@ int bo_len_size (int len) {
  * @len_ber	массив куда будет записан рез-тат
  * @len
  */
-void bo_code_len(char *len_ber, int len) 
+void bo_code_len(unsigned char *len_ber, int len) 
 {
 	int i = 0, n = 0;
 	
@@ -50,7 +50,7 @@ void bo_code_len(char *len_ber, int len)
 /* ----------------------------------------------------------------------------
  * @return	кол-во байт из которых состоит поле BER(Length)
  */
-int bo_len_ber_size (char *len_ber)
+int bo_len_ber_size (unsigned char *len_ber)
 {
 	int n = 0, ans = 0;
 	n = *(unsigned char *)len_ber;
@@ -69,7 +69,7 @@ int bo_len_ber_size (char *len_ber)
  * @brief	читаем длину из закод поля
  * @len_ber	поле Length закод-ое по правилу BER		
  */
-unsigned int bo_uncode_len(char *len_ber)
+unsigned int bo_uncode_len(unsigned char *len_ber)
 {
 	unsigned int len = 0, i = 0, size = 0;
 	unsigned char buf;
@@ -107,12 +107,135 @@ int bo_int_size(int num)
 }
 
 /* ----------------------------------------------------------------------------
- * @brief	кодируем INTEGER	
+ * @brief	кодируем INTEGER(раск-ем по основанию 256)
+ * @return	размер buf	
  */
-int bo_code_int(char *buf, int num)
+int bo_code_int(unsigned char *buf, int num)
 {
-	int len = 1;
+	int len = 0, i = 0;
+	i = (num >> 24) & 0xFF;
+	*buf = (unsigned char ) i;
+	len++;
+	buf++;
 	
+	i = (num >> 16) & 0xFF;
+	*buf = (unsigned char ) i;
+	len++;
+	buf++;
+	
+	i = (num >> 8) & 0xFF;
+	*buf = (unsigned char ) i;
+	len++;
+	buf++;
+
+	i = num & 0xFF;
+	*buf = (unsigned char ) i;
+	len++;
+
 	return len;
+}
+
+/* ----------------------------------------------------------------------------
+ * @brief	код-ем OCTET STRING
+ * @return	кол-во байт занимает строка	
+ */
+int bo_code_string(unsigned char *buf, unsigned char *str, int len)
+{
+	int ans = 0;
+	*buf = ASN1_STRING;
+	buf++;
+	ans++;
+	bo_code_len(buf, len);
+	buf += bo_len_size(len);
+	ans += bo_len_size(len);
+	memcpy(buf, str, len);
+	ans += len;
+	return ans;
+}
+
+/* ----------------------------------------------------------------------------
+ * @brief	кол-во байт для хран одно числа
+ */
+static int bo_oid_size(int num)
+{
+    int len = 1;
+    
+    while (num > 127)
+    {
+        num >>= 7;
+        len++;
+    }
+    
+    return len;
+}
+
+/*
+static int bo_oid_N(char *oid)
+{
+    int n_items = 1;
+    char *p = oid;
+    
+    while (*p)
+    {
+        if (*p == '.')
+            n_items++;
+        p++;
+    }
+    return n_items;
+}
+
+static void bo_oid_split(char *oid, int *dest)
+{
+ 
+    int next_part = 0;
+
+    char *save_ptr;
+    
+    char *p = strtok_r(temp, ".", &save_ptr);
+    while (p)
+    {
+        dest[next_part] = atoi(p);
+        next_part++;
+        p = strtok_r(NULL, ".", &save_ptr);
+    }
+}
+*/
+/* ----------------------------------------------------------------------------
+ * @return	длина OID 
+ */
+int bo_oid_length(int *oid, int n)
+{
+    int data_len = 1;
+    int i;
+    
+    for (i = 2; i < n; i++) {
+        data_len += bo_oid_size( *(oid + i) );
+    }
+    
+    return data_len;
+}
+
+/* ----------------------------------------------------------------------------
+ * @return      возвр колво байт, которые занял oid в buf 
+ */
+int bo_code_oid(int oid, unsigned char *buf)
+{
+        int ans = 1, i = 0, len = 0, v;
+        
+	if(oid < 128) {
+		*buf = oid;
+		goto exit;
+	}
+	
+	len = bo_oid_size(oid);
+	
+	for (i = len - 1; i >= 0; i--) {
+		v = oid & 0x7F;
+		if (i != len - 1) v |= 0x80;
+		oid >>= 7;
+		*(buf + i) = (char) v;
+	}
+	exit:
+        return ans;
 }
 /* 0x42 */

@@ -10,7 +10,7 @@ enum {
 
 int bo_init_snmp();
 
-void bo_snmp_crt_msg(char *oid, int size);
+void bo_snmp_crt_msg(int *oid, int size);
 
 void bo_del_snmp();
 #endif	/* BO_SNMP_H */
