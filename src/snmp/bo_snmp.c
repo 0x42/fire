@@ -20,7 +20,6 @@ static struct {
         int request_id;
         int error;
         int error_i;
-        char *oid;
         int oid_size;
 	int *oid_i;
 } snmp_core;
@@ -152,7 +151,7 @@ static void bo_snmp_gen_getrequest()
 	
 	*(snmp_core.buf + snmp_core.buf_i) = 0x00;
 	snmp_core.buf_i++;
-	
+	printf("buf_i[%d]\n", snmp_core.buf_i);
 }
 
 /* ----------------------------------------------------------------------------
