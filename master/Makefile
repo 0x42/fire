@@ -1,11 +1,11 @@
 TARGET		     = build/master
-
+# ========== for Moxa ====================
 #CC = arm-elf-gcc
 #LDFLAGS	     = -Wl, -elf2flt -lpthread
-
+# ========== for PC   ====================
 CC = gcc
 LDFLAGS		     = -lpthread
-
+# ========================================
 CFLAGS		     = -Wall -c -g
 
 INC_DIR		     = -I../src/log -I../src/tools -I../src/nettcp
@@ -57,9 +57,9 @@ default:
 	      $(OBJ5) $(OBJ6) $(OBJ7) $(OBJ8) $(OBJ9) $(OBJ10) \
 	      $(OBJ11) $(OBJ12) $(OBJ) -o $(TARGET)
 
-memtrace:
-	MALLOC_TRACE=trace.log $(TARGET)
-	mtrace $(TARGET) trace.log
+#memtrace:
+#	MALLOC_TRACE=trace.log $(TARGET)
+#	mtrace $(TARGET) trace.log
 	
 clean:
 	rm -R build

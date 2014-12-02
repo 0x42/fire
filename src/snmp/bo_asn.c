@@ -204,37 +204,6 @@ static int bo_oid_size(int num)
     return len;
 }
 
-/*
-static int bo_oid_N(char *oid)
-{
-    int n_items = 1;
-    char *p = oid;
-    
-    while (*p)
-    {
-        if (*p == '.')
-            n_items++;
-        p++;
-    }
-    return n_items;
-}
-
-static void bo_oid_split(char *oid, int *dest)
-{
- 
-    int next_part = 0;
-
-    char *save_ptr;
-    
-    char *p = strtok_r(temp, ".", &save_ptr);
-    while (p)
-    {
-        dest[next_part] = atoi(p);
-        next_part++;
-        p = strtok_r(NULL, ".", &save_ptr);
-    }
-}
-*/
 /* ----------------------------------------------------------------------------
  * @return	длина OID 
  */

@@ -462,8 +462,6 @@ void one_row_one_set()
 	printf("STRESS ... END \n");
 }
 
-
-
 void *recvOnePacket(void *arg)
 {
 	int ans = 1;
