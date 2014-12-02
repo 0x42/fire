@@ -6,13 +6,15 @@ static  int bo_snmp_gen_getrequest_head();
 static void bo_snmp_gen_getrequest();
 static void bo_ber_header(unsigned char type, int len);
 
-const int SNMP_BUF_SIZE = 2048;
+const int SNMP_BUF_SIZE = 1024;
 static const int BSIZE = 255;
 static unsigned char buf[255];
  
 static struct {
 	unsigned char *buf;
+	unsigned char *pdu;
 	int buf_i;
+	int pdu_i;
 	
 	int ver;
         char *com;
@@ -27,18 +29,30 @@ static struct {
 
 /* ----------------------------------------------------------------------------
  * @brief	созд буфер для приема и отправки
+ * @return	[1] OK [-1] ERROR 
  */
 int bo_init_snmp()
 {
 	int ans = 1;
 	snmp_core.buf = (unsigned char *)malloc(SNMP_BUF_SIZE);
 	if(snmp_core.buf == NULL) {
-		bo_log("bo_init_snmp() can't alloc memory for buffer");
+		bo_log("bo_init_snmp() can't alloc memory for buf");
 		ans = -1;
+		goto exit;
 	}
+	snmp_core.pdu = (unsigned char *)malloc(SNMP_BUF_SIZE);
+	if(snmp_core.pdu == NULL) {
+		bo_log("bo_init_snmp() can't alloc memory for pdu");
+		ans = -1;
+		free(snmp_core.buf);
+		goto exit;
+	}
+	
 	/* Номер версии SNMP - 1 (RFC 1157) */
 	snmp_core.ver		= 0;
 	snmp_core.buf_i		= 0;
+	
+	exit:
 	return ans;
 }
 
@@ -55,6 +69,21 @@ void bo_snmp_crt_msg(int *oid, int size)
 	bo_snmp_gen_getrequest();
 	
 	bo_print_buf();
+}
+
+unsigned char * bo_snmp_get_msg()
+{
+	return snmp_core.pdu;
+}
+
+unsigned char * bo_snmp_get_buf()
+{
+	return snmp_core.buf;
+}
+
+int bo_snmp_get_msg_len()
+{
+	return snmp_core.pdu_i;
 }
 
 static void bo_snmp_gen_head()
@@ -87,18 +116,16 @@ static int bo_snmp_gen_getrequest_head()
 	
 	snmp_core.request_id++;
 	if(snmp_core.request_id == 100000) snmp_core.request_id++;
-/*	len = bo_int_size(snmp_core.request_id);  < -- уточнить 0x42 */
-	
-	len = 4; /* integer always 4 bytes*/
+	len = bo_int_size(snmp_core.request_id);  
 	*buf = ASN1_INTEGER;
 	i++;
-	
+
 	bo_code_len(buf + i, len);
 	i += bo_len_size(len);
 	
-	bo_code_int(buf + i, snmp_core.request_id);
-	i+= 4;
-	/* error status always 0 */
+	i += bo_code_int(buf + i, snmp_core.request_id);
+
+	 /* error status always 0 */
 	*(buf + i) = ASN1_INTEGER; i++;
 	*(buf + i) = 1;		   i++;
 	*(buf + i) = 0;		   i++;
@@ -113,9 +140,9 @@ static void bo_snmp_gen_getrequest()
 {
 	int req_head = 0, oid_len, var, seq1, seq2, i;
 	int req_len;
-	unsigned char *b;
 	req_head = bo_snmp_gen_getrequest_head();
-	
+
+	/* Считаем длину сообщения */
 	oid_len = bo_oid_length(snmp_core.oid_i, snmp_core.oid_size);
 	
 	var = oid_len + bo_len_size(oid_len) + 1;
@@ -124,7 +151,8 @@ static void bo_snmp_gen_getrequest()
 
 	req_len = req_head;	
 	req_len += seq2 + bo_len_size(seq2) + 1;
-	
+
+	/* Формируем сообщение */
 	bo_ber_header(GET_REQ_PDU, req_len);
 
 	memcpy( (snmp_core.buf + snmp_core.buf_i), buf, req_head);
@@ -152,6 +180,16 @@ static void bo_snmp_gen_getrequest()
 	*(snmp_core.buf + snmp_core.buf_i) = 0x00;
 	snmp_core.buf_i++;
 	printf("buf_i[%d]\n", snmp_core.buf_i);
+	
+	*snmp_core.pdu = ASN1_SEQUENCE;
+	snmp_core.pdu_i = 1;
+	bo_code_len( (snmp_core.pdu + snmp_core.pdu_i), snmp_core.buf_i);
+	snmp_core.pdu_i += bo_len_size(snmp_core.buf_i);
+	
+	memcpy( (snmp_core.pdu + snmp_core.pdu_i), snmp_core.buf, snmp_core.buf_i);
+	snmp_core.pdu_i += snmp_core.buf_i;
+	
+	snmp_core.buf_i = 0;
 }
 
 /* ----------------------------------------------------------------------------
@@ -170,14 +208,15 @@ static void bo_ber_header(unsigned char type, int len)
 void bo_del_snmp()
 {
 	if(snmp_core.buf != NULL) free(snmp_core.buf);
+	if(snmp_core.pdu != NULL) free(snmp_core.pdu);
 }
 
 static void bo_print_buf()
 {
 	int i = 0;
-	printf("snmp_core.buf [");
-	for(; i < snmp_core.buf_i; i++) {
-		printf("%02x ", *(snmp_core.buf + i) );
+	printf("snmp_core.pdu [");
+	for(; i < snmp_core.pdu_i; i++) {
+		printf("%02x ", *(snmp_core.pdu + i) );
 	}
 	printf("]\n");
 }

@@ -12,6 +12,13 @@ int bo_init_snmp();
 
 void bo_snmp_crt_msg(int *oid, int size);
 
+unsigned char * bo_snmp_get_msg();
+
+unsigned char * bo_snmp_get_buf();
+
+int bo_snmp_get_msg_len();
+
 void bo_del_snmp();
+
 #endif	/* BO_SNMP_H */
 /* 0x42 */

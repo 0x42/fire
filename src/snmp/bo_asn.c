@@ -95,7 +95,7 @@ unsigned int bo_uncode_len(unsigned char *len_ber)
 int bo_int_size(int num)
 {
 	int ans = 1;
-	if(num < 256) {
+	if(num < 128) {
 		ans = 1;
 	} else {
 		while(num != 0) {
@@ -109,26 +109,61 @@ int bo_int_size(int num)
 /* ----------------------------------------------------------------------------
  * @brief	кодируем INTEGER(раск-ем по основанию 256)
  * @return	размер buf	
+ * max int 7F FF FF FF
  */
 int bo_code_int(unsigned char *buf, int num)
 {
 	int len = 0, i = 0;
+	int hb = 0;
+	
 	i = (num >> 24) & 0xFF;
-	*buf = (unsigned char ) i;
-	len++;
-	buf++;
+	if(i > 0 ) {
+		*buf = (unsigned char ) i;
+		len++;
+		buf++;
+		hb = 1;
+	}
 	
 	i = (num >> 16) & 0xFF;
-	*buf = (unsigned char ) i;
-	len++;
-	buf++;
+	if(hb == 1 ) {
+		*buf = (unsigned char ) i;
+		len++;
+		buf++;
+	} else if( i > 0) {
+		if(i > 127) {
+			*buf = 0x00;
+			buf++;
+			len++;
+		}
+		*buf = (unsigned char ) i;
+		len++;
+		buf++;
+		hb = 1;
+	}
 	
 	i = (num >> 8) & 0xFF;
-	*buf = (unsigned char ) i;
-	len++;
-	buf++;
+	if(hb == 1 ) {
+		*buf = (unsigned char ) i;
+		len++;
+		buf++;
+	} else if( i > 0) {
+		if(i > 127) {
+			*buf = 0x00;
+			buf++;
+			len++;
+		}
+		*buf = (unsigned char ) i;
+		len++;
+		buf++;
+		hb = 1;
+	}
 
 	i = num & 0xFF;
+	if( (i > 127) & (hb == 0) ) {
+		*buf = 0x00;
+		buf++;
+		len++;
+	}
 	*buf = (unsigned char ) i;
 	len++;
 
