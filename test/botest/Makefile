@@ -1,6 +1,5 @@
 # =============================================================================
 # 0x42
-# test nettcp/(bo_net.c, bo_net_fifo_server.c)
 # =============================================================================
 
 UNITY_ROOT = ../unity
@@ -26,19 +25,6 @@ SRC1 = \
     ../../src/log/bologging.c \
     ../../src/tools/ocrc.c
 
-SRC2 = \
-    ../netroute/test_runners/Test_route_Runners.c \
-    ../netroute/test_runners/all_tests.c \
-    ../netroute/testroutenet.c \
-    ../../src/log/bologging.c \
-    ../../src/nettcp/bo_net.c \
-    ../../src/nettcp/bo_net_get_route.c \
-    ../../src/tools/ocrc.c \
-    ../../src/tools/oht.c \
-    ../../src/nettcp/bo_net_master_core.c \
-    ../../src/tools/dbgout.c \
-    ../../src/nettcp/bo_cycle_arr.c \
-    ../../src/nettcp/bo_net_master_core_log.c
 SRC3 = \
     ../bolog/test_runners/Test_log_Runners.c \
     ../bolog/test_runners/all_tests.c \
@@ -59,7 +45,11 @@ SRC5 = \
     ../../src/nettcp/bo_net.c \
     ../../src/nettcp/bo_net_get_route.c \
     ../../src/tools/ocrc.c \
-    ../../src/tools/dbgout.c
+    ../../src/tools/oht.c \
+    ../../src/nettcp/bo_net_master_core.c \
+    ../../src/tools/dbgout.c \
+    ../../src/nettcp/bo_cycle_arr.c \
+    ../../src/nettcp/bo_net_master_core_log.c
 
 SRC6 = \
     ../cycarr/test_runners/Test_cycarr_Runners.c \
@@ -75,20 +65,16 @@ fifo:
 	$(CC)  $(INC_DIRS) $(SRC_FILES_UNITY) $(SRC1) -lpthread -o  $(TARGET)
 	./$(TARGET)
 
-route:
-	$(CC) $(INC_DIRS) $(SRC_FILES_UNITY) -lpthread $(SRC2) -o $(TARGET)
-	./$(TARGET)
-
 llist:
 	$(CC) $(INC_DIRS) $(SRC_FILES_UNITY) $(SRC4) -o $(TARGET)
 	./$(TARGET)
 
 log:
-	$(CC) $(INC_DIRS) $(SRC_FILES_UNITY) $(SRC3) -o $(TARGET)
+	$(CC) $(INC_DIRS) $(SRC_FILES_UNITY) -lpthread $(SRC3) -o $(TARGET)
 	./$(TARGET)
 
 master:
-	$(CC) $(INC_DIRS) $(SRC_FILES_UNITY) $(SRC5) -o $(TARGET)
+	$(CC) $(INC_DIRS) $(SRC_FILES_UNITY) -lpthread $(SRC5)  -o $(TARGET)
 	./$(TARGET)
 
 cycarr:

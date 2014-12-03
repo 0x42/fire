@@ -2,6 +2,17 @@
 
 TEST_GROUP_RUNNER(master)
 {
-//	RUN_TEST_CASE(master, simpleTest);
-	RUN_TEST_CASE(master, setConnectTest);
+	// TAB ROUTE
+	RUN_TEST_CASE(master, boMasterCoreTest);
+	RUN_TEST_CASE(master, boMasterCoreTabTest);
+	RUN_TEST_CASE(master, boMasterCoreBadTabTest);
+	RUN_TEST_CASE(master, sendNULLTest);		/* NEED RUN SERVER */
+	// LOG
+	RUN_TEST_CASE(master, sendLogTest);		/* NEED RUN SERVER */
+	RUN_TEST_CASE(master, sendGetLogTest);		/* NEED RUN SERVER */
+	RUN_TEST_CASE(master, getNullLogTest);		/* NEED RUN SERVER */
+
+//	Запускать при выкл др тестах
+//	RUN_TEST_CASE(master, set2000getLast)		/* NEED RUN SERVER */
+
 }

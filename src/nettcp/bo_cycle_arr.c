@@ -52,6 +52,7 @@ int bo_cycle_arr_add(struct bo_cycle_arr *arr, unsigned char *value, int n)
 {
 	int ans = -1;
 	struct bo_cycle_arr_item *item = NULL;
+	dbgout("log index[%d]\n", arr->tail);
 	item = (arr->mem + arr->tail);
 	if(n < BO_ARR_ITEM_VAL) {
 		memset(item->log, 0, BO_ARR_ITEM_VAL);

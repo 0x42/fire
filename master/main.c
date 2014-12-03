@@ -1,5 +1,4 @@
 /* ----------------------------------------------------------------------------
- * Опрос устройств указ в конф файле
  * получаем изменения -> сохр в таблицу -> отпр изм-ия устр-м из списка 
  */
 
@@ -9,6 +8,7 @@
 #include "../src/tools/dbgout.h"
 #include "../src/log/bologging.h"
 
+/* src/nettcp/bo_net_master.c */
 extern void bo_master_main(int argc, char **argv);
 
 int main(int argc, char **argv)

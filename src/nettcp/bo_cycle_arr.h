@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include "../tools/dbgout.h"
 
 struct bo_cycle_arr *bo_cycle_arr_init(int n);
 

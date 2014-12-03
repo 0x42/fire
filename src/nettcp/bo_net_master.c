@@ -19,6 +19,8 @@ static struct {
 	int queue_len;
 	/* макс кол-во утройств могут подкл*/
 	int max_con;
+	/* макс кол-во запросов хран в логе*/
+	int log_size;
 } servconf = {0};
 
 static void m_readConfig(TOHT *cfg, int n, char **argv);
@@ -81,7 +83,7 @@ void bo_master_main(int argc, char **argv)
 	}
 	
 	logArr = NULL;
-	logArr = bo_cycle_arr_init(1024);
+	logArr = bo_cycle_arr_init(servconf.log_size);
 	if(logArr == NULL) {
 		bo_log("bo_master_main() ERROR %s",
 		"can't create logArr haven't free memory");
@@ -107,15 +109,11 @@ void bo_master_main(int argc, char **argv)
 	if(sock_out != -1) bo_closeSocket(sock_out);
 
 end:
-	if(list_in  != NULL) bo_del_lsock(list_in);
-	if(list_out != NULL) bo_del_lsock(list_out);
-
-	if(tab_routes != NULL) ht_free(tab_routes);
-
-	if(recvBuf != NULL) free(recvBuf);
-
-	if(logArr != NULL) bo_cycle_arr_del(logArr);
-
+	if(list_in    != NULL)	bo_del_lsock(list_in);
+	if(list_out   != NULL)	bo_del_lsock(list_out);
+	if(tab_routes != NULL)	ht_free(tab_routes);
+	if(recvBuf    != NULL)	free(recvBuf);
+	if(logArr     != NULL)	bo_cycle_arr_del(logArr);
 	if(cfg != NULL) {
 		cfg_free(cfg);
 		cfg = NULL;
@@ -132,10 +130,12 @@ static void m_readConfig(TOHT *cfg, int n, char **argv)
 	int  nrow    = 0;
 	int  max_con = 250;
 	int  maxrow  = 1000;
+	int log_size = 1024;
 	servconf.port_in   = defPin;
 	servconf.port_out  = defPout;
 	servconf.queue_len = defQ;
 	servconf.max_con   = max_con;
+	servconf.log_size  = log_size;
 	if(n == 2) {
 		fileName = *(argv + 1);
 		cfg = cfg_load(fileName);
@@ -144,6 +144,7 @@ static void m_readConfig(TOHT *cfg, int n, char **argv)
 			servconf.port_out  = cfg_getint(cfg, "sock:port_out", defPout);
 			servconf.queue_len = cfg_getint(cfg, "sock:queue_len", defQ);
 			servconf.max_con   = cfg_getint(cfg, "sock:max_connect", max_con);
+			servconf.log_size   = cfg_getint(cfg, "log_pr:max_size", log_size);
 			
 			f_log	  = cfg_getstring(cfg, "log:file", f_log);
 			f_log_old = cfg_getstring(cfg, "log:file_old", f_log_old);
@@ -319,8 +320,7 @@ static void m_workClient(struct bo_llsock *list_in, struct bo_llsock *list_out,
 		}
 		i = exec;
 	}
-	/* делаем проверку надо ли закрывать сокеты из списка out
-	   удал записи из таблицы роутов для этого сокета */
+	/* закрываем сокет удал записи из таблицы роутов для этого сокета */
 	dbgout("\nCHK LIST OUT TO CLOSE:  ");
 	i = bo_get_head(list_out);
 	while(i != -1) {
@@ -429,16 +429,15 @@ static int m_recvClientMsg(int sock, TOHT *tr)
 	
 	t_msg = bo_master_core(&p);
 
-	
-	printf("==== TAB ROUTE ==== \n");
+	dbgout("==== TAB ROUTE ==== \n");
 	for(i = 0; i < tr->size; i++) {
 		key = *(tr->key + i);
 		if(key != NULL) {
 			val = *(tr->val + i);
-			printf("[%s:%s]\n", key, val);
+			dbgout("[%s:%s]\n", key, val);
 		}
 	}
-	printf("==== END TAB ==== \n");
+	dbgout("==== END TAB ==== \n");
 
 	return t_msg;
 }
