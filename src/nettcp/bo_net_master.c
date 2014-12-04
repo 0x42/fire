@@ -34,7 +34,7 @@ static void m_addClientOut(struct bo_llsock *list, int servSock, fd_set *set,
 static void m_workClient(struct bo_llsock *list_in, struct bo_llsock *list_out,
 			   fd_set *r_set, fd_set *w_set, TOHT *tr);
 static int  m_recvClientMsg(int sock, TOHT *tr);
-static void m_sendClientMsg(int sock, TOHT *tr, struct bo_llsock *llist_out);
+/* static void m_sendClientMsg(int sock, TOHT *tr, struct bo_llsock *llist_out); */
 static void m_sendTabPacket(int sock, TOHT *tr, struct bo_llsock *list);
 static void m_repeatSendRoute(struct bo_llsock *list_out, TOHT *tr);
 static void m_delRoute(struct bo_sock *val, TOHT *tr);
@@ -445,7 +445,7 @@ static int m_recvClientMsg(int sock, TOHT *tr)
 /* ----------------------------------------------------------------------------
  * @DEPRICATED
  * @brief	отправ всю таблицу роутов клиенту(построчно)
- */
+ 
 static void m_sendClientMsg(int sock, TOHT *tr, struct bo_llsock *list)
 {
 	int i = 0;
@@ -454,14 +454,13 @@ static void m_sendClientMsg(int sock, TOHT *tr, struct bo_llsock *list)
 	int valSize = 0;
 	int crc = 0;
 	int exec = 0;
-	char ip[BO_IP_MAXLEN] = "null"; /* listsock.h define */
+	char ip[BO_IP_MAXLEN] = "null"; 
 	unsigned char cbuf[2] = {0};
 	int packetSize = 23;
 	int p_len = 0;
 	char packet[packetSize];
 	char dbg[packetSize-1];
 	dbg[packetSize-2] = '\0';
-	/* packet = [XXX:XXX.XXX.XXX.XXX:XXX] / [XXX:NULL];  */
 	
 	dbgout("отправка табл роутов sock[%d]\n", sock);
 	for(i = 0; i < tr->size; i++) {
@@ -472,7 +471,6 @@ static void m_sendClientMsg(int sock, TOHT *tr, struct bo_llsock *list)
 			valSize = strlen(val);
 			p_len = valSize;
 			if(valSize <= packetSize) {
-				/*dbgout("send->val[%s] %d\n", val, valSize);*/
 				memcpy(packet, key, 3);
 				packet[3] = ':';
 				memcpy(packet + 4, val, valSize);
@@ -502,6 +500,7 @@ static void m_sendClientMsg(int sock, TOHT *tr, struct bo_llsock *list)
 		}
 	}
 }
+*/
 
 /* ----------------------------------------------------------------------------
  * @brief	отправка таблицы одним пакетом
