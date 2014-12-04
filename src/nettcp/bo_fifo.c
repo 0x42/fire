@@ -37,21 +37,17 @@ void bo_printFIFO()
 	struct BO_ITEM_FIFO *item_fifo;
 
 	pthread_mutex_lock(&fifo_mut);
-/*	printf("FIFO:\n itemN[%d]\nhead[%d]\ntail[%d]\nlast[%d]\ncount[%d]\nfree[%d]\n",
-		   fifo.itemN, fifo.head, fifo.tail, fifo.last, fifo.count, fifo.free);
-*/
-	printf("FIFO: itemN[%d] free[%d]\n",
-		   fifo.itemN, fifo.free);
-/*	printf("FIFO item size[%d]\n", BO_FIFO_ITEM_VAL); */
 
-	printf("=====\nFIFO[head]:\n");
+	dbgout("FIFO: itemN[%d] free[%d]\n", fifo.itemN, fifo.free);
+
+	dbgout("=====\nFIFO HEAD[1..30]:\n");
 	for(i = 0; i < 1; i++) {
 		item_fifo = fifo.mem + fifo.head;
-		printf("\n%d:[", i);
+		dbgout("\n%d:[", i);
 		for(j = 0; j < 30; j++) {
-			printf("%c", item_fifo->val[j]);
+			dbgout("%c", item_fifo->val[j]);
 		}
-		printf("]\n=====\n");
+		dbgout("]\n=====\n");
 	}
 
 	pthread_mutex_unlock(&fifo_mut);

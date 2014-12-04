@@ -174,7 +174,8 @@ static struct bo_llsock *m_crtLL(int size)
 	return ll;
 }
 /* ----------------------------------------------------------------------------
- * @brief	
+ * @brief		Ждет наступления события у сокетов -> 
+ *			Читаем сообщение с сокета SET|LOG|RLO
  * @llist_in		список сокетов кот отпр измен мастеру
  * @llist_out		список сокетов кот прин измен от мастера
  * @tr			таблица роутов(для маршрутизации)
@@ -224,10 +225,7 @@ static void m_servWork(int sock_in, int sock_out,
 			
 			dbgout("CHK SERV OUT \n");
 			m_addClientOut(llist_out, sock_out, &r_set, tr);
-			/*
-			dbgout("IN:    ");   bo_print_list_val(llist_in);
-			dbgout("\nOUT:   "); bo_print_list_val(llist_out); 
-			*/
+			
 			dbgout("\nCHK CLIENT   \n");
 			m_workClient(llist_in, llist_out, &r_set, &w_set, tr);
 			dbgout("------ END \n");
@@ -398,7 +396,7 @@ static int m_isClosed(struct bo_llsock *list, int sock)
 	fl = recv(sock, &buf, 1, MSG_PEEK);
 	if(fl < 1) {
 	/* сокет закрыт удаляем из списка */
-		printf("DEL SOCK[%d] m_isClosed\n", sock);
+		dbgout("DEL SOCK[%d] m_isClosed\n", sock);
 		bo_closeSocket(sock);
 		bo_del_bysock(list, sock);
 		ans = -1;
@@ -503,7 +501,7 @@ static void m_sendClientMsg(int sock, TOHT *tr, struct bo_llsock *list)
 */
 
 /* ----------------------------------------------------------------------------
- * @brief	отправка таблицы одним пакетом
+ * @brief	отправка таблицы одним пакетом, устан флаг отправки
  */
 static void m_sendTabPacket(int sock, TOHT *tr, struct bo_llsock *list)
 {
@@ -544,7 +542,7 @@ static void m_sendTabPacket(int sock, TOHT *tr, struct bo_llsock *list)
 	
 }
 /* ----------------------------------------------------------------------------
- * @brief 
+ * @brief	повторно отправ таблицу роутов 
  */
 static void m_repeatSendRoute(struct bo_llsock *list_out, TOHT *tr)
 {
@@ -557,9 +555,9 @@ static void m_repeatSendRoute(struct bo_llsock *list_out, TOHT *tr)
 	while(i != -1) {
 		sock = -1;
 		exec = bo_get_val(list_out, &val, i);
+		/* проверяем флаг отправки */
 		if(val->flag == -1 ) {
 			sock = val->sock;
-		/*	m_sendClientMsg(sock, tr, list_out); */
 			m_sendTabPacket(sock, tr, list_out);
 		}
 		i = exec;

@@ -329,7 +329,7 @@ TEST(fifo, send100MSGSET10) /* NEED RUN SERVER */
 	TEST_ASSERT_EQUAL(1, ans);
 }
 
-TEST(fifo, testThrModel) /* NEED RUN SERVER */
+TEST(fifo, testThrModel) 
 {
 	int ans = -1, exec = -1, err = 1; 
 	pthread_t thr1, thr2;
@@ -360,7 +360,7 @@ void *get10thr(void *arg)
 		exec = bo_getFifoVal(buf, 30);
 		if(exec != -1) {
 			sprintf(msg, "%20d", i);
-			printf("[%d]get10thr[%d][%s]\n", i, exec, buf);
+//			printf("[%d]get10thr[%d][%s]\n", i, exec, buf);
 			
 			if(exec != 20) {
 				bo_log("get10thr() return length value from FIFO");
@@ -380,6 +380,7 @@ void *get10thr(void *arg)
 	}
 	if(err == 1) {
 		error:
+		dbgout("!!! ERROR !!!");
 		bo_log(" ERROR ");
 	}
 }

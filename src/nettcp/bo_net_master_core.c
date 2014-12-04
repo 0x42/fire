@@ -45,8 +45,10 @@ static void(*statusTable[])(struct paramThr *) = {
 };
 
 /* ----------------------------------------------------------------------------
- * @brief	принимаем данные от клиента SET - изменения для табл роутов
- *					    LOG - лог команд для устр 485
+ * @brief	разбирает вход сообщения SET - изменения для табл роутов
+ *				      LOG - лог команд для устр 485
+ *				      TAB - таблица роутов
+ *				      RLO - запрос лога    
  * @return	[] тип пришедшего сообщения SET/TAB[1]
  *					    LOG[2]
  *					    ERR[-1]
@@ -59,25 +61,12 @@ int bo_master_core(struct paramThr *p)
 	
 	while(stop) {
 		dbgout("KA[%s]", coreStatusTxt[p->status]);
-		if(p->status == SET) { 
-		/*	dbgout("KA[%s]", coreStatusTxt[p->status]); */
-			typeMSG = 1; 
-		}
-		if(p->status == TAB) {
-		/*	dbgout("KA[%s]", coreStatusTxt[p->status]); */
-			typeMSG = 1;
-		}
-		if(p->status == ERR) { 
-		/*	dbgout("[%s]", coreStatusTxt[p->status]); */
-			typeMSG = -1; 
-		}
-		if(p->status == ANSOK) {
-		/*	dbgout("[%s]", coreStatusTxt[p->status]); */ 
-		}
-		if(p->status == QUIT) {
-		/*	dbgout("\n"); */ 
-			break;
-		}
+		if(p->status == SET) typeMSG = 1; 
+		if(p->status == TAB) typeMSG = 1;
+		if(p->status == LOG) typeMSG = 2;
+		if(p->status == ERR) typeMSG = -1; 
+
+		if(p->status == QUIT) break;
 		statusTable[p->status](p);
 	}
 	return typeMSG;
@@ -215,14 +204,14 @@ STATIC int checkCRC(struct paramThr *p)
 	
 	crc = boCharToInt(crcTxt);
 	count = crc16modbus(msg, msg_len);
-	printf("crc[%d][%02x %02x] count[%d]\n", crc,crcTxt[0], crcTxt[1], count);
 	p->length = msg_len;
 	if(crc != count) ans = -1;
 	else ans = 1;
 	return ans;
 }
+
 /* ----------------------------------------------------------------------------
- * @brief	обработка ROW|LEN|DATA|...ROW|LEN|DATA|CRC
+ * @brief	создание сообщения ROW|LEN|DATA|...ROW|LEN|DATA|CRC из таблицы tr
  * @buf		буфер куда будет записана таблица
  * @return	[0]  - таблица пустая, пакет не сформ
  *		[>0] - строка создана, размер пакета
@@ -410,11 +399,11 @@ static void coreSaveLog(struct paramThr *p)
 	int i = 0;
 	int exec = -1;
 
-	printf("\nlen[%d]\ncoreSaveLog = [", p->length);
+	dbgout("\nlen[%d]\ncoreSaveLog = [", p->length);
 	for(; i < p->length; i++) {
-		printf("%c", *(p->buf + i));
+		dbgout( "%c", *(p->buf + i) );
 	}
-	printf("]\n");
+	dbgout("]\n");
 	
 	exec = bo_cycle_arr_add(p->log, p->buf, p->length);
 	if(exec == -1) {
@@ -477,3 +466,4 @@ static void coreSendNul(struct paramThr *p)
 	p->status = QUIT;
 }
 
+/* 0x42 */

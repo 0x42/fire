@@ -43,7 +43,6 @@ SRC5 = \
     ../master/testmaster.c \
     ../../src/log/bologging.c \
     ../../src/nettcp/bo_net.c \
-    ../../src/nettcp/bo_net_get_route.c \
     ../../src/tools/ocrc.c \
     ../../src/tools/oht.c \
     ../../src/nettcp/bo_net_master_core.c \
