@@ -22,7 +22,7 @@ master/master.cfg    - конф-ый файл
 ==============
 1.1 
 test/master/stress_1
-Цель:     Определить время необх для отправки/получении таблицы роутов. 
+Цель:     Определить время необх для отправки/получения таблицы роутов. 
 
 Компиляция/Выполнение: 
     #cd test/master/stress_1
@@ -58,28 +58,6 @@ test/botest/make master             - запуск тестов
 
 4 Алгоритм 
 ===================
-    КА     - конечный автомат
-    клиент - moxa UC7110 
-
-                                Инициализация 
-        | bo_master_main()  --> list_in, list_out списки хран сокеты клиентов,
-        | bo_net_master.c       макс длина списка = max_connect(master.cfg) | или
-        |                       default  = 250(m_readConfig)
-        |                       
-        |                       recvBuf - приемный буфер, макс размер опред 
-        |                       макросом BO_MAX_TAB_BUF(bo_net_master_core.h)
-        |                       
-        |                       tab_routes - таблица роутов(хэш табл)
-        |                       хранит значение: key адрес устр RS-485
-        |                                        value ip:port(1|2 на moxa)
-        |
-        |                       logArr - таблица хран логи ПР 
-        |                       макс значение = max_size(master.cfg) | 
-        |                       default = 1024(m_readConfig)
-        |________________________
-        |
-        |
-        |
-         --> m_servWork()   
+ см. README_scheme.odg
          
 

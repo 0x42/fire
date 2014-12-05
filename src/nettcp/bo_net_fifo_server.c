@@ -257,7 +257,7 @@ static void fifoReadPacket(int clientSock, unsigned char *buffer, int bufSize,
 			break;
 		}
 		statusTable[packetStatus](&param);
-	}
+	}*
 	
 	bo_closeSocket(clientSock);	
 }
