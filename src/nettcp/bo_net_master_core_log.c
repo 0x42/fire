@@ -35,7 +35,8 @@ int bo_master_core_log(int sock, char *buf, int bufSize)
 	ka_p.status = LOGREADHEAD;
 	
 	while(1) {
-		dbgout("bo_master_core_log [%s]\n", ka_logStatusTxt[ka_p.status]);
+		/*dbgout("bo_master_core_log [%s]\n", ka_logStatusTxt[ka_p.status]);
+		*/
 		if(ka_p.status == LOGQUIT) break;
 		if(ka_p.status == LOGNUL) { 
 			ka_p.len = 0;

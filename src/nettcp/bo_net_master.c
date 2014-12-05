@@ -238,7 +238,7 @@ static void m_servWork(int sock_in, int sock_out,
  * @brief	если событие произошло на sock то получаем сокет клиента и 
  *		вносим его в список 
  * @servSock    серверный сокет
- * @set       битовая маска возв  select
+ * @set         битовая маска возв  select
  */
 static void m_addClient(struct bo_llsock *list, int servSock, fd_set *set)
 {

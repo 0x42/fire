@@ -249,7 +249,8 @@ static void fifoReadPacket(int clientSock, unsigned char *buffer, int bufSize,
 	setsockopt(clientSock, SOL_SOCKET, SO_REUSEADDR, &i, sizeof(i));
 	
 	while(stop == -1) {
-		dbgout("\nFIFO = %s\n", PacketStatusTxt[packetStatus]);
+		/*dbgout("\nFIFO = %s\n", PacketStatusTxt[packetStatus]);
+		*/
 		if(packetStatus == QUIT) break;
 		if(packetStatus == END) {
 			*endPr = -1;
