@@ -17,6 +17,7 @@ static void coreSaveLog     (struct paramThr *p);
 static void coreReturnLog   (struct paramThr *p);
 static void coreSendLog	    (struct paramThr *p);
 static void coreSendNul	    (struct paramThr *p);
+static void coreAsk	    (struct paramThr *p);
 /* ----------------------------------------------------------------------------
  *	КОНЕЧНЫЙ АВТОМАТ
  */
@@ -24,7 +25,7 @@ static char *coreStatusTxt[] = {"READHEAD", "SET", "QUIT", "ANSOK",
 				"ERR", "ADD", "READCRC", 
 				"TAB", "READCRC_TAB", "READROW", 
 				"LOG", "SAVELOG", 
-				"RLO", "SENDLOG", "SENDNUL"};
+				"RLO", "SENDLOG", "SENDNUL", "ASK"};
 
 static void(*statusTable[])(struct paramThr *) = {
 	coreReadHead,
@@ -41,7 +42,8 @@ static void(*statusTable[])(struct paramThr *) = {
 	coreSaveLog,
 	coreReturnLog,
 	coreSendLog,
-	coreSendNul
+	coreSendNul,
+	coreAsk
 };
 
 /* ----------------------------------------------------------------------------
@@ -98,7 +100,8 @@ static void coreReadHead(struct paramThr *p)
 				if(strstr(buf, "SET")) p->status = SET;
 				else if(strstr(buf, "TAB")) p->status = TAB;
 				else if(strstr(buf, "RLO")) p->status = RLO;
-				else if(strstr(buf, "OK"))  p->status = QUIT;
+				else if(strstr(buf, "OK") )  p->status = QUIT;
+				else if(strstr(buf, "ASK")) p->status = ANS;
 				else p->status = ERR;
 			}
 		}
@@ -185,6 +188,18 @@ static void coreOk(struct paramThr *p)
 	unsigned char msg[] = " OK";
 	exec = bo_sendAllData(p->sock, msg, 3);
 	if(exec == -1) bo_log("coreOk() errno[%s]", strerror(errno));
+	p->status = QUIT;
+}
+
+/* ----------------------------------------------------------------------------
+ * @brief	polling сервера. Проверка сокета
+ */
+static void coreAsk(struct paramThr *p) 
+{ 
+	int exec = -1;
+	unsigned char msg[] = "ASK";
+	exec = bo_sendAllData(p->sock, msg, 3);
+	if(exec == -1) bo_log("coreAns() errno[%s]", strerror(errno));
 	p->status = QUIT;
 }
 /* ----------------------------------------------------------------------------

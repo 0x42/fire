@@ -15,7 +15,7 @@
 enum m_coreStatus {READHEAD = 0, SET, QUIT, ANSOK, ERR, ADD, READCRC,
                    TAB, READCRC_TAB, READROW, 
                    LOG, SAVELOG,
-                   RLO, SENDLOG, SENDNUL};
+                   RLO, SENDLOG, SENDNUL, ANS};
 
 struct paramThr {
     int sock;

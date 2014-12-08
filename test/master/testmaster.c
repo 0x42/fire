@@ -324,6 +324,27 @@ TEST(master, sendNULLTest) /* NEED RUN SERVER */
 	TEST_ASSERT_EQUAL(1, ans);
 }
 
+TEST(master, chkSockTest) /* NEED RUN SERVER */
+{
+	printf("chkSockTest() ... run\n");
+	int ans = -1, exec = -1;
+	int sock = -1;
+	
+	sock = bo_setConnect("127.0.0.1", 8890);
+	if(sock == -1) {
+		printf("bo_setConnect ERROR\n"); goto exit;
+	}
+	
+	exec = bo_chkSock(sock);
+	if(exec == 1) ans = 1;
+	else {
+		printf("bo_chkSock() ERROR\n");
+	}
+	
+	exit:
+	TEST_ASSERT_EQUAL(1, ans);
+}
+
 TEST(master, sendLogTest) /* NEED RUN SERVER */
 {
 	printf("\nsendLogTest ... RUN\n");
