@@ -192,7 +192,7 @@ static void m_servWork(int sock_in, int sock_out,
 	fd_set r_set, w_set, e_set;
 	/* таймер на события */
 	struct timeval tval;
-
+	int cron_N = 0;
 	while(stop == 1) {
 		tval.tv_sec  = 0;
 		tval.tv_usec = 50;
@@ -202,6 +202,11 @@ static void m_servWork(int sock_in, int sock_out,
 		FD_SET(sock_in,  &r_set);
 		FD_SET(sock_out, &r_set);
 		
+		cron_N++;
+		if(cron_N == 200) {
+			cron_N = 0;
+			inc_cron_life("/mnt/ramdisk/master.life");
+		}
 		m_addSockToSet(llist_in,  &r_set);
 		/* если сокет из того списка подаст сигнал на передачу 
 		 * значит его надо закрыть.*/
