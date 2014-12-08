@@ -157,7 +157,6 @@ int get_wdtlife(struct sta *st);
 
 void gen_moxa_default_cfg(char *cfile);
 /* void gen_moxa_cron_life(char *cfile); */
-void inc_cron_life(char *lifile);
 
 void init_thrState(struct sta *st);
 void destroy_thrState(struct sta *st);

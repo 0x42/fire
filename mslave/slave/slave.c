@@ -159,33 +159,6 @@ void gen_moxa_cron_life(char *cfile)
  */
 
 /**
- * inc_cron_life - Увеличивает счетчик жизни программы на 1.
- * @lifile: Имя файла.
- *
- */
-void inc_cron_life(char *lifile)
-{
-	TOHT *life;
-	FILE *out;
-	char slife[17] = {0};
-	int sch_life;
-
-	life = cfg_load(lifile);
-	sch_life = cfg_getint(life, "WD:life", -1);
-	sprintf(slife, "%016d", ++sch_life);
-	
-	if ((out = fopen(lifile, "w")) == NULL) {
-		fprintf(stderr, "inc_cron_life(): cannot open %s\n", lifile);
-	} else {
-		cfg_put(life, "WD:life", slife);
-		cfg_save(life, out);
-		fclose(out);
-	}
-	
-	cfg_free(life);
-}
-
-/**
  * init_thrState - Инициализация структуры sta{}.
  * @st: Указатель на структуру sta{}.
  */
@@ -816,7 +789,7 @@ void prepare_cadr_actNetStat(struct chan_thread_arg *targ, struct thr_tx_buf *b,
 		key = rt_getkey(rtg, i);
 		if (key == NULL) continue;
 		adr = atoi(key);
-		/** Получаем список адресов устройств
+		 Получаем список адресов устройств
 		 * на глобальном пространстве.
 		adr_bit = 1 << dst;
 		
