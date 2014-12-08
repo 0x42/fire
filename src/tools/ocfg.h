@@ -33,6 +33,8 @@ int cfg_parse_line(TOHT *ht,
 		   char *sect);
 TOHT *cfg_load(const char *cfgname);
 
+void inc_cron_life(char *lifile);
+
 
 #endif	/* _OCFG_H */
 

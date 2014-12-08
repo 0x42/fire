@@ -353,3 +353,30 @@ TOHT *cfg_load(const char *cfgname)
 	return ht;
 }
 
+/**
+ * inc_cron_life - Увеличивает счетчик жизни программы на 1.
+ * @lifile: Имя файла.
+ *
+ */
+void inc_cron_life(char *lifile)
+{
+	TOHT *life;
+	FILE *out;
+	char slife[17] = {0};
+	int sch_life;
+
+	life = cfg_load(lifile);
+	sch_life = cfg_getint(life, "WD:life", -1);
+	sprintf(slife, "%016d", ++sch_life);
+	
+	if ((out = fopen(lifile, "w")) == NULL) {
+		fprintf(stderr, "inc_cron_life(): cannot open %s\n", lifile);
+	} else {
+		cfg_put(life, "WD:life", slife);
+		cfg_save(life, out);
+		fclose(out);
+	}
+	
+	cfg_free(life);
+}
+
