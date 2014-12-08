@@ -25,7 +25,7 @@
  * @return   Указатель на выделенную область.
  *
  * Новый размер хэш таблицы будет изменен на HT_MINSIZE.
-*/
+ */
 static void *mem_reorg(void *ptr, int size, size_t st)
 {
 	void *newptr;
@@ -44,7 +44,7 @@ static void *mem_reorg(void *ptr, int size, size_t st)
  * @return   Указатель на новую строку.
  *
  * Это аналог функции strdup().
-*/
+ */
 char *str_dup(const char *str)
 {
 	char *dstr;
@@ -59,6 +59,7 @@ char *str_dup(const char *str)
 /**
  * ht_hash - Вычислить хэш-ключ для строки.
  * @key: Строка символов.
+ * @return   хэш.
  *
  * Реализация FNV1A хэш функции.
  *
@@ -87,7 +88,7 @@ static unsigned int ht_hash(const char *key)
  * @key: Ключ.
  *
  * Если ключ найден получаем индекс ключа, иначе - ht->size.
-*/
+ */
 int get_key_index(TOHT *ht, const char *key)
 {
 	unsigned hash = ht_hash(key);
@@ -111,7 +112,7 @@ int get_key_index(TOHT *ht, const char *key)
  * @ht:  Хэш таблица.
  *
  * @return  ht->size.
-*/
+ */
 int ht_get_size(TOHT *ht)
 {
 	return ht->size;
@@ -123,7 +124,7 @@ int ht_get_size(TOHT *ht)
  * @idx: Индекс.
  *
  * @return  Если ключ найден получаем ключ ввиде строки, иначе - NULL.
-*/
+ */
 char *ht_get_key(TOHT *ht, int idx)
 {
 	if (idx < ht->size)
@@ -140,7 +141,7 @@ char *ht_get_key(TOHT *ht, int idx)
  *
  * Если значение существует, то изменяем его и выходим с
  * результатом 0. Иначе - выходим с результатом 1.
-*/
+ */
 static int modify_value(TOHT *ht, const char *key, const char *val)
 {
 	int i = get_key_index(ht, key);
@@ -161,8 +162,8 @@ static int modify_value(TOHT *ht, const char *key, const char *val)
  * @val: Новое значение.
  *
  * Если добавление нового значения прошло успешно, то выходим с
- * результатом 0. Иначе - выходим с результатом 1.
-*/
+ * результатом 0. Иначе - выходим с результатом -1.
+ */
 static int add_value(TOHT *ht, const char *key, const char *val)
 {
 	unsigned hash = ht_hash(key);
@@ -200,11 +201,12 @@ static int add_value(TOHT *ht, const char *key, const char *val)
 /**
  * ht_new - Создать новый объект таблицы.
  * @size: Начальный размер таблицы.
+ * @return   Указатель на хэш таблицу или NULL.
  *
  * Функция создает новый объект таблицы данного размера и возвращает его.
  * Если вы не знаете заранее, какое количество записей будет в таблице,
  * задайте значение size=0.
-*/
+ */
 TOHT *ht_new(int size)
 {
 	TOHT *ht;
@@ -228,7 +230,7 @@ TOHT *ht_new(int size)
  * @ht: Хэш таблица.
  *
  * Освободить объект таблицы и всю память, связанную с ним.
-*/
+ */
 void ht_free(TOHT *ht)
 {
 	int i;
@@ -255,7 +257,7 @@ void ht_free(TOHT *ht)
  * Функция находит ключ в таблице и возвращает указатель на его
  * значение.
  * При неудаче, возвратит указатель на значение по умолчанию.
-*/
+ */
 char *ht_get(TOHT *ht, const char *key, char *def)
 {
 	int i = get_key_index(ht, key);
@@ -278,7 +280,7 @@ char *ht_get(TOHT *ht, const char *key, char *def)
  * Новый ключ будет добавлен в таблицу с новым значением
  * (функция add_value()).
  *
-*/
+ */
 int ht_put(TOHT *ht, const char *key, const char *val)
 {
 	if (ht == NULL || key == NULL) return -1;

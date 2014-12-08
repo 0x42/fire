@@ -1,7 +1,9 @@
 
+#if defined (__MOXA_TARGET__) && defined (__WDT__)
 #include "mxwdg.h"
+#endif
+
 #include "slave.h"
-#include "ch_threads.h"
 #include "ocfg.h"
 #include "ort.h"
 #include "ocrc.h"
@@ -10,26 +12,27 @@
 #include "serial.h"
 #include "bo_net_master_core.h"
 
-int  rtBufLen = BO_MAX_TAB_BUF;
-
 
 int main(int argc, char *argv[])
 {
 	pthread_t thread_wdt;
+	pthread_t thread_log;
 	pthread_t thread_fifoSrv;
 	pthread_t thread_ch1, thread_ch2;
 	pthread_t thread_rtSend, thread_rtRecv;
-
+	
 	struct wdt_thread_arg wdt_targ;
+	struct log_thread_arg log_targ;
 	struct fifo_thread_arg fifoSrv_targ;
 	struct chan_thread_arg ch1_targ, ch2_targ;
 	struct rt_thread_arg rtSend_targ, rtRecv_targ;
-	
+
 	int result;
 	
 	char cfile[64];
 	char lfile[64];
 	char lfile_old[64];
+	char lifeFile[64];
 
 	int rs_parity, rs_databits, rs_stopbit;
 	int rs_speed;
@@ -37,10 +40,8 @@ int main(int argc, char *argv[])
 	int tsec, tusec, tscan;
 	int tout, nretries;
 
-#ifdef MOXA_TARGET
 	int wdt_en;
 	unsigned long wdt_tm;
-#endif
 	
 	int ch1_enable, ch2_enable;
 	
@@ -52,7 +53,7 @@ int main(int argc, char *argv[])
 	unsigned int rt_portSend, rt_portRecv;
 
 	char logSend_ip[16];
-	unsigned int logSend_port;
+	unsigned int logSend_port, logMaxLines;
 	
 	char ls_gen[32];
 	char req_ag[32];
@@ -71,8 +72,8 @@ int main(int argc, char *argv[])
 	if( argc == 2)
 		sprintf(cfile, argv[1]);
 	else {
-		sprintf(cfile, "mslave.cfg");
-		gen_moxa_default_cfg(cfile);  /** Генерация moxa конфиг файла
+		sprintf(cfile, "mslave_default.cfg");
+		gen_moxa_default_cfg(cfile);  /** Генерация slave конфиг файла
 					       *  по умолчанию */
 	}
 	
@@ -94,13 +95,14 @@ int main(int argc, char *argv[])
 	tout = cfg_getint(cfg, "moxa:Tout", -1);
 	nretries = cfg_getint(cfg, "moxa:nRetries", -1);
 	
-#ifdef MOXA_TARGET
 	/** Установка параметров WatchDog */
 	wdt_targ.tsec = cfg_getint(cfg, "WDT:Tsec", -1);
 	wdt_targ.tusec = cfg_getint(cfg, "WDT:Tusec", -1);
 	wdt_tm = (unsigned long)cfg_getint(cfg, "WDT:Tms", -1);
 	wdt_en = cfg_getint(cfg, "WDT:enable", -1);
-#endif
+	/** Инициализация файла для контроля жизни программы через CRON */
+	sprintf(lifeFile, cfg_getstring(cfg, "WDT:lifeFile", NULL));
+	/* gen_moxa_cron_life(lifeFile); */
 
 	/** IP адрес узла */
 	sprintf(ip, cfg_getstring(cfg, "eth0:ip", NULL));
@@ -118,10 +120,11 @@ int main(int argc, char *argv[])
 	sprintf(rt_ipRecv, cfg_getstring(cfg, "RT:recvIp", NULL));
 	rt_portRecv = (unsigned int)cfg_getint(cfg, "RT:recvPort", -1);
 
-	/** LOGGER server IP, port */
+	/** LOGGER server IP, port, максимальное количество строк */
 	sprintf(logSend_ip, cfg_getstring(cfg, "LOGGER:sendIp", NULL));
 	logSend_port = (unsigned int)cfg_getint(cfg, "LOGGER:sendPort", -1);
-
+	logMaxLines = (unsigned int)cfg_getint(cfg, "LOGGER:maxLines", -1);
+	
 	/** Загрузка параметров серийного порта */
 	/** 0: none, 1: odd, 2: even, 3: space, 4: mark */
 	rs_parity = cfg_getint(cfg, "RS:prmParity", -1);
@@ -182,8 +185,10 @@ int main(int argc, char *argv[])
 
 	cfg_free(cfg);
 
-	
-	rtBuf = (unsigned char *)malloc(rtBufLen);
+
+	/** Выделение памяти под буфер для глобальной таблицы
+	 * маршрутов загружаемой с контроллера master */
+	rtBuf = (unsigned char *)malloc(BO_MAX_TAB_BUF);
 	if(rtBuf == NULL) {
 		bo_log("main() ERROR %s", "can't alloc mem for rtBuf");
 		return 1;
@@ -233,8 +238,17 @@ int main(int argc, char *argv[])
 
 	logSend_sock = 0;
 	fifo_idx = 0;
+
 	
-#ifdef MOXA_TARGET
+	log_targ.logSend_ip = logSend_ip;
+	log_targ.logSend_port = logSend_port;
+	result = pthread_create(&thread_log, &pattr, &logSendSock_connect, &log_targ);
+	if (result) {
+		printf("th_log: result = %d: %s\n", result, strerror(errno));
+		return 1;
+		}
+
+#if defined (__MOXA_TARGET__) && defined (__WDT__)
 	if (wdt_en) {
 
 		/* set watch dog timer, must be refreshed in 5ms..60s */
@@ -246,28 +260,18 @@ int main(int argc, char *argv[])
 			return 1;
 		}
 
-		/**
-		wdt_fd = swtd_open();
-		if (wdt_fd < 0) {
-			printf("Open sWatchDog device fail !: %d [%s]\n",
-			       wdt_fd, strerror(errno));
-			return 1;
-		}
-		// enable it and set it 5 seconds /
-		swtd_enable(wdt_fd, wdt_t);
-		*/
-
 		init_thrWdtlife(&wdt_life);
 		printf("WatchDog enabled ok\n");
 	}
+#endif
 
 	wdt_targ.wdt_en = wdt_en;
+	wdt_targ.lifeFile = lifeFile;
 	result = pthread_create(&thread_wdt, &pattr, &wdt, &wdt_targ);
 	if (result) {
 		printf("th_wdt: result = %d: %s\n", result, strerror(errno));
 		return 1;
 		}
-#endif
 	
 	rtRecv_targ.ip = rt_ipRecv;
 	rtRecv_targ.port = rt_portRecv;
@@ -300,14 +304,11 @@ int main(int argc, char *argv[])
 	ch1_targ.tusec = tusec;
 	ch1_targ.tscan = tscan;
 	ch1_targ.tout = tout;
-#ifdef MOXA_TARGET
 	ch1_targ.wdt_en = wdt_en;
-#endif
 	ch1_targ.nretries = nretries;
 	ch1_targ.ip = ip;
 	ch1_targ.fifo_port = fifo_port;
-	ch1_targ.logSend_ip = logSend_ip;
-	ch1_targ.logSend_port = logSend_port;
+	ch1_targ.logMaxLines = logMaxLines;
 	ch1_targ.cdaId = cdaId;
 	ch1_targ.cdaDest = cdaDest;
 	ch1_targ.cdnsId = cdnsId;
@@ -328,14 +329,11 @@ int main(int argc, char *argv[])
 	ch2_targ.tusec = tusec;
 	ch2_targ.tscan = tscan;
 	ch2_targ.tout = tout;
-#ifdef MOXA_TARGET
 	ch2_targ.wdt_en = wdt_en;
-#endif
 	ch2_targ.nretries = nretries;
 	ch2_targ.ip = ip;
 	ch2_targ.fifo_port = fifo_port;
-	ch2_targ.logSend_ip = logSend_ip;
-	ch2_targ.logSend_port = logSend_port;
+	ch2_targ.logMaxLines = logMaxLines;
 	ch2_targ.cdaId = cdaId;
 	ch2_targ.cdaDest = cdaDest;
 	ch2_targ.cdnsId = cdnsId;
@@ -352,10 +350,13 @@ int main(int argc, char *argv[])
 	
 	
 	/** Ожидаем завершения потоков */
-#ifdef MOXA_TARGET
+	if (!pthread_equal(pthread_self(), thread_log))
+		pthread_join(thread_log, NULL);
+
+	write(1, "pthread_log exited ok\n", 22);
+
 	if (!pthread_equal(pthread_self(), thread_wdt))
 		pthread_join(thread_wdt, NULL);
-#endif
 
 	if (!pthread_equal(pthread_self(), thread_rtRecv))
 		pthread_join(thread_rtRecv, NULL);
@@ -390,10 +391,9 @@ int main(int argc, char *argv[])
 	pthread_cond_destroy(&psvdata);
 	destroy_thrState(&psvdata_ready);
 	
-#ifdef MOXA_TARGET
+#if defined (__MOXA_TARGET__) && defined (__WDT__)
 	if (wdt_en) {
 		destroy_thrWdtlife(&wdt_life);
-		/** swtd_close(wdt_fd); */
 		mxwdg_close(wdt_fd);
 	}
 #endif
@@ -403,7 +403,6 @@ int main(int argc, char *argv[])
 	rt_free(rtl);
 	rt_free(rtg);
 	
-
 	return 0;
 }
 

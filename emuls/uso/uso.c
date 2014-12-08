@@ -37,10 +37,11 @@ void gen_uso_default_cfg(char *cfile)
 	cfg_put(cfg, "USO2:logger", "1");
 
 	cfg_put(cfg, "LOGGER:line", "1");
-	cfg_put(cfg, "LOGGER:nlines", "100");
+	cfg_put(cfg, "LOGGER:nlines", "4");
 
-	cfg_put(cfg, "TEST:cmd", "cmd100");
-
+	/** Количество данных в кадре теста */
+	cfg_put(cfg, "TEST:lnTest", "1");
+	
 	/** Идентификаторы подсистем ЛС */
 	cfg_put(cfg, "LS:gen", "General");         /** 0xC2*/
 
@@ -49,9 +50,10 @@ void gen_uso_default_cfg(char *cfile)
 	cfg_put(cfg, "REQ:ns", "GetNetworkStatus");  /** 0x29 */
 	cfg_put(cfg, "REQ:gl", "GetLog");            /** 0x0E */
 
-	cfg_put(cfg, "PR1:adr", "3");
-	cfg_put(cfg, "PR2:adr", "5");
-	cfg_put(cfg, "PR3:adr", "4");
+	cfg_put(cfg, "PR:adr1", "2");
+	cfg_put(cfg, "PR:adr2", "3");
+	cfg_put(cfg, "PR:adr3", "4");
+	cfg_put(cfg, "PR:adr4", "5");
 
 	cfg_save(cfg, out);
 	fclose(out);
@@ -80,8 +82,6 @@ unsigned int uso(struct actx_thread_arg *targ, struct thr_tx_buf *b,
 	int i;
 	char csch[10];
 	int ln = 8;
-	/* int mln = 1000; */
-	int mln = 1;
 	
 	sprintf(csch, "%08u", sch);
 	
@@ -97,10 +97,10 @@ unsigned int uso(struct actx_thread_arg *targ, struct thr_tx_buf *b,
 	for (i=0; i<ln; i++)
 		put_txBuf(b, csch[i]);
 
-	for (i=0; i<mln; i++)
+	for (i=0; i<targ->test_ln; i++)
 		put_txBuf(b, '\x00');
 	
-	crc = crc16modbus(b->buf, ln+6+mln);
+	crc = crc16modbus(b->buf, ln+6+targ->test_ln);
 
 	put_txBuf(b, (char)(crc & 0xff));
 	put_txBuf(b, (char)((crc >> 8) & 0xff));
@@ -147,8 +147,8 @@ void uso_quLog(struct actx_thread_arg *targ, struct thr_tx_buf *b,
 	put_txBuf(b, (char)targ->cdquDest);
 	put_txBuf(b, (char)0);
 	put_txBuf(b, (char)4);
-	put_txBuf(b, (char)((line & 0xffff) & 0xff));
-	put_txBuf(b, (char)(((line & 0xffff) >> 8) & 0xff));
+	put_txBuf(b, (char)(line & 0xff));
+	put_txBuf(b, (char)((line >> 8) & 0xff));
 	put_txBuf(b, (char)(nlines & 0xff));
 	put_txBuf(b, (char)((nlines >> 8) & 0xff));
 

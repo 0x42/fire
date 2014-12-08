@@ -117,7 +117,8 @@ void destroy_thrTxBuf(struct thr_tx_buf *b)
 }
 
 /**
- * get_txBuf - Получить элемент из буфера buf по текущей позиции rpos.
+ * get_txBuf - Получить элемент из буфера buf по текущей позиции rpos с
+ *             последующим инкрементом rpos.
  * @b: Указатель на структуру thr_tx_buf{}.
  * @return: Байт данных кадра.
  */
@@ -199,6 +200,7 @@ int read_byte(struct thr_rx_buf *b, char data, int fl)
 					/** Ошибка CRC */
 					bo_log("read_byte: icrc= %d, crc= %d",
 					       icrc, crc);
+					
 					b->wpos = 0;
 					put_rxFl(b, RX_ERROR);
 				} else {
@@ -332,7 +334,7 @@ int prepare_buf_tx(struct thr_tx_buf *b, char *buf)
  * @port: Порт RS485.
  * @return  0: успешно передали кадр,
  *         -1: не успех.
-*/
+ */
 int writer(struct thr_tx_buf *b, char *buf, int port)
 {
 	int n;  /** Кол-во байт подготовленных для передачи */

@@ -10,7 +10,7 @@ CC = gcc
 CFLAGS = -Wall -g -fPIC -D PC_TARGET
 LDFLAGS =
 INC_DIRS = -I/usr/include -I/usr/local/include -I../ -I../../src/log \
-	-I../../src/lib -I../../src/tools -I../uso -I../pr -I../pr2
+	-I../../src/lib -I../../src/tools -I../uso -I../pr
 
 SRC1 = ../../src/log/bologging.c
 SRC2 = ../../src/lib/serial.c
@@ -25,12 +25,9 @@ SRC_ACT1 = ../uso/uso.c
 SRC_ACT2 = ../uso/uso_threads.c
 SRC_ACT3 = ../pr/pr.c
 SRC_ACT4 = ../pr/pr_threads.c
-SRC_ACT5 = ../pr2/pr2.c
-SRC_ACT6 = ../pr2/pr2_threads.c
 
 SRC_T1 = ../euso.c
 SRC_T2 = ../epr.c
-SRC_T3 = ../epr2.c
 
 OBJ1 = build/bologging.o
 OBJ2 = build/serial.o
@@ -45,16 +42,12 @@ OBJ_ACT1 = build/uso/uso.o
 OBJ_ACT2 = build/uso/uso_threads.o
 OBJ_ACT3 = build/pr/pr.o
 OBJ_ACT4 = build/pr/pr_threads.o
-OBJ_ACT5 = build/pr2/pr2.o
-OBJ_ACT6 = build/pr2/pr2_threads.o
 
 OBJ_T1 = build/uso/euso.o
 OBJ_T2 = build/pr/epr.o
-OBJ_T3 = build/pr2/epr2.o
 
 T1 = build/uso/euso
 T2 = build/pr/epr
-T3 = build/pr2/epr2
 
 
 all:	clean default
@@ -78,10 +71,6 @@ default:
 	$(CC) $(INC_DIRS) $(CFLAGS) -c $(SRC_ACT4) -o $(OBJ_ACT4)
 	$(CC) $(INC_DIRS) $(CFLAGS) -c $(SRC_T2) -o $(OBJ_T2)
 
-	$(CC) $(INC_DIRS) $(CFLAGS) -c $(SRC_ACT5) -o $(OBJ_ACT5)
-	$(CC) $(INC_DIRS) $(CFLAGS) -c $(SRC_ACT6) -o $(OBJ_ACT6)
-	$(CC) $(INC_DIRS) $(CFLAGS) -c $(SRC_T3) -o $(OBJ_T3)
-
 	$(CC) $(CFLAGS) $(LDFLAGS) $(OBJ1) $(OBJ2) $(OBJ3) $(OBJ4) $(OBJ5) \
 		$(OBJ6) $(OBJ7) $(OBJ8) $(OBJ9) \
 		$(OBJ_ACT1) $(OBJ_ACT2) $(OBJ_T1) -o $(T1) -lpthread
@@ -90,14 +79,9 @@ default:
 		$(OBJ6) $(OBJ7) $(OBJ8) \
 		$(OBJ_ACT3) $(OBJ_ACT4) $(OBJ_T2) -o $(T2) -lpthread
 
-	$(CC) $(CFLAGS) $(LDFLAGS) $(OBJ1) $(OBJ2) $(OBJ3) $(OBJ4) $(OBJ5) \
-		$(OBJ6) $(OBJ7) $(OBJ8) \
-		$(OBJ_ACT5) $(OBJ_ACT6) $(OBJ_T3) -o $(T3) -lpthread
-
 clean:
 	rm -f $(OBJ1) $(OBJ2) $(OBJ3) $(OBJ4) $(OBJ5) $(OBJ6) $(OBJ7) \
 		$(OBJ8) $(OBJ9)
 	rm -f $(OBJ_ACT1) $(OBJ_ACT2) $(OBJ_T1) $(T1)
 	rm -f $(OBJ_ACT3) $(OBJ_ACT4) $(OBJ_T2) $(T2)
-	rm -f $(OBJ_ACT5) $(OBJ_ACT6) $(OBJ_T3) $(T3)
 

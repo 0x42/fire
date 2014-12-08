@@ -1,6 +1,5 @@
 
 #include "pr.h"
-#include "pr_threads.h"
 #include "ocfg.h"
 #include "ocrc.h"
 #include "bologging.h"
@@ -23,13 +22,13 @@ int main(int argc, char *argv[])
 	int rs_speed;
 	int rs_port;	
 	int tout;
-	
+
 	TOHT *cfg;
 	
 	if( argc == 2)
 		sprintf(cfile, argv[1]);
 	else {
-		sprintf(cfile, "pr.cfg");
+		sprintf(cfile, "pr_default.cfg");
 		gen_pr_default_cfg(cfile);  /** Генерация конфиг файла
 					     * по умолчанию */
 	}
@@ -59,7 +58,13 @@ int main(int argc, char *argv[])
 
 	tout = cfg_getint(cfg, "RS:tout", -1);
 
-	actx_targ.adr = cfg_getint(cfg, "PR:adr", -1);
+	actx_targ.adr1 = cfg_getint(cfg, "PR1:adr", -1);
+	actx_targ.adr2 = cfg_getint(cfg, "PR2:adr", -1);
+	
+	actx_targ.uso1 = cfg_getint(cfg, "USO:adr1", -1);
+	actx_targ.uso2 = cfg_getint(cfg, "USO:adr2", -1);
+	actx_targ.uso3 = cfg_getint(cfg, "USO:adr3", -1);
+	actx_targ.uso4 = cfg_getint(cfg, "USO:adr4", -1);
 	
 	/** Установка параметров и открытие серийного порта */
 	SerialSetParam(rs_port, rs_parity, rs_databits, rs_stopbit);
@@ -73,13 +78,6 @@ int main(int argc, char *argv[])
 	printf("Init ok\n");
 
 	
-	/** Установка атрибутов функционирования нитей PTHREAD:
-	 * - инициализирует структуру, указываемую pattr, значениями
-	     "по умолчанию";
-	 * - область действия конкуренции (scope) определяет связность
-	 *   потока с LWP;
-	 * - отсоединенность (detachstate);
-	 * - область действия блокировки PTHREAD_PROCESS_PRIVATE. */
 	pthread_attr_init(&pattr);
 	pthread_attr_setscope(&pattr, PTHREAD_SCOPE_SYSTEM);
 	pthread_attr_setdetachstate(&pattr, PTHREAD_CREATE_JOINABLE);
@@ -98,7 +96,7 @@ int main(int argc, char *argv[])
 			strerror(errno));
 		return 1;
 	}
-	
+
 
 	/** Ожидаем завершения потоков */
 	if (!pthread_equal(pthread_self(), thread_actx))

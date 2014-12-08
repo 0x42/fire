@@ -1,13 +1,23 @@
+/*
+ *		Moxa-slave канал 1 (активные устройства)
+ *
+ * Version:	@(#)ch1_threads.c	1.0.0	01/09/14
+ * Authors:	ovelb
+ *
+ */
 
-#include "ch_threads.h"
+
 #include "slave.h"
 #include "ort.h"
 #include "bologging.h"
-#include "bo_net.h"
-#include "bo_fifo.h"
-#include "bo_net_fifo_server.c"
 
 
+/**
+ * trx - Передача кадра данных активному устройству сети RS485 и
+ *       получение от него ответа.
+ * @targ: Указатель на структуру chan_thread_arg{}.
+ * @return  0- успех, -1 неудача.
+ */
 int trx(struct chan_thread_arg *targ)
 {
 	char tbuf[BUF485_SZ];  /** Буфер передатчика RS485 */
@@ -31,10 +41,25 @@ int trx(struct chan_thread_arg *targ)
 	return 0;
 }
 
+/**
+ * scan - Опрос устройств на сети RS485 (порт 1).
+ * @targ: Указатель на структуру chan_thread_arg{}.
+ * @dst:  Адрес устройства.
+ * @return  0- успех, -1 неудача.
+ *
+ * Опрос производится в пределах заданного диапазона адресов,
+ * прописанного в конфигурационном файле.
+ * Если устройство отвечает на запрос в пределах отведенного времени, то
+ * его адрес прописывается в локальной таблице маршрутов.
+ * Если устройство, не отвечает на запрос, то оно удаляется из
+ * локальной таблицы маршрутов.
+ */
 int scan(struct chan_thread_arg *targ, int dst)
 {
-	char a[4];
 	int res;
+#ifdef __PRINT__
+	char a[4];
+#endif
 
 	prepare_cadr_scan(targ, &txBuf, dst);
 
@@ -47,11 +72,11 @@ int scan(struct chan_thread_arg *targ, int dst)
 		switch (get_rxFl(&rxBuf)) {
 		case RX_DATA_READY:
 			put_rtbl(targ, &dstBuf, dst);
-			
+#ifdef __PRINT__
 			memset(a, 0, 3);		
 			sprintf(a, "%d", dst);
 			write(1, a, 4);
-			
+#endif
 			break;
 		case RX_ERROR:
 			/** Ошибка кадра */
@@ -62,20 +87,32 @@ int scan(struct chan_thread_arg *targ, int dst)
 			 * вычеркиваем его из списка. */
 			bo_log("scan(): timeout dst= %d", dst);
 			remf_rtbl(targ, &dstBuf, dst);
-
+#ifdef __PRINT__
 			write(1, ".", 1);
+#endif
 			break;
 		default:
 			bo_log("scan(): state ??? fl= %d", get_rxFl(&rxBuf));
 			break;
 		}
 	} else {
+#ifdef __PRINT__
 		write(1, "-", 1);
+#endif
 	}
 
 	return 0;
 }
 
+/**
+ * active_netStat - Запрос конфигурации сети RS485.
+ * @targ: Указатель на структуру chan_thread_arg{}.
+ * @dst:  Адрес устройства.
+ * @return  0- успех, -1 неудача.
+ *
+ * Если устройство, не отвечает на запрос, то оно (после определенного
+ * количества попыток) удаляется из локальной таблицы маршрутов.
+ */
 int active_netStat(struct chan_thread_arg *targ, int dst)
 {
 	int res;
@@ -116,22 +153,16 @@ int active_netStat(struct chan_thread_arg *targ, int dst)
 	return 0;
 }
 
-void active_toPassive()
-{
-	pthread_mutex_lock(&mx_psv);
 
-	/** имеем что передать пассивному устройству -
-	 * ch2_threads.c: send_dataToPassive() */
-	put_state(&psvdata_ready, 1);
-	
-	/** Ожидаем готовности послать кадр
-	    пассивному устройствуву */
-	while (get_state(&psvdata_ready))
-		pthread_cond_wait(&psvdata, &mx_psv);
-
-	pthread_mutex_unlock(&mx_psv);
-}
-
+/**
+ * active_getLog - Запрос лога.
+ * @targ: Указатель на структуру chan_thread_arg{}.
+ * @dst:  Адрес устройства.
+ * @return  0- успех, -1 неудача.
+ *
+ * Если устройство, не отвечает на запрос, то оно (после определенного
+ * количества попыток) удаляется из локальной таблицы маршрутов.
+ */
 int active_getLog(struct chan_thread_arg *targ, int dst)
 {
 	int res;
@@ -172,6 +203,25 @@ int active_getLog(struct chan_thread_arg *targ, int dst)
 	return 0;
 }
 
+/**
+ * active - Запросы активным устройствам на сети RS485 (порт 1).
+ * @targ: Указатель на структуру chan_thread_arg{}.
+ * @dst:  Адрес устройства.
+ * @return  0- успех, -1 неудача.
+ *
+ * Если устройство отвечает на запрос в пределах отведенного времени, то,
+ * в зависимости от месторасположения адресата, имеем следующие
+ * варианты действий, ответ адресован:
+ *  1) локальному пассивному устройству -
+ *     ответ перенаправляется на канал 2 (пассивные устройства);
+ *  2) пассивному устройству чужого узла -
+ *     ответ передается на стек FIFO соответствующего узла;
+ *  3) собственному сетевому контроллеру -
+ *     ответ обрабатывает сам контроллер.
+ *
+ * Если устройство, не отвечает на запрос, то оно (после определенного
+ * количества попыток) удаляется из локальной таблицы маршрутов.
+ */
 int active(struct chan_thread_arg *targ, int dst)
 {
 	char key[4];  /** Адрес пассивного у-ва */
@@ -218,7 +268,18 @@ int active(struct chan_thread_arg *targ, int dst)
 				} else if (test_bufDst(&dst2Buf, rxBuf.buf[0])) {
 					if (targ->ch2_enable) {
 						/** Кадр сети RS485 (local node) */
-						active_toPassive();
+						pthread_mutex_lock(&mx_psv);
+
+						/** имеем что передать пассивному устройству -
+						 * ch2_threads.c: send_dataToPassive() */
+						put_state(&psvdata_ready, 1);
+	
+						/** Ожидаем готовности послать кадр
+						    пассивному устройствуву */
+						while (get_state(&psvdata_ready))
+							pthread_cond_wait(&psvdata, &mx_psv);
+
+						pthread_mutex_unlock(&mx_psv);
 					} else
 						bo_log("active(): key= [%s] ch2 disable", key);
 					
@@ -250,20 +311,16 @@ int active(struct chan_thread_arg *targ, int dst)
 	return 0;
 }
 
-void *fifo_serv(void *arg)
-{
-	struct fifo_thread_arg *targ = (struct fifo_thread_arg *)arg;
 
-	while (1) {
-		bo_fifo_thrmode(targ->port, targ->qu_len, targ->len);
-		bo_log("fifo_serv: restarted");
-		sleep(1);
-	}
-	
-	bo_log("fifo_serv: exit");
-	pthread_exit(0);
-}
-
+/**
+ * chan1 - Канал 1 (активные устройства).
+ * @arg:  Параметры для потока.
+ *
+ * Поток выполняет следующие действия:
+ * 1) Организует таймеры 50ms и 1000ms;
+ * 2) По таймеру 50ms производит запросы активным устройствам;
+ * 3) По таймеру 1000ms опрашивает устройства на порту 1.
+ */
 void *chan1(void *arg)
 {
 	struct chan_thread_arg *targ = (struct chan_thread_arg *)arg;
@@ -271,18 +328,6 @@ void *chan1(void *arg)
 	int count_scan = targ->tscan;
 	int dst;
 	int res;
-
-	while (1) {
-		logSend_sock = bo_setConnect(targ->logSend_ip, targ->logSend_port);
-		if (logSend_sock < 0) {
-			bo_log("chan1(): logSend_sock=bo_setConnect() ERROR");
-			sleep(10);
-			continue;
-		}
-		break;
-	}
-	
-	bo_log("logSend_sock: socket ok");
 	
 	while (1) {
 		t.tv_sec = targ->tsec;
@@ -294,7 +339,9 @@ void *chan1(void *arg)
 			if (targ->ch1_enable) {
 				/** Сканируем устройства порт 1 RS485
 				 *  (1 раз в сек) */
+#ifdef __PRINT__
 				write (1, "chan1: 1000ms\n", 14);
+#endif
 				dst = targ->dst_beg;
 				while (dst <= targ->dst_end) {
 					res = scan(targ, dst);
@@ -307,11 +354,9 @@ void *chan1(void *arg)
 				}
 
 				dstBuf.rpos = 0;
-
+#ifdef __PRINT__
 				write(1, "\n", 1);
-				
-			} else {
-				write (1, "chan1: disabled\n", 16);
+#endif
 			}
 		}
 
@@ -330,53 +375,14 @@ void *chan1(void *arg)
 			}
 		}
 		
-#ifdef MOXA_TARGET
+#if defined (__MOXA_TARGET__) && defined (__WDT__)
 			if (targ->wdt_en)
 				put_wdtlife(&wdt_life, WDT_CHAN1);
 #endif
-		
 		count_scan++;
 	}
 	
 	bo_log("chan1: exit");
 	pthread_exit(0);
 }
-
-#ifdef MOXA_TARGET
-
-void *wdt(void *arg)
-{
-	struct wdt_thread_arg *targ = (struct wdt_thread_arg *)arg;
-	struct timeval t;
-	char a[4];
-	
-	while (1) {
-		t.tv_sec = targ->tsec;
-		t.tv_usec = targ->tusec;
-		select(0, NULL, NULL, NULL, &t);
-		
-		if (targ->wdt_en) {
-			memset(a, 0, 4);		
-			sprintf(a, "%d", get_wdtlife(&wdt_life));
-			write (1, "\n", 1);
-			write(1, a, 4);
-			write (1, "\n", 1);
-			if (get_wdtlife(&wdt_life) == WDT_LIVING) {
-				/** Если контрольные участки кода пройдены,
-				 * подтвердить работоспособность системы */
-				set_wdtlife(&wdt_life, 0);
-				/* swtd_ack(wdt_fd); */
-				/* refresh the timer */
-				write (1, "WDT refresh -----------------\n", 30);
-				mxwdg_refresh(wdt_fd);
-			} else
-				write (1, "------------- WDT not refresh\n", 30);
-		}
-	}
-	
-	bo_log("wdt: exit");
-	pthread_exit(0);
-}
-
-#endif
 

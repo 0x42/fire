@@ -30,7 +30,13 @@ void gen_pr_default_cfg(char *cfile)
 	cfg_put(cfg, "RS:speed", "19200");
 	cfg_put(cfg, "RS:tout", "5");
 
-	cfg_put(cfg, "PR:adr", "4");
+	cfg_put(cfg, "PR1:adr", "3");
+	cfg_put(cfg, "PR2:adr", "5");
+
+	cfg_put(cfg, "USO:adr1", "159");
+	cfg_put(cfg, "USO:adr2", "160");
+	cfg_put(cfg, "USO:adr3", "229");
+	cfg_put(cfg, "USO:adr4", "230");
 
 	cfg_save(cfg, out);
 	fclose(out);

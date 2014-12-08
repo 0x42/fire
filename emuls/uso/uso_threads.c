@@ -1,5 +1,4 @@
 
-#include "uso_threads.h"
 #include "uso.h"
 #include "ocs.h"
 #include "bologging.h"
@@ -9,8 +8,8 @@
 int apsv[256] = {0};
 int apsv_ln = 0;
 
-unsigned int p11, p12, p13;
-unsigned int p21, p22, p23;
+unsigned int p11, p12, p13, p14;
+unsigned int p21, p22, p23, p24;
 
 
 int tx_uso(struct actx_thread_arg *targ)
@@ -103,6 +102,12 @@ int uso1_proc(struct actx_thread_arg *targ, int ncmd)
 				p13 = uso(targ, &txBuf, p13, targ->pr3);
 				break;
 			}
+	} else if (ncmd == 4) {
+		for (i=0; i<apsv_ln; i++)
+			if (apsv[i] == targ->pr4) {
+				p14 = uso(targ, &txBuf, p14, targ->pr4);
+				break;
+			}
 	} else {
 		/**
 		   uso_answer(targ, &txBuf); */
@@ -136,6 +141,12 @@ int uso2_proc(struct actx_thread_arg *targ, int ncmd)
 		for (i=0; i<apsv_ln; i++)
 			if (apsv[i] == targ->pr3) {
 				p23 = uso(targ, &txBuf, p23, targ->pr3);
+				break;
+			}
+	} else if (ncmd == 4) {
+		for (i=0; i<apsv_ln; i++)
+			if (apsv[i] == targ->pr4) {
+				p24 = uso(targ, &txBuf, p24, targ->pr4);
 				break;
 			}
 	} else {
@@ -235,8 +246,8 @@ int uso_session(struct actx_thread_arg *targ, const char *msg,
 		/* bo_log("uso: netstatus answer"); */
 		uso_answer(targ, &txBuf);
 	} else if (rxBuf.buf[2] == (char)targ->cdquLogId) {
-		/** Print Log
-		uso_printLog(); */
+		/** Print Log */
+		uso_printLog();
 		uso_answer(targ, &txBuf);
 	} else {
 		bo_log("%s ??? id= %d", msg, (unsigned int)rxBuf.buf[2]);
@@ -256,9 +267,11 @@ void *actx_485(void *arg)
 	p11 = 1;
 	p12 = 1;
 	p13 = 1;
+	p14 = 1;
 	p21 = 1;
 	p22 = 1;
 	p23 = 1;
+	p24 = 1;
 	
 	write(1, "uso:\n", 5);
 

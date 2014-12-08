@@ -1,14 +1,24 @@
+/*
+ *		Moxa-slave канал 2 (пассивные устройства)
+ *
+ * Version:	@(#)ch2_threads.c	1.0.0	01/09/14
+ * Authors:	ovelb
+ *
+ */
 
-#include "ch_threads.h"
+
 #include "slave.h"
 #include "ort.h"
 #include "bologging.h"
-#include "bo_net.h"
 #include "bo_fifo.h"
-#include "bo_fifo.c"
-#include "bo_net_master_core.h"
 
 
+/**
+ * trx2 - Передача кадра данных пассивному устройству сети RS485 и
+ *        получение от него ответа.
+ * @targ: Указатель на структуру chan_thread_arg{}.
+ * @return  0- успех, -1 неудача.
+ */
 int trx2(struct chan_thread_arg *targ)
 {
 	char tbuf[BUF485_SZ];  /** Буфер передатчика RS485 */
@@ -32,10 +42,25 @@ int trx2(struct chan_thread_arg *targ)
 	return 0;
 }
 
+/**
+ * scan2 - Опрос устройств на сети RS485 (порт 2).
+ * @targ: Указатель на структуру chan_thread_arg{}.
+ * @dst:  Адрес устройства.
+ * @return  0- успех, -1 неудача.
+ *
+ * Опрос производится в пределах заданного диапазона адресов,
+ * прописанного в конфигурационном файле.
+ * Если устройство отвечает на запрос в пределах отведенного времени, то
+ * его адрес прописывается в локальной таблице маршрутов.
+ * Если устройство, не отвечает на запрос, то оно удаляется из
+ * локальной таблицы маршрутов.
+ */
 int scan2(struct chan_thread_arg *targ, int dst)
 {
-	char a[4];
 	int res;
+#ifdef __PRINT__
+	char a[4];
+#endif
 
 	prepare_cadr_scan(targ, &tx2Buf, dst);
 	
@@ -48,11 +73,11 @@ int scan2(struct chan_thread_arg *targ, int dst)
 		switch (get_rxFl(&rx2Buf)) {
 		case RX_DATA_READY:
 			put_rtbl(targ, &dst2Buf, dst);
-			
+#ifdef __PRINT__
 			memset(a, 0, 3);
 			sprintf(a, "%d", dst);
 			write(1, a, 4);
-			
+#endif
 			break;
 		case RX_ERROR:
 			/** Ошибка кадра */
@@ -63,23 +88,44 @@ int scan2(struct chan_thread_arg *targ, int dst)
 			 * вычеркиваем его из списка. */
 			bo_log("scan2(): timeout dst= %d", dst);
 			remf_rtbl(targ, &dst2Buf, dst);
-			
+#ifdef __PRINT__
 			write(1, ",", 1);
+#endif
 			break;
 		default:
 			bo_log("scan2(): state ??? fl= %d", get_rxFl(&rx2Buf));
 			break;
 		}
 	} else {
+#ifdef __PRINT__
 		write(1, "_", 1);
+#endif
 	}
 
 	return 0;
 }
 
 
+/**
+ * send_dataToPassive - Запросы пассивным устройствам на сети RS485 (порт 2).
+ * @targ: Указатель на структуру chan_thread_arg{}.
+ * @return  0- успех, -1 неудача.
+ *
+ * В зависимости от источника поступления запроса, могут возникнуть 2 ситуации:
+ *  1) Переменная psvdata_ready == 1 -
+ *     поступил запрос от локального активного устройства (канал 1);
+ *  2) Переменная psvdata_ready == 0 -
+ *     проверяем наличие запросов от стороннего узла на стеке FIFO;
+ * 
+ * Если запрос поступил, то формируем кадр и выполняем запрос.
+ * После успешного прохождения запроса и получения ответа, помещаем
+ * ответ в логе на сервере мастера.
+ *
+ * Если устройство, не отвечает на запрос, то оно (после определенного
+ * количества попыток) удаляется из локальной таблицы маршрутов.
+ */
 int send_dataToPassive(struct chan_thread_arg *targ)
-{	
+{
 	int nretr = targ->nretries;
 	unsigned char buf[BO_FIFO_ITEM_VAL];
 	int bufSize = BO_FIFO_ITEM_VAL;
@@ -88,7 +134,7 @@ int send_dataToPassive(struct chan_thread_arg *targ)
 	int res;
 	
 	if (get_state(&psvdata_ready) == 1) {
-		/** Есть данные для передачи */
+		/** Есть данные для передачи пассивному устройству */
 		pthread_mutex_lock(&mx_psv);
 
 		dst = (unsigned int)rxBuf.buf[0];
@@ -103,14 +149,14 @@ int send_dataToPassive(struct chan_thread_arg *targ)
 	} else {
 		ans = bo_getFifoVal(buf, bufSize);
 		if (ans > 0) {
+			/** В FIFO есть данные для передачи пассивному
+			 * устройству */
 			dst = (unsigned int)buf[0];
 
 			prepare_cadr(&tx2Buf, (char *)buf, ans);
 
 		} else {
-			/*
-			bo_log("send_dataToPassive()/bo_getFifoVal(): <= 0");
-			*/
+			/** Если в FIFO нет данных */
 			return 0;
 		}
 	}
@@ -151,86 +197,15 @@ int send_dataToPassive(struct chan_thread_arg *targ)
 }
 
 
-void *rtbl_recv(void *arg)
-{
-	struct rt_thread_arg *targ = (struct rt_thread_arg *)arg;
-	struct paramThr p;
-	int ans;
-	fd_set r_set;
-	int exec = -1;
-	
-	while (1) {
-		rtRecv_sock = bo_setConnect(targ->ip, targ->port);		
-		if (rtRecv_sock < 0) {
-			sleep(10);
-			continue;
-		}
-
-		p.sock = rtRecv_sock;
-		p.route_tab = rtg;
-		p.buf = rtBuf;
-		p.bufSize = BO_MAX_TAB_BUF;
-
-		bo_log("rtbl_recv(): socket ok");
-		
-		while (1) {
-			FD_ZERO(&r_set);
-			FD_SET(rtRecv_sock,  &r_set);
-
-			exec = select(rtRecv_sock+1, &r_set, NULL, NULL, NULL);
-
-			if(exec == -1) {
-				bo_log("rtbl_recv(): select errno[%s]",
-				       strerror(errno));
-				break;
-			} else if(exec == 0) {
-				bo_log("rtbl_recv(): ???");
-				break;
-			} else {
-				/* если событие произошло */
-				pthread_mutex_lock(&mx_rtg);
-				ans = bo_master_core(&p);
-				pthread_mutex_unlock(&mx_rtg);
-				if (ans < 0) {
-					bo_log("rtbl_recv(): bo_master_core ERROR");
-					break;
-				}
-			}
-		}
-		
-		bo_closeSocket(rtRecv_sock);
-	}
-	
-	bo_log("rtbl_recv: exit");
-	pthread_exit(0);
-}
-
-void *rtbl_send(void *arg)
-{
-	struct rt_thread_arg *targ = (struct rt_thread_arg *)arg;
-	
-	while (1) {
-		rtSend_sock = bo_setConnect(targ->ip, targ->port);
-		
-		if (rtSend_sock < 0) {
-			bo_log("rtbl_send: bo_setConnect ERROR");
-			sleep(10);
-			continue;
-		}
-		
-		bo_log("rtbl_send(): socket ok");
-		
-		while (1) {
-			/* write (1, "rtbl_send: bo_setConnect
-			   leaving\n", 33); */
-			sleep(10);
-		}
-	}
-	
-	bo_log("rtbl_send: exit");
-	pthread_exit(0);
-}
-
+/**
+ * chan2 - Канал 2 (пассивные устройства).
+ * @arg:  Параметры для потока.
+ *
+ * Поток выполняет следующие действия:
+ * 1) Организует таймеры 50ms и 1000ms;
+ * 2) По таймеру 50ms производит запросы пассивным устройствам;
+ * 3) По таймеру 1000ms опрашивает устройства на порту 2.
+ */
 void *chan2(void *arg)
 {
 	struct chan_thread_arg *targ = (struct chan_thread_arg *)arg;
@@ -238,12 +213,7 @@ void *chan2(void *arg)
 	int count_scan = targ->tscan;
 	int dst;
 	int res;
-	/* 
-	   char *defv = "null";
-	   char *rt_key;
-	   char *val;
-	   int i; */
-	
+
 	while (1) {
 
 		t.tv_sec = targ->tsec;
@@ -255,7 +225,9 @@ void *chan2(void *arg)
 			if (targ->ch2_enable) {
 				/** Сканируем устройства порт 2 RS485
 				 *  (1 раз в сек) */
+#ifdef __PRINT__
 				write (1, "chan2: 1000ms\n", 14);
+#endif
 				dst = targ->dst_beg;
 				while (dst <= targ->dst_end) {
 					res = scan2(targ, dst);
@@ -266,39 +238,25 @@ void *chan2(void *arg)
 				
 					dst++;
 				}
+#ifdef __PRINT__
 				write(1, "\n", 1);
-				
-			} else {
-				write (1, "chan2: disabled\n", 16);
+#endif				
 			}
-			
-			/** Тест глобальной таблицы маршр.
-			for (i=0; i<rt_getsize(rtg); i++) {
-				rt_key = rt_getkey(rtg, i);
-				if (rt_key == NULL) continue;
-				val = ht_get(rtg, rt_key, defv);
-				printf("rtg/%s:%s\n", rt_key, val);
-			} */
-			
-			/** Тест локальной таблицы маршр.
-			for (i=0; i<rt_getsize(rtl); i++) {
-				rt_key = rt_getkey(rtl, i);
-				if (rt_key == NULL) continue;
-				val = ht_get(rtl, rt_key, defv);
-				printf("rtl/%s:%s\n", rt_key, val);
-			} */
 		}
 		
 		if (targ->ch2_enable) {
 			/** Запросы из FIFO пассивным устройствам на порту 2
 			 *  (1 раз в 50 мсек) */
 			if (dst2Buf.wpos > 0)
+				/** Если пассивные устройства имеются
+				 * на шине, то разрешаем проверить
+				 * наличие запросов к ним. */
 				res = send_dataToPassive(targ);
-		
+			
 			if (res < 0) break;
 		}
 		
-#ifdef MOXA_TARGET
+#if defined (__MOXA_TARGET__) && defined (__WDT__)
 			if (targ->wdt_en)
 				put_wdtlife(&wdt_life, WDT_CHAN2);
 #endif
