@@ -55,12 +55,11 @@ default:
 	$(CC) $(INC_DIR) $(CFLAGS) $(SRC10) -o $(OBJ10)
 	$(CC) $(INC_DIR) $(CFLAGS) $(SRC11) -o $(OBJ11)
 	$(CC) $(INC_DIR) $(CFLAGS) $(SRC12) -o $(OBJ12)
-	$(CC) $(INC_DIR) $(CFLAGS) $(SRC13) -o $(OBJ13)
 
 	$(CC) $(INC_DIR) $(CFLAGS) $(SRC)  -o $(OBJ)
 	$(CC) $(LDFLAGS) -g   $(OBJ1) $(OBJ2) $(OBJ3) $(OBJ4) \
 	      $(OBJ5) $(OBJ6) $(OBJ7) $(OBJ8) $(OBJ9) $(OBJ10) \
-	      $(OBJ11) $(OBJ12) $(OBJ13) $(OBJ) -o $(TARGET)
+	      $(OBJ11) $(OBJ12) $(OBJ) -o $(TARGET)
 
 #memtrace:
 #	MALLOC_TRACE=trace.log $(TARGET)
