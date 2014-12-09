@@ -5,8 +5,11 @@ static void bo_print_buf();
 static  int bo_snmp_gen_getrequest_head();
 static void bo_snmp_gen_getrequest();
 static void bo_ber_header(unsigned char type, int len);
+
 static int bo_ber_head(unsigned char type, int len, unsigned char *buf);
 static int bo_gen_varbind(unsigned char *buf, int *oid, int size);
+static int bo_gen_ver_comm(unsigned char *buf);
+static int bo_gen_pdu_head(unsigned char *buf);
 
 const int SNMP_BUF_SIZE = 1024;
 static const int BSIZE = 255;
@@ -73,31 +76,71 @@ void bo_snmp_crt_msg(int *oid, int size)
 	bo_print_buf();
 }
 
-void bo_snmp_crt_next_req(int oid[][3], int n, int m)
+void bo_snmp_crt_next_req(int oid[][14], int n, int m)
 {
 	int i = 0, j = 0, exec = 0;
 	unsigned char *temp = buf;
 	int buf_len = 0;
 	int req_head_len = 0,
-	    varbind_len = 0;
+	    varbind_len  = 0,
+	    all_len      = 0,
+	    t = 0;
+	
+	snmp_core.buf_i = 0;
 	
 	for(; i < n; i++) {
-		exec = bo_gen_varbind(temp, oid[i], 3);
+		exec = bo_gen_varbind(temp, oid[i], m);
 		buf_len += exec;
 		printf("exec[%d]\n", exec);
 		temp = buf + buf_len;
 	}
 	
+	t = bo_int_size(snmp_core.request_id) + 8;
+	
 	varbind_len = 1 + bo_len_size(buf_len) + buf_len;
-	req_head_len = 12 + 
+	req_head_len = varbind_len + t;
+	all_len = req_head_len + 12 + bo_len_size(req_head_len);
 		
+	snmp_core.buf_i += bo_ber_head(ASN1_SEQUENCE, 
+				       all_len, 
+				       snmp_core.buf);
+	
+	temp = snmp_core.buf + snmp_core.buf_i;
+	snmp_core.buf_i += bo_gen_ver_comm(temp);
+	
+	temp = snmp_core.buf + snmp_core.buf_i;
+	snmp_core.buf_i += bo_ber_head(SNMP_GET_NEXT_REQUEST_TYPE,
+				       req_head_len,
+				       temp);
+	
+	temp = snmp_core.buf + snmp_core.buf_i;
+	snmp_core.buf_i += bo_gen_pdu_head(temp);
+	
+	temp = snmp_core.buf + snmp_core.buf_i;
+	snmp_core.buf_i += bo_ber_head(ASN1_SEQUENCE, 
+				       buf_len,
+				       temp);
+	
+	temp = snmp_core.buf + snmp_core.buf_i;
+	memcpy(temp, buf, buf_len);
+	snmp_core.buf_i += buf_len;
+	
+	printf("snmp[\n");
+	int eol = 0;
+	for(i = 0; i < snmp_core.buf_i; i++) {
+		if(eol == 8) {eol = 0; printf("\n");}
+		printf("%02x ", *(snmp_core.buf + i) );
+		eol++;
+	}
+	printf("]\n");
+	/*
 	printf("buf[");
 	for(i = 0; i < buf_len; i++) {
 		printf("%02x", *(buf+i) );
 	}
 	printf("]\n");
 	printf("buf_len = [%d]\n", buf_len);
-	
+	*/
 }
 
 unsigned char * bo_snmp_get_msg()
@@ -237,7 +280,7 @@ static int bo_gen_varbind(unsigned char *buf, int *oid, int size)
 	
 	oid_len = bo_oid_length(oid, size);
 	var	= oid_len + bo_len_size(oid_len) + 1;
-	seq_len = var + bo_len_size(var + 2);
+	seq_len = var + 2; /* 05 00 (2bytes) OID value*/
 	
 	ptr += bo_ber_head(ASN1_SEQUENCE, seq_len, buf);
 	
@@ -266,20 +309,6 @@ static int bo_gen_varbind(unsigned char *buf, int *oid, int size)
 	return ptr;
 }
 
-static 
-/* ----------------------------------------------------------------------------
- * @brief  созд заголовок 
- */
-static void bo_ber_header(unsigned char type, int len)
-{
-	unsigned char *b = NULL;
-	*(snmp_core.buf + snmp_core.buf_i) = type;
-	snmp_core.buf_i++;
-	b = (unsigned char *)(snmp_core.buf + snmp_core.buf_i);
-	bo_code_len( b, len);
-	snmp_core.buf_i += bo_len_size(len);
-}
-
 static int bo_ber_head(unsigned char type, int len, unsigned char *buf)
 {
 	int ptr = 0;
@@ -291,6 +320,71 @@ static int bo_ber_head(unsigned char type, int len, unsigned char *buf)
 	bo_code_len(b, len);
 	ptr += bo_len_size(len);
 	return ptr;
+}
+
+/* ----------------------------------------------------------------------------
+ * @brief	генер-ем VERSION|COMMUNITY
+ * @return	n - кол-во байт занимает инф 
+ */
+static int bo_gen_ver_comm(unsigned char *buf)
+{
+	int ptr = 0;
+	unsigned char *temp = NULL;
+	
+	/* VERSION */
+	*buf = ASN1_INTEGER;
+	*(buf + 1) = 1;
+	*(buf + 2) = 0;
+	ptr += 3;
+	
+	/* COMMUNITY */
+	temp = buf + ptr;
+	ptr += bo_code_string(temp, (unsigned char *)"public", 6);
+	
+	return ptr;
+}
+
+/* ----------------------------------------------------------------------------
+ * @brief	генер-ем REQUEST-ID|ERR-STATUS|ERROR-INDEX
+ */
+static int bo_gen_pdu_head(unsigned char *buf)
+{
+	int ptr = 0, len = 0;
+	
+	snmp_core.request_id++;
+	if(snmp_core.request_id == 100000) snmp_core.request_id++;
+	len = bo_int_size(snmp_core.request_id);  
+	*buf = ASN1_INTEGER;
+	ptr++;
+
+	bo_code_len(buf + ptr, len);
+	ptr += bo_len_size(len);
+	
+	ptr += bo_code_int(buf + ptr, snmp_core.request_id);
+
+	 /*DOC: error status always 0 */
+	*(buf + ptr) = ASN1_INTEGER; ptr++;
+	*(buf + ptr) = 1;	     ptr++;
+	*(buf + ptr) = 0;	     ptr++;
+	/*DOC: error index always 0 */
+	*(buf + ptr) = ASN1_INTEGER; ptr++;
+	*(buf + ptr) = 1;	     ptr++;
+	*(buf + ptr) = 0;	     ptr++;
+	
+	return ptr;
+}
+
+/* ----------------------------------------------------------------------------
+ * @brief	созд заголовок 
+ */
+static void bo_ber_header(unsigned char type, int len)
+{
+	unsigned char *b = NULL;
+	*(snmp_core.buf + snmp_core.buf_i) = type;
+	snmp_core.buf_i++;
+	b = (unsigned char *)(snmp_core.buf + snmp_core.buf_i);
+	bo_code_len( b, len);
+	snmp_core.buf_i += bo_len_size(len);
 }
 
 void bo_del_snmp()

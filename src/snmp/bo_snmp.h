@@ -13,7 +13,7 @@ int bo_init_snmp();
 
 void bo_snmp_crt_msg(int *oid, int size);
 
-void bo_snmp_crt_next_req(int oid[][3], int n, int m);
+void bo_snmp_crt_next_req(int oid[][14], int n, int m);
 
 unsigned char * bo_snmp_get_msg();
 
