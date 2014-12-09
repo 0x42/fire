@@ -13,7 +13,8 @@ void bo_snmp_main()
 	int exec = -1;
 	int oid_name[] = {1, 3, 6, 1, 2, 1, 1, 3, 0};
 	int oid_sysName[] = {1, 3, 6, 1, 2, 1, 1, 5, 0};
-	int oid_tab_i[] = {1, 3, 6, 1, 4, 1, 8691, 7, 6, 1, 1, 0};
+	
+	int oid[][3] = { {1,2,3}, {1,2,3}, {1,2,3}};
 	
 	dbgout("bo_main_snmp ... run\n");
 	unsigned char *pack;
@@ -25,7 +26,7 @@ void bo_snmp_main()
 	exec = bo_init_snmp();
 	if(exec == -1) bo_log("bo_snmp_main() ERROR can't create data for run snmp");
 	
-//	bo_snmp_crt_msg(oid_tab_i, 12);
+	bo_snmp_crt_next_req(oid, 3, 3);
 	
 	bo_snmp_crt_msg(oid_sysName, 9);
 
@@ -33,6 +34,9 @@ void bo_snmp_main()
 	buf = bo_snmp_get_buf();
 	pack = bo_snmp_get_msg();
 	len  = bo_snmp_get_msg_len();
+	
+	
+	
 	exec = bo_send_udp_packet(sock, pack, len, "192.168.1.151");
 	if(exec == -1)	printf("send udp error\n");
 	

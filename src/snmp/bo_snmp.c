@@ -5,6 +5,8 @@ static void bo_print_buf();
 static  int bo_snmp_gen_getrequest_head();
 static void bo_snmp_gen_getrequest();
 static void bo_ber_header(unsigned char type, int len);
+static int bo_ber_head(unsigned char type, int len, unsigned char *buf);
+static int bo_gen_varbind(unsigned char *buf, int *oid, int size);
 
 const int SNMP_BUF_SIZE = 1024;
 static const int BSIZE = 255;
@@ -69,6 +71,20 @@ void bo_snmp_crt_msg(int *oid, int size)
 	bo_snmp_gen_getrequest();
 	
 	bo_print_buf();
+}
+
+void bo_snmp_crt_next_req(int oid[][3], int n, int m)
+{
+	int i = 0, j = 0, exec = 0;
+	unsigned char *temp = buf;
+	int buf_len = 0;
+	for(; i < n; i++) {
+		exec = bo_gen_varbind(buf, oid[i], 3);
+		buf_len += exec;
+		temp = buf + exec;
+	}
+	
+	printf("exec = [%d]\n", exec);
 }
 
 unsigned char * bo_snmp_get_msg()
@@ -193,6 +209,51 @@ static void bo_snmp_gen_getrequest()
 }
 
 /* ----------------------------------------------------------------------------
+ * @brief	Создание поля элемента VARBIND
+ *		|SEQ|LEN_SEQ|VAR|OID_LEN|OID + 05 00
+ */
+static int bo_gen_varbind(unsigned char *buf, int *oid, int size)
+{
+	int ptr      = 0,
+	    i        = 0, 
+	    oid_len  = 0,
+	    var      = 0,
+	    seq_len  = 0;
+	
+	unsigned char *temp = NULL;
+	
+	oid_len = bo_oid_length(oid, size);
+	var	= oid_len + bo_len_size(oid_len) + 1;
+	seq_len = var + bo_len_size(var + 2);
+	
+	ptr += bo_ber_head(ASN1_SEQUENCE, seq_len, buf);
+	
+	temp = buf + ptr;
+	ptr += bo_ber_head(OID_TYPE, oid_len, temp);
+	
+	temp = buf + ptr;
+	*temp = 0x2b;
+	ptr++;
+	
+	/* формируем поле name:value
+	 * name =  OID; value = NULL */
+	for(i = 2; i < size; i++) {
+		temp = buf + ptr;
+		ptr += bo_code_oid(*(oid + i), temp);
+	}
+	
+	temp = buf + ptr;
+	*temp = 0x05;
+	ptr++;
+	
+	temp = buf + ptr;
+	*temp = 0x00;
+	ptr++;
+	
+	return ptr;
+}
+
+/* ----------------------------------------------------------------------------
  * @brief  созд заголовок 
  */
 static void bo_ber_header(unsigned char type, int len)
@@ -203,6 +264,19 @@ static void bo_ber_header(unsigned char type, int len)
 	b = (unsigned char *)(snmp_core.buf + snmp_core.buf_i);
 	bo_code_len( b, len);
 	snmp_core.buf_i += bo_len_size(len);
+}
+
+static int bo_ber_head(unsigned char type, int len, unsigned char *buf)
+{
+	int ptr = 0;
+	unsigned char *b = NULL;
+	
+	*buf = type;
+	ptr++;
+	b = (buf + ptr);
+	bo_code_len(b, len);
+	ptr += bo_len_size(len);
+	return ptr;
 }
 
 void bo_del_snmp()
