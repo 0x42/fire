@@ -14,7 +14,7 @@ void bo_snmp_main()
 	int oid_name[] = {1, 3, 6, 1, 2, 1, 1, 3, 0};
 	int oid_sysName[] = {1, 3, 6, 1, 2, 1, 1, 5, 0};
 	
-	int oid[][3] = { {1,2,3}, {1,2,3}, {1,2,3}};
+	int oid[][3] = { {1,2,3}, {4,5,6}, {7,8,9}};
 	
 	dbgout("bo_main_snmp ... run\n");
 	unsigned char *pack;
@@ -34,8 +34,6 @@ void bo_snmp_main()
 	buf = bo_snmp_get_buf();
 	pack = bo_snmp_get_msg();
 	len  = bo_snmp_get_msg_len();
-	
-	
 	
 	exec = bo_send_udp_packet(sock, pack, len, "192.168.1.151");
 	if(exec == -1)	printf("send udp error\n");

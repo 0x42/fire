@@ -78,13 +78,26 @@ void bo_snmp_crt_next_req(int oid[][3], int n, int m)
 	int i = 0, j = 0, exec = 0;
 	unsigned char *temp = buf;
 	int buf_len = 0;
+	int req_head_len = 0,
+	    varbind_len = 0;
+	
 	for(; i < n; i++) {
-		exec = bo_gen_varbind(buf, oid[i], 3);
+		exec = bo_gen_varbind(temp, oid[i], 3);
 		buf_len += exec;
-		temp = buf + exec;
+		printf("exec[%d]\n", exec);
+		temp = buf + buf_len;
 	}
 	
-	printf("exec = [%d]\n", exec);
+	varbind_len = 1 + bo_len_size(buf_len) + buf_len;
+	req_head_len = 12 + 
+		
+	printf("buf[");
+	for(i = 0; i < buf_len; i++) {
+		printf("%02x", *(buf+i) );
+	}
+	printf("]\n");
+	printf("buf_len = [%d]\n", buf_len);
+	
 }
 
 unsigned char * bo_snmp_get_msg()
@@ -253,6 +266,7 @@ static int bo_gen_varbind(unsigned char *buf, int *oid, int size)
 	return ptr;
 }
 
+static 
 /* ----------------------------------------------------------------------------
  * @brief  созд заголовок 
  */
