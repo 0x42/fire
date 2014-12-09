@@ -14,6 +14,7 @@ void bo_snmp_main()
 	int oid_name[] = {1, 3, 6, 1, 2, 1, 1, 3, 0};
 	int oid_sysName[] = {1, 3, 6, 1, 2, 1, 1, 5, 0};
 	int oid_tab_i[] = {1, 3, 6, 1, 4, 1, 8691, 7, 6, 1, 1, 0};
+	
 	dbgout("bo_main_snmp ... run\n");
 	unsigned char *pack;
 	unsigned char *buf;

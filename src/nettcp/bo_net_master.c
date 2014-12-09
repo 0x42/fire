@@ -150,7 +150,7 @@ static void m_readConfig(TOHT *cfg, int n, char **argv)
 			servconf.max_con   = cfg_getint(cfg, "sock:max_connect", max_con);
 			servconf.log_size  = cfg_getint(cfg, "log_pr:max_size", log_size);
 			servconf.wd_file   = cfg_getstring(cfg, "wd:file", wd_file);
-
+			
 			f_log	  = cfg_getstring(cfg, "log:file", f_log);
 			f_log_old = cfg_getstring(cfg, "log:file_old", f_log_old);
 			maxrow    = cfg_getint(cfg, "log:maxrow", maxrow);
@@ -161,6 +161,7 @@ static void m_readConfig(TOHT *cfg, int n, char **argv)
 		}
 		bo_setLogParam(f_log, f_log_old, nrow, maxrow);
 		bo_log("%s config[%s]", " INFO ", fileName);
+		bo_log("INFO wd:file[%s]", servconf.wd_file);
 	} else {
 		bo_setLogParam(f_log, f_log_old, nrow, maxrow);
 		bo_log("%s", " WARNING start with default config");
@@ -200,7 +201,7 @@ static void m_servWork(int sock_in, int sock_out,
 	int cron_N = 0;
 	while(stop == 1) {
 		tval.tv_sec  = 0;
-		tval.tv_usec = 100;
+		tval.tv_usec = 100000;
 		FD_ZERO(&r_set);
 		FD_ZERO(&w_set);
 		FD_ZERO(&e_set);
@@ -208,7 +209,7 @@ static void m_servWork(int sock_in, int sock_out,
 		FD_SET(sock_out, &r_set);
 		
 		cron_N++;
-		if(cron_N == 50000) {
+		if(cron_N == 50) {
 			cron_N = 0;
 			inc_cron_life(servconf.wd_file);
 		}
