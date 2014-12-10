@@ -410,6 +410,7 @@ static void fifoAnsOk(struct ParamSt *param)
 				"FIFO", 
 				strerror(errno)); 
 }
+
  /* ---------------------------------------------------------------------------
   * @brief		отправляем ответ " NO" (нет данных в очереди)
   */
@@ -425,6 +426,7 @@ static void fifoAnsNo(struct ParamSt *param)
 				"FIFO",
 				strerror(errno));
 }
+
 /* --------------------------------------------------------------------------
  * @brief		send answer "ERR"
  */

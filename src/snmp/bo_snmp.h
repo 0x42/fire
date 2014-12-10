@@ -21,6 +21,8 @@ unsigned char * bo_snmp_get_buf();
 
 int bo_snmp_get_msg_len();
 
+int bo_snmp_get_buf_len();
+
 void bo_del_snmp();
 
 #endif	/* BO_SNMP_H */

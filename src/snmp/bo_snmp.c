@@ -78,7 +78,7 @@ void bo_snmp_crt_msg(int *oid, int size)
 
 void bo_snmp_crt_next_req(int oid[][14], int n, int m)
 {
-	int i = 0, j = 0, exec = 0;
+	int i = 0, exec = 0;
 	unsigned char *temp = buf;
 	int buf_len = 0;
 	int req_head_len = 0,
@@ -91,7 +91,6 @@ void bo_snmp_crt_next_req(int oid[][14], int n, int m)
 	for(; i < n; i++) {
 		exec = bo_gen_varbind(temp, oid[i], m);
 		buf_len += exec;
-		printf("exec[%d]\n", exec);
 		temp = buf + buf_len;
 	}
 	
@@ -133,14 +132,6 @@ void bo_snmp_crt_next_req(int oid[][14], int n, int m)
 		eol++;
 	}
 	printf("]\n");
-	/*
-	printf("buf[");
-	for(i = 0; i < buf_len; i++) {
-		printf("%02x", *(buf+i) );
-	}
-	printf("]\n");
-	printf("buf_len = [%d]\n", buf_len);
-	*/
 }
 
 unsigned char * bo_snmp_get_msg()
@@ -156,6 +147,11 @@ unsigned char * bo_snmp_get_buf()
 int bo_snmp_get_msg_len()
 {
 	return snmp_core.pdu_i;
+}
+
+int bo_snmp_get_buf_len()
+{
+	return snmp_core.buf_i;
 }
 
 static void bo_snmp_gen_head()

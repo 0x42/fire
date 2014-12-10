@@ -57,10 +57,10 @@ int bo_len_ber_size (unsigned char *len_ber)
 	
 	if(n < 128) ans = 1;
 	else {
-		ans = 2;
 		/* удаляем старший бит согласно BER */
 		n = n ^ 0x80;
 		ans = (unsigned int)n;
+		ans++;
 	}
 	return ans;
 }
@@ -171,6 +171,16 @@ int bo_code_int(unsigned char *buf, int num)
 }
 
 /* ----------------------------------------------------------------------------
+ * @brief	раскод-ем unsigned integer
+ * @return	[-1] error [integer]
+ */
+int bo_uncode_int(unsigned char *buf, int n)
+{
+	int num = -1;
+	
+	return num;
+}
+/* ----------------------------------------------------------------------------
  * @brief	код-ем OCTET STRING
  * @return	кол-во байт занимает строка	
  */
@@ -191,7 +201,7 @@ int bo_code_string(unsigned char *buf, unsigned char *str, int len)
 /* ----------------------------------------------------------------------------
  * @brief	кол-во байт для хран одно числа
  */
-static int bo_oid_size(int num)
+int bo_oid_size(int num)
 {
     int len = 1;
     
@@ -232,7 +242,7 @@ int bo_code_oid(int oid, unsigned char *buf)
 	}
 	
 	len = bo_oid_size(oid);
-	
+	ans = len;
 	for (i = len - 1; i >= 0; i--) {
 		v = oid & 0x7F;
 		if (i != len - 1) v |= 0x80;
