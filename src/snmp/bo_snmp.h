@@ -9,11 +9,23 @@ enum {
         SNMP_SET_REQUEST_TYPE      = 0xA3
 };
 
+struct OID_Next {	
+	int  link[20];
+	int speed[20];
+	int descr[20];
+	
+	int link_size;
+	int speed_size;
+	int descr_size;
+};
+
 int bo_init_snmp();
 
 void bo_snmp_crt_msg(int *oid, int size);
 
 void bo_snmp_crt_next_req(int oid[][14], int n, int m);
+
+void bo_snmp_crt_next_req2(struct OID_Next *oid_next);
 
 unsigned char * bo_snmp_get_msg();
 
@@ -22,6 +34,7 @@ unsigned char * bo_snmp_get_buf();
 int bo_snmp_get_msg_len();
 
 int bo_snmp_get_buf_len();
+
 
 void bo_del_snmp();
 

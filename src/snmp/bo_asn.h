@@ -50,9 +50,10 @@ int bo_int_size(int num);
 int bo_code_int(unsigned char *buf, int num);
 
 /* ----------------------------------------------------------------------------
+ * @n           кол-во байт занимает число
  * @return	[-1] error [INT]
  */
-int bo_uncode_int(unsigned char *buf);
+int bo_uncode_int(unsigned char *buf, int n);
 
 /* ----------------------------------------------------------------------------
  * @brief	код-ем OCTET STRING	
@@ -62,10 +63,18 @@ int bo_code_string(unsigned char *buf, unsigned char *str, int len);
 int bo_oid_length(int *oid, int n);
 
 int bo_oid_size(int num);
+
 /* ----------------------------------------------------------------------------
  * @return      возвр колво байт, которые занял oid в buf 
  */
 int bo_code_oid(int oid, unsigned char *buf);
+
+/* ----------------------------------------------------------------------------
+ * @brief	parse oid
+ * @val		oid
+ * @return	размер oid
+ */
+int bo_uncode_oid(unsigned char *buf, unsigned int *val);
 
 #endif	/* BO_ASN_H */
 /* 0x42 */

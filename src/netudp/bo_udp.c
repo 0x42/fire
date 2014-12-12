@@ -1,4 +1,3 @@
-#include <netinet/in.h>
 
 #include "bo_udp.h"
 
@@ -29,7 +28,7 @@ int bo_udp_sock()
 	
 	if (bind(s, (struct sockaddr *) &saddr, sizeof(saddr)) != 0)
 		bo_log("bo_udp_sock() ERROR bind() ");
-	
+	fcntl(s, F_SETFL, O_NONBLOCK);
 	exit:
 	return s;
 }
