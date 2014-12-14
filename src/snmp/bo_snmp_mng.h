@@ -11,15 +11,15 @@
 #include "../netudp/bo_udp.h"
 #include "../snmp/bo_parse.h"
 
+#define BO_OPT_SW_PORT_N 5
+
 struct OPT_SWITCH {
-        char ip[15];
-        struct PortItem ports[5];
+        char ip[16];
+        struct PortItem ports[BO_OPT_SW_PORT_N];
         int port_n;
-        
 };
 
 void bo_snmp_main(char *ip, int n);
-
 
 
 #endif	/* BO_SNMP_MNG_H */

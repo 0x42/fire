@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "bo_asn.h"
+#include "../tools/dbgout.h"
 #include "../log/bologging.h"
 #include "../snmp/bo_snmp.h"
 
