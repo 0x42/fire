@@ -15,8 +15,7 @@
 
 struct OPT_SWITCH {
         char ip[16];
-        struct PortItem ports[BO_OPT_SW_PORT_N];
-        int port_n;
+        struct PortItem ports[BO_OPT_SW_PORT_N]; /* bo_parse.h */
 };
 
 /* ----------------------------------------------------------------------------
@@ -24,7 +23,7 @@ struct OPT_SWITCH {
  * @ip      массив ip switch'ей которые будем опрашивать
  * @n       кол-во опраш устройств
  */
-void bo_snmp_main(char *ip, int n);
+void bo_snmp_main(char *ip[], int n);
 
 void bo_snmp_lock_mut();
 

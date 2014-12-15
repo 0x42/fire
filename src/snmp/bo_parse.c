@@ -292,6 +292,7 @@ static int bo_parse_VALSPEED(struct PortItem *p)
 	}
 	PS.ptr += exec;
 	p->speed = speed;
+	if(p->speed == 255) p->speed = -1;
 	ans = 1;
 	
 	exit:

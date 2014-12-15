@@ -2,7 +2,7 @@
 
 static struct OID_Next *bo_getPortVal(int sock, char *ip, struct PortItem *portItem);
 static void bo_checkSwitch(int sock, struct OPT_SWITCH *o_sw);
-static int bo_crt_optSwitch(char *ip[], int n);
+static int  bo_crt_optSwitch(char *ip[], int n);
 static void bo_del_tab_switch();
 static void bo_prt_switch(int n);
 
@@ -26,13 +26,14 @@ struct OPT_SWITCH *bo_snmp_get_tab()
 	return tab_sw;
 }
 
-void bo_snmp_main(char *ip, int n)
+void bo_snmp_main(char *ip[], int n)
 {
 	int stop = 1;
 	int exec = -1, sock = -1;
 	struct OPT_SWITCH *o_sw = NULL;
-	char *my_ip[] = {"192.168.1.151", "192.168.1.8"};
+	char *my_ip[] = {"192.168.1.151", "192.168.1.150"};
 	
+	my_ip = ip;
 	n = 2;
 	bo_snmp_lock_mut();
 	exec = bo_init_snmp();
