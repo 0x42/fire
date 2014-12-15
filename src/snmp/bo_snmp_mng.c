@@ -33,7 +33,7 @@ void bo_snmp_main(char *ip[], int n)
 	struct OPT_SWITCH *o_sw = NULL;
 	char *my_ip[] = {"192.168.1.151", "192.168.1.150"};
 	
-	my_ip = ip;
+//	my_ip = ip;
 	n = 2;
 	bo_snmp_lock_mut();
 	exec = bo_init_snmp();
@@ -44,7 +44,7 @@ void bo_snmp_main(char *ip[], int n)
 	}
 	
 	bo_snmp_lock_mut();
-	exec = bo_crt_optSwitch(my_ip, n);
+	exec = bo_crt_optSwitch(ip, n);
 	bo_snmp_unlock_mut();
 	if(exec == -1) {
 		bo_log("bo_snmp_main ERROR can't create data for OPT_SWITCH");
