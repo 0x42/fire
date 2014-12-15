@@ -21,6 +21,11 @@ void bo_snmp_unlock_mut()
 	pthread_mutex_unlock(&opt_sw_mut);
 }
 
+struct OPT_SWITCH *bo_snmp_get_tab() 
+{
+	return tab_sw;
+}
+
 void bo_snmp_main(char *ip, int n)
 {
 	int stop = 1;

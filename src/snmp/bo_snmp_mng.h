@@ -19,11 +19,24 @@ struct OPT_SWITCH {
         int port_n;
 };
 
+/* ----------------------------------------------------------------------------
+ * @brief   опрос оптич-ких свитчей.
+ * @ip      массив ip switch'ей которые будем опрашивать
+ * @n       кол-во опраш устройств
+ */
 void bo_snmp_main(char *ip, int n);
 
 void bo_snmp_lock_mut();
 
 void bo_snmp_unlock_mut();
+
+/* ----------------------------------------------------------------------------
+ * @brief   возвращает таблицу состояния магистрали. Перед чтением данных
+ *          вызываем bo_snmp_lock_mut/bo_snmp_unlock_mut 
+ * @return  OPT_SWITCH[] / NULL
+ */
+struct OPT_SWITCH *bo_snmp_get_tab();
+
 
 #endif	/* BO_SNMP_MNG_H */
 
