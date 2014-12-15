@@ -124,6 +124,7 @@ void bo_snmp_crt_next_req(int oid[][14], int n, int m)
 	memcpy(temp, buf, buf_len);
 	snmp_core.buf_i += buf_len;
 	
+	/*
 	printf("snmp[\n");
 	int eol = 0;
 	for(i = 0; i < snmp_core.buf_i; i++) {
@@ -133,11 +134,12 @@ void bo_snmp_crt_next_req(int oid[][14], int n, int m)
 		eol++;
 	}
 	printf("]\n");
+	*/
 }
 
 void bo_snmp_crt_next_req2(struct OID_Next *oid_next)
 {
-	int i = 0, exec = 0;
+	int exec = 0;
 	unsigned char *temp = buf;
 	int buf_len = 0;
 	int req_head_len = 0,
@@ -189,16 +191,6 @@ void bo_snmp_crt_next_req2(struct OID_Next *oid_next)
 	temp = snmp_core.buf + snmp_core.buf_i;
 	memcpy(temp, buf, buf_len);
 	snmp_core.buf_i += buf_len;
-	
-	printf("snmp[\n");
-	int eol = 0;
-	for(i = 0; i < snmp_core.buf_i; i++) {
-		if(eol == 8) printf(" ");
-		else if(eol == 16) { eol = 0; printf("\n");}
-		printf("%02x ", *(snmp_core.buf + i) );
-		eol++;
-	}
-	printf("]\n");
 }
 
 unsigned char * bo_snmp_get_msg()
@@ -468,4 +460,5 @@ static void bo_print_buf()
 	}
 	printf("]\n");
 }
+
 /* 0x42 */

@@ -54,7 +54,7 @@ int bo_parse_oid(unsigned char *snmp, int len, struct PortItem *port)
 	PS.ptr    = 0;
 	
 	while(1) {
-		dbgout("KA[%s]\n", ParseStatusTxt[PS.status]);
+		/* dbgout("KA[%s]\n", ParseStatusTxt[PS.status]); */
 		if(PS.status == ERR) ans = -1;
 		if(PS.status == QUIT) break;
 		statusTable[PS.status](port);
@@ -430,7 +430,6 @@ int bo_parse_STRING(unsigned char *buf,
 		ptr++;
 		temp = buf + ptr;
 		len = bo_uncode_len(temp);
-		printf("len[%d]\n",len);
 		ptr++;
 		temp = buf + ptr;
 		if(len > 20) len = 20;

@@ -9,21 +9,37 @@ static void bo_prt_switch(int n);
 /* таблица OPTICAL SWITCH */
 static struct OPT_SWITCH *tab_sw = NULL;
 
+static pthread_mutex_t opt_sw_mut = PTHREAD_MUTEX_INITIALIZER;
+
+void bo_snmp_lock_mut() 
+{
+	pthread_mutex_lock(&opt_sw_mut);
+}
+
+void bo_snmp_unlock_mut() 
+{
+	pthread_mutex_unlock(&opt_sw_mut);
+}
+
 void bo_snmp_main(char *ip, int n)
 {
+	int stop = 1;
 	int exec = -1, sock = -1;
 	struct OPT_SWITCH *o_sw = NULL;
 	char *my_ip[] = {"192.168.1.151", "192.168.1.8"};
 	
 	n = 2;
+	bo_snmp_lock_mut();
 	exec = bo_init_snmp();
+	bo_snmp_unlock_mut();
 	if(exec == -1) { 
 		bo_log("bo_snmp_main ERROR can't create data for run snmp");
 		goto exit;
 	}
 	
+	bo_snmp_lock_mut();
 	exec = bo_crt_optSwitch(my_ip, n);
-	
+	bo_snmp_unlock_mut();
 	if(exec == -1) {
 		bo_log("bo_snmp_main ERROR can't create data for OPT_SWITCH");
 		goto exit;
@@ -35,18 +51,27 @@ void bo_snmp_main(char *ip, int n)
 		goto exit;
 	}
 	
-	o_sw = tab_sw;
-	bo_checkSwitch(sock, o_sw);
+	while(stop == 1) {
+		sleep(1);
+		o_sw = tab_sw;
+		bo_snmp_lock_mut();
+		bo_checkSwitch(sock, o_sw);
+		bo_snmp_unlock_mut();
 
-	o_sw = tab_sw + 1;
-	bo_checkSwitch(sock, o_sw);	
-	bo_prt_switch(0);
-	bo_prt_switch(1);
-
+		o_sw = tab_sw + 1;
+		bo_snmp_lock_mut();
+		bo_checkSwitch(sock, o_sw);
+		bo_snmp_unlock_mut();
+		
+		bo_prt_switch(0);
+		bo_prt_switch(1);
+	}
 	
 	exit:
+	bo_snmp_lock_mut();
 	bo_del_snmp();
 	bo_del_tab_switch();
+	bo_snmp_unlock_mut();
 }
 
 static void bo_checkSwitch(int sock, struct OPT_SWITCH *o_sw) {

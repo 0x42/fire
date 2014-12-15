@@ -21,6 +21,9 @@ struct OPT_SWITCH {
 
 void bo_snmp_main(char *ip, int n);
 
+void bo_snmp_lock_mut();
+
+void bo_snmp_unlock_mut();
 
 #endif	/* BO_SNMP_MNG_H */
 
