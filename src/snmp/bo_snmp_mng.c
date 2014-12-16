@@ -194,7 +194,7 @@ static struct OID_Next *bo_getPortVal(int sock, char *ip, struct PortItem *portI
 
 static int bo_crt_optSwitch(char *ip[], int n)
 {
-	int ans = -1, i = 0, j = 0, ptr = 0;
+	int ans = -1, i = 0, j = 0;
 	struct OPT_SWITCH *o_sw = NULL;
 	struct PortItem *ports = NULL;
 	char *s;
@@ -217,10 +217,9 @@ static int bo_crt_optSwitch(char *ip[], int n)
 			bo_log("bo_crt_optSwitch() bad ip len");
 			goto exit;
 		}
-		memcpy(o_sw->ip, s, strlen(s));
-		*(o_sw->ip + len) = 0;
+		memcpy(o_sw->ip, s, strlen(s)+1);
 		
-		dbgout("ip[%s] len[%d]\n", s, strlen(s));
+		dbgout("ip[%s] len[%d]\n", o_sw->ip, strlen(o_sw->ip));
 		
 		ports = o_sw->ports;
 		for(; j < BO_OPT_SW_PORT_N; j++) {
@@ -240,17 +239,12 @@ static void bo_del_tab_switch()
 
 static void bo_prt_switch(int n)
 {
-	int i = 0, j = 0;
+	int i = 0;
 	struct OPT_SWITCH *o_sw = (tab_sw + n);
 	struct PortItem *port = NULL;
-	
 	for(; i < BO_OPT_SW_PORT_N; i++) {
 		port = (o_sw->ports + i);
-		dbgout("%d:ip[", i);
-		for(j = 0; j < 15; j++) {
-			dbgout("%c", *(o_sw->ip + j) );
-		}
-		dbgout("] ");
+		dbgout("%d:ip[%d][%s] ", i, strlen(o_sw->ip), o_sw->ip );
 		dbgout("flg[%d] link[%d] speed[%d] descr[%s]\n", 
 			port->flg, port->link, port->speed, port->descr);
 	}
