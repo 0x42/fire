@@ -61,15 +61,15 @@ void bo_snmp_main(char *ip[], int n)
 		bo_snmp_lock_mut();
 		bo_checkSwitch(sock, o_sw);
 		bo_snmp_unlock_mut();
-		dbgout("\n ==================== \n");
+		/* dbgout("\n ==================== \n"); */
 		for(i = 0; i < n; i++) {
 			o_sw = tab_sw + i;
 			bo_snmp_lock_mut();
 			bo_checkSwitch(sock, o_sw);
 			bo_snmp_unlock_mut();
-			bo_prt_switch(i);
+			/* bo_prt_switch(i); */
 		}
-		dbgout("\n ==================== \n");
+		/* dbgout("\n ==================== \n"); */
 	}
 	
 	exit:
