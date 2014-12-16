@@ -26,8 +26,12 @@ int bo_udp_sock()
 	saddr.sin_port = htons(CLI_PORT);
 	saddr.sin_addr.s_addr = htonl(INADDR_ANY);
 	
-	if (bind(s, (struct sockaddr *) &saddr, sizeof(saddr)) != 0)
+	if (bind(s, (struct sockaddr *) &saddr, sizeof(saddr)) != 0) {
 		bo_log("bo_udp_sock() ERROR bind() ");
+		close(s);
+		s = 0;
+		goto exit;
+	}
 	fcntl(s, F_SETFL, O_NONBLOCK);
 	exit:
 	return s;

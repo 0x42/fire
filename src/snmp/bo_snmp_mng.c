@@ -32,8 +32,6 @@ void bo_snmp_main(char *ip[], int n)
 	int exec = -1, sock = -1, i = 0;
 	struct OPT_SWITCH *o_sw = NULL;
 	
-	
-        
 	bo_snmp_lock_mut();
 	exec = bo_init_snmp();
 	bo_snmp_unlock_mut();
@@ -215,7 +213,10 @@ static int bo_crt_optSwitch(char *ip[], int n)
 		o_sw = tab_sw + i;
 		s = *(ip + i);
 		len = strlen(s);
-		if(len > 15) goto exit;
+		if(len > 15) {
+			bo_log("bo_crt_optSwitch() bad ip len");
+			goto exit;
+		}
 		memcpy(o_sw->ip, s, strlen(s));
 		*(o_sw->ip + len) = 0;
 		
