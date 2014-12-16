@@ -32,7 +32,7 @@ void bo_snmp_main(char *ip[], int n)
 	int exec = -1, sock = -1;
 	struct OPT_SWITCH *o_sw = NULL;
 	
-	char *my_ip[] = {"192.168.1.151", "192.168.1.150"};
+	
         
 	bo_snmp_lock_mut();
 	exec = bo_init_snmp();
@@ -67,9 +67,10 @@ void bo_snmp_main(char *ip[], int n)
 		bo_snmp_lock_mut();
 		bo_checkSwitch(sock, o_sw);
 		bo_snmp_unlock_mut();
-		
+/*		
 		bo_prt_switch(0);
 		bo_prt_switch(1);
+*/
 	}
 	
 	exit:
