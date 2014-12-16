@@ -34,15 +34,6 @@ void bo_snmp_main(char *ip[], int n)
 	
 	char *my_ip[] = {"192.168.1.151", "192.168.1.150"};
         
-/*	
-	char *ttt_ip[2];
-	*ttt_ip = malloc(sizeof(char) * 16);
-	ttt_ip[1] = malloc(sizeof(char) * 16);
-
-	memcpy( *ttt_ip, *my_ip, 13);
-	memcpy( *(ttt_ip + 1), *(my_ip+1), 13);
-	n = 2;
-*/
 	bo_snmp_lock_mut();
 	exec = bo_init_snmp();
 	bo_snmp_unlock_mut();
