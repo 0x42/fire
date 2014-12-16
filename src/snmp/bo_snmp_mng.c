@@ -179,7 +179,8 @@ static struct OID_Next *bo_getPortVal(int sock, char *ip, struct PortItem *portI
 					portItem->descr);
 				*/
 			} else { 
-				dbgout("error parse ip[%s]\n", ip_recv); 
+				dbgout("bo_getPortVal() error parse ip[%s]\n", 
+					ip); 
 				goto exit;
 			}
 

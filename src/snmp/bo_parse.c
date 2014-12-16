@@ -203,9 +203,9 @@ static void snmpReadErr(struct PortItem *p)
 	
 	if(err != 0) {
 		if( (err-1) < 5) {
-			bo_log("SNMP ERROR[%s] ERROR_INDEX[%d]", 
+			bo_log("snmpReadErr() SNMP ERROR[%s] ERROR_INDEX[%d]", 
 			err_txt[err], err_index);
-		} else 	bo_log("SNMP ERROR[%d] ERROR_INDEX[%d]", 
+		} else 	bo_log("snmpReadErr() SNMP ERROR[%d] ERROR_INDEX[%d]", 
 			err, err_index);
 		goto error_label;
 	}
