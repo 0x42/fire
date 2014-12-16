@@ -179,6 +179,8 @@ static struct OID_Next *bo_getPortVal(int sock, char *ip, struct PortItem *portI
 					portItem->descr);
 				*/
 			} else { 
+				dbgout("bo_getPortVal() ERROR parse snmp from ip[%s]\n", 
+					ip);
 				bo_log("bo_getPortVal() ERROR parse snmp from ip[%s]\n", 
 					ip); 
 				goto exit;
