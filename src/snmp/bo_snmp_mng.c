@@ -32,6 +32,7 @@ void bo_snmp_main(char *ip[], int n)
 	int exec = -1, sock = -1, i = 0;
 	struct OPT_SWITCH *o_sw = NULL;
 	
+	bo_log("SNMP(monitor) START");
 	bo_snmp_lock_mut();
 	exec = bo_init_snmp();
 	bo_snmp_unlock_mut();
@@ -47,7 +48,13 @@ void bo_snmp_main(char *ip[], int n)
 		bo_log("bo_snmp_main ERROR can't create data for OPT_SWITCH");
 		goto exit;
 	}
-	
+
+	for(i = 0; i < n; i++)  {
+		o_sw = tab_sw + i;
+		dbgout("bo_snmp_mng INFO SWITCH IP-%d[%s]\n", i, o_sw->ip);
+		bo_log("bo_snmp_mng INFO SWITCH IP-%d[%s]", i, o_sw->ip);
+	}
+
 	sock = bo_udp_sock();
 	if(sock == 0) {
 		bo_log("bo_snmp_main ERROR can't create socket for run snmp");
@@ -57,10 +64,10 @@ void bo_snmp_main(char *ip[], int n)
 	while(stop == 1) {
 		sleep(1);
 
-		o_sw = tab_sw + 1;
-		bo_snmp_lock_mut();
-		bo_checkSwitch(sock, o_sw);
-		bo_snmp_unlock_mut();
+//		o_sw = tab_sw + 1;
+//		bo_snmp_lock_mut();
+//		bo_checkSwitch(sock, o_sw);
+//		bo_snmp_unlock_mut();
 		/* dbgout("\n ==================== \n"); */
 		for(i = 0; i < n; i++) {
 			o_sw = tab_sw + i;
@@ -77,6 +84,7 @@ void bo_snmp_main(char *ip[], int n)
 	bo_del_snmp();
 	bo_del_tab_switch();
 	bo_snmp_unlock_mut();
+	bo_log("SNMP monitor END");
 }
 
 static void bo_checkSwitch(int sock, struct OPT_SWITCH *o_sw) {
