@@ -29,7 +29,7 @@ struct OPT_SWITCH *bo_snmp_get_tab()
 void bo_snmp_main(char *ip[], int n)
 {
 	int stop = 1;
-	int exec = -1, sock = -1;
+	int exec = -1, sock = -1, i = 0;
 	struct OPT_SWITCH *o_sw = NULL;
 	
 	
@@ -58,19 +58,20 @@ void bo_snmp_main(char *ip[], int n)
 	
 	while(stop == 1) {
 		sleep(1);
-		o_sw = tab_sw;
-		bo_snmp_lock_mut();
-		bo_checkSwitch(sock, o_sw);
-		bo_snmp_unlock_mut();
 
 		o_sw = tab_sw + 1;
 		bo_snmp_lock_mut();
 		bo_checkSwitch(sock, o_sw);
 		bo_snmp_unlock_mut();
-/*		
-		bo_prt_switch(0);
-		bo_prt_switch(1);
-*/
+		dbgout("\n ==================== \n");
+		for(i = 0; i < n; i++) {
+			o_sw = tab_sw + i;
+			bo_snmp_lock_mut();
+			bo_checkSwitch(sock, o_sw);
+			bo_snmp_unlock_mut();
+			bo_prt_switch(i);
+		}
+		dbgout("\n ==================== \n");
 	}
 	
 	exit:
@@ -199,6 +200,7 @@ static int bo_crt_optSwitch(char *ip[], int n)
 	struct OPT_SWITCH *o_sw = NULL;
 	struct PortItem *ports = NULL;
 	char *s;
+	int len;
 	if(n < 1) { 
 		bo_log("bo_crt_optSwitch() n < 1 can't create tab_sw");
 		goto exit;
@@ -212,13 +214,11 @@ static int bo_crt_optSwitch(char *ip[], int n)
 	for(;i < n; i++) {
 		o_sw = tab_sw + i;
 		s = *(ip + i);
-		ptr = 0;
+		len = strlen(s);
+		if(len > 15) goto exit;
+		memcpy(o_sw->ip, s, strlen(s));
+		*(o_sw->ip + len) = 0;
 		
-		for(ptr = 0; ptr < 15; ptr++) {
-			if(*s) *(o_sw->ip + ptr) = *(s + ptr);
-			else *(o_sw->ip + ptr) = 0;
-		}
-		*(o_sw->ip + 14) = 0;
 		dbgout("ip[%s] len[%d]\n", s, strlen(s));
 		
 		ports = o_sw->ports;
@@ -245,7 +245,7 @@ static void bo_prt_switch(int n)
 	
 	for(; i < BO_OPT_SW_PORT_N; i++) {
 		port = (o_sw->ports + i);
-		dbgout("ip[");
+		dbgout("%d:ip[", i);
 		for(j = 0; j < 15; j++) {
 			dbgout("%c", *(o_sw->ip + j) );
 		}
