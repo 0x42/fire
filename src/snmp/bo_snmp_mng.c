@@ -64,10 +64,6 @@ void bo_snmp_main(char *ip[], int n)
 	while(stop == 1) {
 		sleep(1);
 
-//		o_sw = tab_sw + 1;
-//		bo_snmp_lock_mut();
-//		bo_checkSwitch(sock, o_sw);
-//		bo_snmp_unlock_mut();
 		/* dbgout("\n ==================== \n"); */
 		for(i = 0; i < n; i++) {
 			o_sw = tab_sw + i;

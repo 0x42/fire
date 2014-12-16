@@ -289,7 +289,7 @@ int bo_chkSock(int sock)
 	
 	exec = bo_recvAllData(sock, (unsigned char*)buf, 3, 3);
 	if(exec == -1) {
-		bo_log("bo_chkSock() WARN errno[%s]", strerror(errno));
+		bo_log("bo_chkSock() WARN don't recv ans");
 	} else {
 		if(strstr(buf, "ASK")) ans = 1;
 		else bo_log("bo_chkSock() recv bad ans"); 

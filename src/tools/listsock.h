@@ -1,6 +1,6 @@
 #ifndef LISTSOCK_H
 #define	LISTSOCK_H
-#define BO_IP_MAXLEN 15
+#define BO_IP_MAXLEN 16
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>

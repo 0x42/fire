@@ -118,6 +118,9 @@ static void logReadCrc(struct KA_log_param *p)
 	if(crc != count) { 
 		p->status = LOGERR;
 		p->len = -1;
+		printf("logReadCrc bad CRC[%02x %02x]", 
+			crcTxt[0], 
+			crcTxt[1]);
 		bo_log("logReadCrc() bad CRC");
 	} else p->status = LOGOK;
 }

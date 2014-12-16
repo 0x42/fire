@@ -42,6 +42,7 @@ static void m_repeatSendRoute(struct bo_llsock *list_out, TOHT *tr);
 static void m_delRoute(struct bo_sock *val, TOHT *tr);
 static void m_addSockToSet(struct bo_llsock *list_in, fd_set *r_set);
 static int  m_isClosed(struct bo_llsock *list_in, int sock);
+static void m_askSock(struct bo_llsock *list_out, TOHT *tr);
 
 /* Buffer for recieve data */
 static unsigned char *recvBuf;
@@ -224,6 +225,8 @@ static void m_servWork(int sock_in, int sock_out,
 			bo_log("CRITICAL ERROR app will stop");
 			stop = -1;
 		} else if(exec == 0) {
+			/* проверка соединений sock_out */
+			m_askSock(llist_out, tr);
 			/* если в списке есть устр которым не удалось отправить
 			 * таблицу повторяем отправку */
 			m_repeatSendRoute(llist_out, tr);
@@ -337,7 +340,8 @@ static void m_workClient(struct bo_llsock *list_in, struct bo_llsock *list_out,
 		sock = val->sock;
 		if(FD_ISSET(sock, r_set) == 1) {
 			/* реализовать в потоках ??? <- 0x42 */
-			dbgout("sock[%d] set \n", sock);
+			dbgout("sock[%d] ip[%s] set \n", sock, val->ip);
+			bo_log("master INFO disconnect ip[%s]", val->ip);
 			m_delRoute(val, tr);
 			bo_closeSocket(sock);
 			bo_del_bysock(list_out, sock);
@@ -570,6 +574,34 @@ static void m_repeatSendRoute(struct bo_llsock *list_out, TOHT *tr)
 		if(val->flag == -1 ) {
 			sock = val->sock;
 			m_sendTabPacket(sock, tr, list_out);
+		}
+		i = exec;
+	}
+}
+
+/* ----------------------------------------------------------------------------
+ * @brief	отправл ASK запрос, если возв ошибка значит сокет
+ */
+static void m_askSock(struct bo_llsock *list_out, TOHT *tr)
+{
+	int i    = -1;
+	int exec = -1, ask = -1;
+	int sock = -1;
+	struct bo_sock *val = NULL;
+	
+	i = bo_get_head(list_out);
+	while(i != -1) {
+		sock = -1;
+		exec = bo_get_val(list_out, &val, i);
+		sock = val->sock;
+		ask = -1;
+
+		ask = bo_chkSock(sock);
+		dbgout("m_askSock ip[%s] ask[%d]\n", val->ip, ask);
+		if(ask == -1) {
+			m_delRoute(val, tr);
+			bo_closeSocket(sock);
+			bo_del_bysock(list_out, sock);
 		}
 		i = exec;
 	}
