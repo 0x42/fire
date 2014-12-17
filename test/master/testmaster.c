@@ -93,7 +93,7 @@ static void *cltSendRoute(void *arg)
 	if(exec == -1) {printf("ERR cltSendRoute bo_closeSocket");goto error;}
 	ans = 1;
 	error:
-	return ans;
+	return (void*)ans;
 }
 
 /* ----------------------------------------------------------------------------
@@ -367,6 +367,9 @@ TEST(master, chkAskTest) /* MOCK NEED RUN SERVER */
 		printf("chkAskTest() ERROR\n");
 	}
 	
+	exec = bo_sendAllData(sock, (unsigned char *)"ASK", 3);
+	
+	sleep(5);
 	exit:
 	TEST_ASSERT_EQUAL(1, ans);
 }
@@ -499,7 +502,8 @@ TEST(master, set2000getLast) /* NEED RUN SERVER */
 	}
 	printf("\n");
 	
-	if(exec != strlen(log[1999])) { printf("bad exec[%d]!=len[%d] ERROR\n", exec, strlen(log)); goto exit;}
+	if(exec != strlen(log[1999])) 
+	{ printf("bad exec[%d]!=len[%d] ERROR\n", exec, strlen(log[1999])); goto exit;}
 	
 	printf("log[1999][");
 	for(i = 0; i<strlen(log[1999]); i++) {
