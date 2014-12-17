@@ -193,7 +193,7 @@ static void m_servWork(int sock_in, int sock_out,
 		       TOHT *tr)
 {
 	int stop = 1;
-	int exec = -1;
+	int exec = -1, temp = -1;
 	/* максимально возможной номер дескриптора для сокета*/
 	int maxdesc = FD_SETSIZE;
 	fd_set r_set, w_set, e_set;
@@ -267,8 +267,9 @@ static void m_servWork(int sock_in, int sock_out,
  */
 static void m_addClient(struct bo_llsock *list, int servSock, fd_set *set)
 {
-	
 	int sock = -1;
+	char *ip;
+	int exec = -1;
 	/* провер подкл ли кто-нибудь на серверный сокет */
 	if(FD_ISSET(servSock, set) == 1) {
 		dbgout("m_addClient-> has connect ...\n");
@@ -280,6 +281,10 @@ static void m_addClient(struct bo_llsock *list, int servSock, fd_set *set)
 			 * чтобы искл блокировки */
 			bo_setTimerRcv2(sock, 5, 500);
 			bo_addll(list, sock);
+			exec = bo_getip_bysock(list, sock, ip);
+			if(exec == 1) {
+				bo_log("INFO connect IN ip[%s]", ip);
+			}
 		}
 	} else {
 		dbgout("m_addClient-> not serv sock \n");
@@ -304,6 +309,10 @@ static void m_addClientOut(struct bo_llsock *list, int servSock, fd_set *set,
 			 * чтобы искл блокировки */
 			bo_setTimerRcv2(sock, 5, 500);
 			bo_addll(list, sock);
+			exec = bo_getip_bysock(list, sock, ip);
+			if(exec == 1) {
+				bo_log("INFO connect OUT ip[%s]", ip);
+			}
 			/* m_sendClientMsg(sock, tr, list); */
 			m_sendTabPacket(sock, tr, list);
 		}
