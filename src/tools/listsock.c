@@ -285,6 +285,7 @@ void bo_print_list(struct bo_llsock *llist)
 	int size = 0;
 	struct bo_sock *v;
 	size = llist->size;
+	size = 10;
 	printf("size[%d] n[%d]\nind :", size, llist->n);
 	for(i = 0; i < size; i++) {
 		printf("[%d] ", i);

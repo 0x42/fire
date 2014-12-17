@@ -245,12 +245,14 @@ static void m_servWork(int sock_in, int sock_out,
 		if(exec > -1) {
 			chk_sock_N++;
 			if(chk_sock_N == 10) {
+			/*	dbgout("CHK SOCK OUT exec[%d]\n", exec); */
 				/* проверка соединений sock_out */
 				m_askSock(llist_out, tr);
 				/* если в списке есть устр которым не удалось отправить
 				* таблицу повторяем отправку */
 				m_repeatSendRoute(llist_out, tr);
 				chk_sock_N = 0;
+			/*	dbgout("CHK SOCK OUT END \n"); */
 			}
 		}
 	}
@@ -605,7 +607,7 @@ static void m_askSock(struct bo_llsock *list_out, TOHT *tr)
 		ask = -1;
 
 		ask = bo_chkSock(sock);
-		dbgout("m_askSock ip[%s] ask[%d]\n", val->ip, ask);
+		/* dbgout("ip[%s] ask[%d]\n", val->ip, ask); */
 		if(ask == -1) {
 			m_delRoute(val, tr);
 			bo_closeSocket(sock);
