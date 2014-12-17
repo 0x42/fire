@@ -54,6 +54,7 @@ static void(*statusTable[])(struct paramThr *) = {
  * @return	[] тип пришедшего сообщения SET/TAB[1]
  *					    LOG[2]
  *					    ERR[-1]
+ *					    ANS [3]
  */
 int bo_master_core(struct paramThr *p)
 {
@@ -67,7 +68,7 @@ int bo_master_core(struct paramThr *p)
 		if(p->status == TAB) typeMSG = 1;
 		if(p->status == LOG) typeMSG = 2;
 		if(p->status == ERR) typeMSG = -1; 
-
+		if(p->status == ANS) typeMSG = 3;
 		if(p->status == QUIT) break;
 		statusTable[p->status](p);
 	}

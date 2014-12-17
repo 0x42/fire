@@ -246,7 +246,7 @@ static void m_servWork(int sock_in, int sock_out,
 			chk_sock_N++;
 			if(chk_sock_N == 10) {
 				/* проверка соединений sock_out */
-//				m_askSock(llist_out, tr);
+				m_askSock(llist_out, tr);
 				/* если в списке есть устр которым не удалось отправить
 				* таблицу повторяем отправку */
 				m_repeatSendRoute(llist_out, tr);
