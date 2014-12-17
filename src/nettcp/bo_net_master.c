@@ -221,17 +221,7 @@ static void m_servWork(int sock_in, int sock_out,
 		 * значит его надо закрыть.*/
 		m_addSockToSet(llist_out, &r_set);
 		exec = select(maxdesc, &r_set, NULL, NULL, &tval);
-		if(exec > -1) {
-			chk_sock_N++;
-			if(chk_sock_N == 10) {
-				/* проверка соединений sock_out */
-				m_askSock(llist_out, tr);
-				/* если в списке есть устр которым не удалось отправить
-				* таблицу повторяем отправку */
-				m_repeatSendRoute(llist_out, tr);
-				chk_sock_N = 0;
-			}
-		}
+		
 		if(exec == -1) {
 			bo_log("bo_net_master.c->m_servWork() select errno[%s]",
 				strerror(errno));
@@ -250,6 +240,18 @@ static void m_servWork(int sock_in, int sock_out,
 			dbgout("\nCHK CLIENT   \n");
 			m_workClient(llist_in, llist_out, &r_set, &w_set, tr);
 			dbgout("------ END \n");
+		}
+		
+		if(exec > -1) {
+			chk_sock_N++;
+			if(chk_sock_N == 10) {
+				/* проверка соединений sock_out */
+//				m_askSock(llist_out, tr);
+				/* если в списке есть устр которым не удалось отправить
+				* таблицу повторяем отправку */
+				m_repeatSendRoute(llist_out, tr);
+				chk_sock_N = 0;
+			}
 		}
 	}
 	/* Очистить все клиент сокеты*/
