@@ -114,11 +114,11 @@ int bo_addll(struct bo_llsock *llist, int sock)
 	struct sockaddr_in addr;
 	socklen_t addr_len = sizeof(addr);
 
-	char ip[16] = "000.000.000.000";
-	ip[15] = 0;
 	char *ip_buf;
 	int ip_num[4] = {0};
 	int exec = -1;
+	char ip[16] = "000.000.000.000";
+	ip[15] = 0;
 	/* опред ip адрес */
 	exec = getpeername(sock, (struct sockaddr *)&addr, &addr_len);
 	
