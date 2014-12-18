@@ -193,7 +193,7 @@ static void m_servWork(int sock_in, int sock_out,
 		       TOHT *tr)
 {
 	int stop = 1;
-	int exec = -1, temp = -1;
+	int exec = -1;
 	/* максимально возможной номер дескриптора для сокета*/
 	int maxdesc = FD_SETSIZE;
 	fd_set r_set, w_set, e_set;
@@ -268,7 +268,7 @@ static void m_servWork(int sock_in, int sock_out,
 static void m_addClient(struct bo_llsock *list, int servSock, fd_set *set)
 {
 	int sock = -1;
-	char *ip;
+	char ip[16] = {0};
 	int exec = -1;
 	/* провер подкл ли кто-нибудь на серверный сокет */
 	if(FD_ISSET(servSock, set) == 1) {
@@ -298,6 +298,8 @@ static void m_addClientOut(struct bo_llsock *list, int servSock, fd_set *set,
 			   TOHT *tr)
 {
 	int sock = -1;
+	int exec = -1;
+	char ip[16] = {0};
 	/* провер подкл ли кто-нибудь на серверный сокет */
 	if(FD_ISSET(servSock, set) == 1) {
 		dbgout("m_addClientOut-> has connect ...\n");
