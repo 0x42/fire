@@ -268,8 +268,7 @@ static void m_servWork(int sock_in, int sock_out,
 static void m_addClient(struct bo_llsock *list, int servSock, fd_set *set)
 {
 	int sock = -1;
-	char ip[16] = {0};
-	int exec = -1;
+	/* char ip[16] = {0}; */
 	/* провер подкл ли кто-нибудь на серверный сокет */
 	if(FD_ISSET(servSock, set) == 1) {
 		dbgout("m_addClient-> has connect ...\n");
@@ -281,10 +280,14 @@ static void m_addClient(struct bo_llsock *list, int servSock, fd_set *set)
 			 * чтобы искл блокировки */
 			bo_setTimerRcv2(sock, 5, 500);
 			bo_addll(list, sock);
+			/*
 			exec = bo_getip_bysock(list, sock, ip);
 			if(exec == 1) {
-				bo_log("INFO connect IN ip[%s]", ip);
-			}
+				bo_log("INFO connect IN ip[%s][%d]", ip, sock);
+			} else {
+				bo_log("INFO connect IN ip[---]");
+			} 
+			 */ 
 		}
 	} else {
 		dbgout("m_addClient-> not serv sock \n");
@@ -314,6 +317,8 @@ static void m_addClientOut(struct bo_llsock *list, int servSock, fd_set *set,
 			exec = bo_getip_bysock(list, sock, ip);
 			if(exec == 1) {
 				bo_log("INFO connect OUT ip[%s]", ip);
+			} else {
+				bo_log("INFO connect OUT ip[---]");
 			}
 			/* m_sendClientMsg(sock, tr, list); */
 			m_sendTabPacket(sock, tr, list);
@@ -363,7 +368,7 @@ static void m_workClient(struct bo_llsock *list_in, struct bo_llsock *list_out,
 		if(FD_ISSET(sock, r_set) == 1) {
 			/* реализовать в потоках ??? <- 0x42 */
 			dbgout("sock[%d] ip[%s] set \n", sock, val->ip);
-			bo_log("master INFO disconnect ip[%s]", val->ip);
+			bo_log("INFO disconnect OUT ip[%s]", val->ip);
 			m_delRoute(val, tr);
 			bo_closeSocket(sock);
 			bo_del_bysock(list_out, sock);
@@ -428,11 +433,20 @@ static int m_isClosed(struct bo_llsock *list, int sock)
 {
 	int fl = -1;
 	int ans = 1;
+	/*
+	char ip[16] = {0};
+	int exec = -1; 
+	 */
 	char buf;
 	fl = recv(sock, &buf, 1, MSG_PEEK);
 	if(fl < 1) {
 	/* сокет закрыт удаляем из списка */
 		dbgout("DEL SOCK[%d] m_isClosed\n", sock);
+		/*
+		exec = bo_getip_bysock(list, sock, ip);
+		if(exec == 1)	bo_log(" INFO disconnect IN ip[%s]", ip);
+		else bo_log(" INFO disconnect IN ip[ --- ]");
+		*/
 		bo_closeSocket(sock);
 		bo_del_bysock(list, sock);
 		ans = -1;
@@ -558,17 +572,20 @@ static void m_sendTabPacket(int sock, TOHT *tr, struct bo_llsock *list)
 	
 	if(tab_not_empty == 1) {
 		exec = bo_master_sendTab(sock, tr, (char *)recvBuf);
-		dbgout("\n==== SEND TAB ====\n");
+		bo_getip_bysock(list, sock, ip);
+		bo_log("\n==== SEND TAB ====\n");
+		bo_log("To: ip[%s]\n", ip);
 		for(i = 0; i < tr->size; i++) {
 			key = *(tr->key + i);
 			if(key != NULL) {
 				val = *(tr->val + i);
-				dbgout("[%s:%s]\n", key, val);
+				bo_log("[%s:%s]\n", key, val);
 			}
 		}
-		dbgout("==== SEND END ====\n");
+		bo_log("==== SEND END ====\n");
+		
 		if(exec == -1) {
-			bo_getip_bysock(list, sock, ip);
+			
 			bo_setflag_bysock(list, sock, -1);
 			bo_log("m_sendTabPacket() can't send data to ip[%s]", ip);
 		} else {
@@ -620,6 +637,7 @@ static void m_askSock(struct bo_llsock *list_out, TOHT *tr)
 		ask = bo_chkSock(sock);
 		/* dbgout("ip[%s] ask[%d]\n", val->ip, ask); */
 		if(ask == -1) {
+			bo_log("master INFO disconnect OUT ip[%s]", val->ip);
 			m_delRoute(val, tr);
 			bo_closeSocket(sock);
 			bo_del_bysock(list_out, sock);
