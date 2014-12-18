@@ -27,10 +27,10 @@ static void recvNo	(struct Param *p);
 static void recvErr     (struct Param *p);
 static void recvEnd     (struct Param *p);
 
-/* Возм - ые состояния КА */
+/* Возможные состояния КА */
 static enum Status {START=0, READHEAD, VAL, DEL, NO, ERR, END} status;
 
-/* Ф - ии реал - ие КА */
+/* Функции реализующие КА */
 static void(*statusTable[])(struct Param *) = {
 	recvStart,
 	recvReadHead,

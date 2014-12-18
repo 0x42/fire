@@ -24,7 +24,7 @@
  * @str: Строка для разбора.
  * @return  Указатель на возвращаемую строку.
  *
-*/
+ */
 static char *str_trim(const char *str)
 {
 	char *end;
@@ -52,7 +52,7 @@ static char *str_trim(const char *str)
  *            конфигурационного файла.
  * @ht: Освобождаемая таблица.
  *
-*/
+ */
 void cfg_free(TOHT *ht)
 {
 	ht_free(ht);
@@ -65,7 +65,7 @@ void cfg_free(TOHT *ht)
  * @def: Значение по умолчанию, если ничего не нашли.
  * @return   Указатель на строку которую нашли.
  *
-*/
+ */
 char *cfg_getstring(TOHT *ht, const char *key, char *def)
 {
 	char *sval;
@@ -84,7 +84,7 @@ char *cfg_getstring(TOHT *ht, const char *key, char *def)
  * @nf:  Значение, если ничего не нашли.
  * @return  Найденое целое значение.
  *
-*/
+ */
 int cfg_getint(TOHT *ht, const char *key, int nf)
 {
 	char *str;
@@ -103,7 +103,7 @@ int cfg_getint(TOHT *ht, const char *key, int nf)
  *
  * Если ключ уже имеется в таблице, новое значение заменит старое.
  * Если ключ новый, создается новая запись.
-*/
+ */
 int cfg_put(TOHT *ht, const char *key, const char *val)
 {
 	return ht_put(ht, key, val) ;
@@ -114,7 +114,7 @@ int cfg_put(TOHT *ht, const char *key, const char *val)
  * @ht:  Таблица.
  * @key: Ключ для удаления записи.
  *
-*/
+ */
 void cfg_remove(TOHT *ht, const char *key)
 {
 	ht_remove(ht, key);
@@ -126,7 +126,7 @@ void cfg_remove(TOHT *ht, const char *key)
  * @sect: Таблица секций.
  * @return  Указатель на таблицу секций, NULL - ошибка.
  *
-*/
+ */
 TOHT *cfg_sections(TOHT *ht, TOHT *sect)
 {
 	char s[CFG_LSIZE+1];
@@ -172,7 +172,7 @@ TOHT *cfg_sections(TOHT *ht, TOHT *sect)
  * @ht:  Таблица с данными конфигурации.
  * @out: Указатель на открытый файл для сохранения данных конфигурации.
  *
-*/
+ */
 void cfg_save(TOHT *ht, FILE *out)
 {
 	TOHT *sect;
@@ -271,7 +271,7 @@ int cfg_parse_line(TOHT *ht,
  * @cfgname: Имя конфигурационного файла.
  * @return  Указатель на таблицу или NULL при неудаче.
  *
-*/
+ */
 TOHT *cfg_load(const char *cfgname)
 {
 	TOHT *ht;
@@ -351,5 +351,32 @@ TOHT *cfg_load(const char *cfgname)
 		fprintf(stderr, "cfg: cannot close %s\n", cfgname);
 	
 	return ht;
+}
+
+/**
+ * inc_cron_life - Увеличивает счетчик жизни программы на 1.
+ * @lifile: Имя файла.
+ *
+ */
+void inc_cron_life(char *lifile)
+{
+	TOHT *life;
+	FILE *out;
+	char slife[17] = {0};
+	int sch_life;
+
+	life = cfg_load(lifile);
+	sch_life = cfg_getint(life, "WD:life", -1);
+	sprintf(slife, "%016d", ++sch_life);
+	
+	if ((out = fopen(lifile, "w")) == NULL) {
+		fprintf(stderr, "inc_cron_life(): cannot open %s\n", lifile);
+	} else {
+		cfg_put(life, "WD:life", slife);
+		cfg_save(life, out);
+		fclose(out);
+	}
+	
+	cfg_free(life);
 }
 

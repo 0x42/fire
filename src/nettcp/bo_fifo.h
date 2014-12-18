@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <pthread.h>
+#include "../tools/dbgout.h"
 
 void bo_printFIFO(); /* THREAD SAFE */ 
 

@@ -19,3 +19,4 @@ nbproject/
 test/botest/*.log
 test/botest/*.out
 data.test
+*.life

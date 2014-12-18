@@ -1,6 +1,5 @@
 
 #include "uso.h"
-#include "uso_threads.h"
 #include "ocfg.h"
 #include "ocrc.h"
 #include "ofnv1a.h"
@@ -19,7 +18,6 @@ int main(int argc, char *argv[])
 	char cfile[64];
 	char lfile[64];
 	char lfile_old[64];
-	char cmdfile[64];
 
 	char ls_gen[32];
 	char req_ag[32];
@@ -43,7 +41,7 @@ int main(int argc, char *argv[])
 	if( argc == 2)
 		sprintf(cfile, argv[1]);
 	else {
-		sprintf(cfile, "uso.cfg");
+		sprintf(cfile, "uso_default.cfg");
 		gen_uso_default_cfg(cfile);  /** Генерация конфиг файла
 					      * по умолчанию */
 	}
@@ -55,8 +53,6 @@ int main(int argc, char *argv[])
 	sprintf(lfile, cfg_getstring(cfg, "log:log", NULL));
 	sprintf(lfile_old, cfg_getstring(cfg, "log:log_old", NULL));
 	bo_setLogParam(lfile, lfile_old, 0, 1000);
-
-	sprintf(cmdfile, cfg_getstring(cfg, "TEST:cmd", NULL));
 
 	/** Генерация таблицы для расчета контрольной суммы
 	 * кадра сети RS485 по алгоритму CRC16-MODBUS */
@@ -86,6 +82,9 @@ int main(int argc, char *argv[])
 	actx_targ.lline = cfg_getint(cfg, "LOGGER:line", -1);
 	actx_targ.nllines = cfg_getint(cfg, "LOGGER:nlines", -1);
 
+	/** Количество данных в кадре теста */
+	actx_targ.test_ln = cfg_getint(cfg, "TEST:lnTest", -1);
+
 	/** Главная подсистема ЛС 'General' */
 	sprintf(ls_gen, cfg_getstring(cfg, "LS:gen", NULL));
 	
@@ -104,9 +103,10 @@ int main(int argc, char *argv[])
 	cdquLogId = mfnv1a(req_gl);
 	cdquDest = mfnv1a(ls_gen);
 	
-	actx_targ.pr1 = cfg_getint(cfg, "PR1:adr", -1);
-	actx_targ.pr2 = cfg_getint(cfg, "PR2:adr", -1);
-	actx_targ.pr3 = cfg_getint(cfg, "PR3:adr", -1);
+	actx_targ.pr1 = cfg_getint(cfg, "PR:adr1", -1);
+	actx_targ.pr2 = cfg_getint(cfg, "PR:adr2", -1);
+	actx_targ.pr3 = cfg_getint(cfg, "PR:adr3", -1);
+	actx_targ.pr4 = cfg_getint(cfg, "PR:adr4", -1);
 	
 	/** Установка параметров и открытие серийного порта */
 	SerialSetParam(rs_port, rs_parity, rs_databits, rs_stopbit);
@@ -117,22 +117,10 @@ int main(int argc, char *argv[])
 	cfg_free(cfg);
 
 	
-	cmd = cfg_load(cmdfile);  /** Загрузили тест команды */
-	actx_targ.ncmds = cfg_getint(cmd, "CMD:n", -1);
-	actx_targ.m = cfg_getint(cmd, "CMD:m", -1);
-	
-	
 	bo_log("Init ok");
 	printf("Init ok\n");
 
 	
-	/** Установка атрибутов функционирования нитей PTHREAD:
-	 * - инициализирует структуру, указываемую pattr, значениями
-	     "по умолчанию";
-	 * - область действия конкуренции (scope) определяет связность
-	 *   потока с LWP;
-	 * - отсоединенность (detachstate);
-	 * - область действия блокировки PTHREAD_PROCESS_PRIVATE. */
 	pthread_attr_init(&pattr);
 	pthread_attr_setscope(&pattr, PTHREAD_SCOPE_SYSTEM);
 	pthread_attr_setdetachstate(&pattr, PTHREAD_CREATE_JOINABLE);
@@ -162,8 +150,6 @@ int main(int argc, char *argv[])
 	/** Ожидаем завершения потоков */
 	if (!pthread_equal(pthread_self(), thread_actx))
 		pthread_join(thread_actx, NULL);
-
-	cfg_free(cmd);
 	
 	/** Разрушаем блокировки и условные переменные, освобождая память. */
 	

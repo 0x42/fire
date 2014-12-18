@@ -15,12 +15,11 @@
 enum m_coreStatus {READHEAD = 0, SET, QUIT, ANSOK, ERR, ADD, READCRC,
                    TAB, READCRC_TAB, READROW, 
                    LOG, SAVELOG,
-                   RLO, SENDLOG, SENDNUL};
+                   RLO, SENDLOG, SENDNUL, ANS};
 
 struct paramThr {
     int sock;
     TOHT *route_tab;
-    /**/
     /* KA текущ состояние */
     enum m_coreStatus status;
     /* buffer для приема данных SET|LOG|TAB */
@@ -32,8 +31,9 @@ struct paramThr {
 };
 
 /* ----------------------------------------------------------------------------
+ * @brief       разб сообщения LOG|SET|TAB|RLO
  * @return      тип пришедшего сообщения 
- *              [1]  - SET(измен для таблицы роутов) 
+ *              [1]  - SET(измен для таблицы роутов) | TAB
  *              [2]  - LOG(лог ПР) 
  *              [-1] - ERR
  */
@@ -46,6 +46,16 @@ int bo_master_core(struct paramThr *p);
  *		[1]  - успешно      
  */
 int bo_master_sendTab(int sock, TOHT *tr, char *buf);
+
+/* ----------------------------------------------------------------------------
+ * @brief	создание сообщения ROW|LEN|DATA|...ROW|LEN|DATA|CRC из таблицы tr
+ * @buf		буфер куда будет записана таблица
+ * @return	[0]  - таблица пустая, пакет не сформ
+ *		[>0] - строка создана, размер пакета
+ *		[-1] - ошибка, все данные не помещ в буфер 
+ */
+int bo_master_crtPacket(TOHT *tr, char *buf);
+
 
 #endif	/* BO_NET_MASTER_CORE_H */
 /* 0x42 */

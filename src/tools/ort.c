@@ -144,7 +144,7 @@ static char *rt_getstring(TOHT *ht, const char *key, char *def)
  * @ht:  Хэш таблица.
  *
  * @return  ht->size.
-*/
+ */
 int rt_getsize(TOHT *ht)
 {
 	return ht->size;
@@ -157,7 +157,7 @@ int rt_getsize(TOHT *ht)
  * @key: Ключ.
  *
  * @return  1- если ключ найден, иначе - 0.
-*/
+ */
 int rt_iskey(TOHT *ht, const char *key)
 {
 	if (key == NULL) return 0;
@@ -175,7 +175,7 @@ int rt_iskey(TOHT *ht, const char *key)
  * @idx: Индекс.
  *
  * @return  Если ключ найден получаем ключ ввиде строки, иначе - NULL.
-*/
+ */
 char *rt_getkey(TOHT *ht, int idx)
 {
 	if (idx < ht->size)
@@ -274,7 +274,7 @@ void rt_save(TOHT *ht, const char *rtname)
 /**
  * rt_load - Загрузка и разбор файла в таблицу.
  * @rtname: Имя файла таблицы маршрутов.
- * @return  Указатель на таблицу.
+ * @return  Указатель на таблицу или NULL.
  *
  * Таблица маршрутов (adr:ip:port):
  * ---------

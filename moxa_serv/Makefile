@@ -1,9 +1,15 @@
 TARGET		     = build/moxa_serv
+# ================ for Moxa ===================
 #CC = arm-elf-gcc
+#LDFLAGS	     = -Wl, -elf2flt, -lpthread
+# ================ for PC  ====================
 CC = gcc
 LDFLAGS		     = -lpthread
-#LDFLAGS	     = -Wl, -elf2flt, -lpthread
+# =============================================
 CFLAGS		     = -Wall -c -g
+# Выводит отлад инфу в терминал
+CFLAGS		     += -D __PRINT__ 
+# =============================================
 
 INC_DIR		     = -I../src/log -I../src/tools -I../src/nettcp
 

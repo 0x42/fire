@@ -6,6 +6,9 @@
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <errno.h>
+#include <netinet/in.h>
+#include <unistd.h>
+#include <fcntl.h>
 
 #include "../log/bologging.h"
 

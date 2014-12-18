@@ -21,9 +21,9 @@ static void(*KA_Table[])(struct KA_log_param *) = {
 };
 /* ----------------------------------------------------------------------------
  * @brief	<= LOG|LEN|DATA|CRC
- *	DATA write in @buf
+ *		DATA write in @buf
  * 	     OK =>
- * @return  LEN [-1] ERror [>0] - length log [0] - нет лога по такому индексу
+ * @return  [-1] ERROR [>0] - length log [0] - нет лога по такому индексу
  */
 int bo_master_core_log(int sock, char *buf, int bufSize)
 {
@@ -35,8 +35,8 @@ int bo_master_core_log(int sock, char *buf, int bufSize)
 	ka_p.status = LOGREADHEAD;
 	
 	while(1) {
-		printf("bo_master_core_log [%s]\n", 
-			ka_logStatusTxt[ka_p.status]);
+		/*dbgout("bo_master_core_log [%s]\n", ka_logStatusTxt[ka_p.status]);
+		*/
 		if(ka_p.status == LOGQUIT) break;
 		if(ka_p.status == LOGNUL) { 
 			ka_p.len = 0;
@@ -112,14 +112,15 @@ static void logReadCrc(struct KA_log_param *p)
 	
 	crc = boCharToInt(crcTxt);
 	count = crc16modbus(msg, msg_len);
-/*
-	printf("\ncrc[%d][%02x %02x] count[%d]\n", crc,crcTxt[0], crcTxt[1], count);
-*/
+
 	p->len = msg_len;
 	
 	if(crc != count) { 
 		p->status = LOGERR;
 		p->len = -1;
+		printf("logReadCrc bad CRC[%02x %02x]", 
+			crcTxt[0], 
+			crcTxt[1]);
 		bo_log("logReadCrc() bad CRC");
 	} else p->status = LOGOK;
 }
@@ -129,11 +130,11 @@ static void logOk(struct KA_log_param *p)
 	int exec = -1;
 	unsigned char msg[] = " OK";
 	int i = 0;
-	printf("len[%d]\nlog[", p->len);
+	dbgout("len[%d]\nlog[", p->len);
 	for(; i < p->len; i++) {
-		printf("%c", *(p->buf + i) );
+		dbgout("%c", *(p->buf + i) );
 	}
-	printf("]\n");
+	dbgout("]\n");
 	
 	exec = bo_sendAllData(p->sock, msg, 3);
 	if(exec == -1) { 
@@ -150,8 +151,15 @@ static void logErr(struct KA_log_param *p) {}
 static void logQuit(struct KA_log_param *p) {}
 
 static void logNul(struct KA_log_param *p) {}
-/* --------------- END KA --------------------*/
+
+/* ---------------------------- END KA ---------------------------------------*/
+
 /*----------------------------------------------------------------------------
+ * @brief	отправляет запрос 1) RLO|index => master
+ *		принимает лог	  2)          <= LOG
+ *		сохраняет LOG в @buf
+ * @buf		
+ * @index	номер лога 
  * @return	[-1] Error [0] haven't got log [>0] log length
  */
 int bo_master_core_logRecv(int sock, int index, char *buf, int bufSize) 

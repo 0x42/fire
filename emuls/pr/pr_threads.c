@@ -1,12 +1,12 @@
 
-#include "pr_threads.h"
 #include "pr.h"
 #include "ocs.h"
 #include "bologging.h"
 #include "serial.h"
 
 
-unsigned int p159, p160, p229, p230;
+unsigned int p11, p12, p13, p14;
+unsigned int p21, p22, p23, p24;
 
 
 int tx_pr(struct actx_thread_arg *targ)
@@ -76,14 +76,14 @@ int rx_pr(struct actx_thread_arg *targ)
 	return 0;
 }
 
-unsigned int pr_proc(struct actx_thread_arg *targ, const char *msg, unsigned int sch)
+unsigned int pr_proc(int adr, unsigned int sch)
 {
 	char csch[10];
 	unsigned int ln;
 	unsigned int pn;
 	int i;
 
-	printf("%s %u\n", msg, sch);
+	printf("USO(%d): %u\n", adr, sch);
 
 	memset(csch, 0, 10);
 
@@ -92,23 +92,29 @@ unsigned int pr_proc(struct actx_thread_arg *targ, const char *msg, unsigned int
 		csch[i] = (unsigned char)rxBuf.buf[6+i];
 	
 	pn = (unsigned int)atoi(csch);
+
+	/*
+	bo_log("pr_proc(): sch=%d dst=%d src=%d",
+	       sch,
+	       (unsigned char)rxBuf.buf[1],
+	       (unsigned char)rxBuf.buf[0]);
+	*/
 	
 	if (sch == 1)
 		sch = pn;
 	else if (pn != sch) {
-		bo_log("Loss packet %s= %d/ pn= %d", msg, sch, pn);
+		bo_log("Loss packet USO(%d)= %d/ pn= %d", adr, sch, pn);
 		sch = pn;
-	}
-	else if (pn == sch-1) {
-		bo_log("Duplicate packet %s= %d", msg, sch);
+	} else if (pn == sch-1) {
+		bo_log("Duplicate packet USO(%d)= %d", adr, sch);
 		sch = pn;
 	} else if (pn == sch) {
-		/* bo_log("%s ______ ok", msg); */
+		/* bo_log("USO(%d) ______ ok", adr); */
 	} else
-		bo_log("??? %s= %d/ pn=%d", msg, sch, pn);
+		bo_log("??? USO(%d)= %d/ pn=%d", adr, sch, pn);
 	
 	sch++;
-	
+
 	return sch;
 }
 
@@ -117,12 +123,16 @@ void *actx_485(void *arg)
 {
 	struct actx_thread_arg *targ = (struct actx_thread_arg *)arg;
 	int res;
-
-	p159 = 1;
-	p160 = 1;
-	p229 = 1;
-	p230 = 1;
 	
+	p11 = 1;
+	p12 = 1;
+	p13 = 1;
+	p14 = 1;
+	p21 = 1;
+	p22 = 1;
+	p23 = 1;
+	p24 = 1;
+
 	write(1, "pr:\n", 4);
 
 	while (1) {
@@ -132,28 +142,54 @@ void *actx_485(void *arg)
 			break;
 		}
 		
-		if (rxBuf.buf[0] == (char)targ->adr) {
+		if ((rxBuf.buf[0] == (char)targ->adr1) ||
+		    (rxBuf.buf[0] == (char)targ->adr2)) {
 			switch (get_rxFl(&rxBuf)) {
 			case RX_DATA_READY:
 				/** PR */
-				if (rxBuf.wpos == 4) {
-					/** Нас сканируют */
-					write(1, "pr: scan()\n", 11);
-					scan(targ, &txBuf);
-				} else {
-					if ((unsigned char)rxBuf.buf[1] == 159)
-						p159 = pr_proc(targ, "PR(159):", p159);
-					else if ((unsigned char)rxBuf.buf[1] == 160)
-						p160 = pr_proc(targ, "PR(160):", p160);
-					else if ((unsigned char)rxBuf.buf[1] == 229)
-						p229 = pr_proc(targ, "PR(229):", p229);
-					else if ((unsigned char)rxBuf.buf[1] == 230)
-						p230 = pr_proc(targ, "PR(230):", p230);
-					else
-						break;
+				if (rxBuf.buf[0] == (char)targ->adr1) {
+					/** PR1 */
+					if (rxBuf.wpos == 4) {
+						/** Нас сканируют */
+						write(1, "pr1: scan()\n", 12);
+						scan(targ, &txBuf);
+					} else {
+						if ((unsigned char)rxBuf.buf[1] == targ->uso1)
+							p11 = pr_proc(targ->uso1, p11);
+						else if ((unsigned char)rxBuf.buf[1] == targ->uso2)
+							p12 = pr_proc(targ->uso2, p12);
+						else if ((unsigned char)rxBuf.buf[1] == targ->uso3)
+							p13 = pr_proc(targ->uso3, p13);
+						else if ((unsigned char)rxBuf.buf[1] == targ->uso4)
+							p14 = pr_proc(targ->uso4, p14);
+						else
+							break;
 
-					probot(targ, &txBuf);
-				}
+						probot(targ, &txBuf);
+					}
+					
+				} else if (rxBuf.buf[0] == (char)targ->adr2) {
+					/** PR2 */
+					if (rxBuf.wpos == 4) {
+						/** Нас сканируют */
+						write(1, "pr2: scan()\n", 12);
+						scan(targ, &txBuf);
+					} else {
+						if ((unsigned char)rxBuf.buf[1] == targ->uso1)
+							p21 = pr_proc(targ->uso1, p21);
+						else if ((unsigned char)rxBuf.buf[1] == targ->uso2)
+							p22 = pr_proc(targ->uso2, p22);
+						else if ((unsigned char)rxBuf.buf[1] == targ->uso3)
+							p23 = pr_proc(targ->uso3, p23);
+						else if ((unsigned char)rxBuf.buf[1] == targ->uso4)
+							p24 = pr_proc(targ->uso4, p24);
+						else
+							break;
+						
+						probot(targ, &txBuf);
+					}
+				} else
+					break;
 				
 				res = tx_pr(targ);
 				if (res < 0) {
@@ -170,7 +206,7 @@ void *actx_485(void *arg)
 				bo_log("actx_485(): timeout dst= %d", (unsigned int)rxBuf.buf[1]);
 				break;
 			default:
-				bo_log("actx_485(): state ??? fl= %d", get_rxFl(&rxBuf));
+				bo_log("actx_485(): state unknown fl= %d", get_rxFl(&rxBuf));
 				break;
 			}
 		}

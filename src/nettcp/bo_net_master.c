@@ -21,6 +21,8 @@ static struct {
 	int max_con;
 	/* макс кол-во запросов хран в логе*/
 	int log_size;
+	/* Watch dog file*/
+	char *wd_file;
 } servconf = {0};
 
 static void m_readConfig(TOHT *cfg, int n, char **argv);
@@ -34,17 +36,19 @@ static void m_addClientOut(struct bo_llsock *list, int servSock, fd_set *set,
 static void m_workClient(struct bo_llsock *list_in, struct bo_llsock *list_out,
 			   fd_set *r_set, fd_set *w_set, TOHT *tr);
 static int  m_recvClientMsg(int sock, TOHT *tr);
-static void m_sendClientMsg(int sock, TOHT *tr, struct bo_llsock *llist_out);
+/* static void m_sendClientMsg(int sock, TOHT *tr, struct bo_llsock *llist_out); */
 static void m_sendTabPacket(int sock, TOHT *tr, struct bo_llsock *list);
 static void m_repeatSendRoute(struct bo_llsock *list_out, TOHT *tr);
 static void m_delRoute(struct bo_sock *val, TOHT *tr);
 static void m_addSockToSet(struct bo_llsock *list_in, fd_set *r_set);
 static int  m_isClosed(struct bo_llsock *list_in, int sock);
+static void m_askSock(struct bo_llsock *list_out, TOHT *tr);
 
 /* Buffer for recieve data */
 static unsigned char *recvBuf;
 static int  recvBufLen = BO_MAX_TAB_BUF;
 static struct bo_cycle_arr *logArr;
+static char *wd_file = "master.life";
 /* ----------------------------------------------------------------------------
  * @brief	старт сервера, чтение конфига, созд списка сокетов(текущ подкл) 
  */
@@ -136,6 +140,7 @@ static void m_readConfig(TOHT *cfg, int n, char **argv)
 	servconf.queue_len = defQ;
 	servconf.max_con   = max_con;
 	servconf.log_size  = log_size;
+	servconf.wd_file   = wd_file;
 	if(n == 2) {
 		fileName = *(argv + 1);
 		cfg = cfg_load(fileName);
@@ -144,7 +149,8 @@ static void m_readConfig(TOHT *cfg, int n, char **argv)
 			servconf.port_out  = cfg_getint(cfg, "sock:port_out", defPout);
 			servconf.queue_len = cfg_getint(cfg, "sock:queue_len", defQ);
 			servconf.max_con   = cfg_getint(cfg, "sock:max_connect", max_con);
-			servconf.log_size   = cfg_getint(cfg, "log_pr:max_size", log_size);
+			servconf.log_size  = cfg_getint(cfg, "log_pr:max_size", log_size);
+			servconf.wd_file   = cfg_getstring(cfg, "wd:file", wd_file);
 			
 			f_log	  = cfg_getstring(cfg, "log:file", f_log);
 			f_log_old = cfg_getstring(cfg, "log:file_old", f_log_old);
@@ -156,6 +162,7 @@ static void m_readConfig(TOHT *cfg, int n, char **argv)
 		}
 		bo_setLogParam(f_log, f_log_old, nrow, maxrow);
 		bo_log("%s config[%s]", " INFO ", fileName);
+		bo_log("INFO wd:file[%s]", servconf.wd_file);
 	} else {
 		bo_setLogParam(f_log, f_log_old, nrow, maxrow);
 		bo_log("%s", " WARNING start with default config");
@@ -174,7 +181,8 @@ static struct bo_llsock *m_crtLL(int size)
 	return ll;
 }
 /* ----------------------------------------------------------------------------
- * @brief	
+ * @brief		Ждет наступления события у сокетов -> 
+ *			Читаем сообщение с сокета SET|LOG|RLO
  * @llist_in		список сокетов кот отпр измен мастеру
  * @llist_out		список сокетов кот прин измен от мастера
  * @tr			таблица роутов(для маршрутизации)
@@ -191,31 +199,35 @@ static void m_servWork(int sock_in, int sock_out,
 	fd_set r_set, w_set, e_set;
 	/* таймер на события */
 	struct timeval tval;
-
+	int cron_N = 0;
+	int chk_sock_N = 0;
+	
 	while(stop == 1) {
 		tval.tv_sec  = 0;
-		tval.tv_usec = 50;
+		tval.tv_usec = 100000;
 		FD_ZERO(&r_set);
 		FD_ZERO(&w_set);
 		FD_ZERO(&e_set);
 		FD_SET(sock_in,  &r_set);
 		FD_SET(sock_out, &r_set);
 		
+		cron_N++;
+		if(cron_N == 50) {
+			cron_N = 0;
+			inc_cron_life(servconf.wd_file);
+		}
 		m_addSockToSet(llist_in,  &r_set);
 		/* если сокет из того списка подаст сигнал на передачу 
 		 * значит его надо закрыть.*/
 		m_addSockToSet(llist_out, &r_set);
 		exec = select(maxdesc, &r_set, NULL, NULL, &tval);
+		
 		if(exec == -1) {
 			bo_log("bo_net_master.c->m_servWork() select errno[%s]",
 				strerror(errno));
 			bo_log("CRITICAL ERROR app will stop");
 			stop = -1;
-		} else if(exec == 0) {
-			/* если в списке есть устр которым не удалось отправить
-			 * таблицу повторяем отправку */
-			m_repeatSendRoute(llist_out, tr);
-		} else {
+		} else if(exec > 0){
 			dbgout("\n------ EVENT ->\n");
 			/* если событие произошло у серв сокетов in&out 
 			 * добавляем в список*/
@@ -224,13 +236,24 @@ static void m_servWork(int sock_in, int sock_out,
 			
 			dbgout("CHK SERV OUT \n");
 			m_addClientOut(llist_out, sock_out, &r_set, tr);
-			/*
-			dbgout("IN:    ");   bo_print_list_val(llist_in);
-			dbgout("\nOUT:   "); bo_print_list_val(llist_out); 
-			*/
+			
 			dbgout("\nCHK CLIENT   \n");
 			m_workClient(llist_in, llist_out, &r_set, &w_set, tr);
 			dbgout("------ END \n");
+		}
+		
+		if(exec > -1) {
+			chk_sock_N++;
+			if(chk_sock_N == 10) {
+			/*	dbgout("CHK SOCK OUT exec[%d]\n", exec); */
+				/* проверка соединений sock_out */
+				m_askSock(llist_out, tr);
+				/* если в списке есть устр которым не удалось отправить
+				* таблицу повторяем отправку */
+				m_repeatSendRoute(llist_out, tr);
+				chk_sock_N = 0;
+			/*	dbgout("CHK SOCK OUT END \n"); */
+			}
 		}
 	}
 	/* Очистить все клиент сокеты*/
@@ -240,12 +263,12 @@ static void m_servWork(int sock_in, int sock_out,
  * @brief	если событие произошло на sock то получаем сокет клиента и 
  *		вносим его в список 
  * @servSock    серверный сокет
- * @set       битовая маска возв  select
+ * @set         битовая маска возв  select
  */
 static void m_addClient(struct bo_llsock *list, int servSock, fd_set *set)
 {
-	
 	int sock = -1;
+	/* char ip[16] = {0}; */
 	/* провер подкл ли кто-нибудь на серверный сокет */
 	if(FD_ISSET(servSock, set) == 1) {
 		dbgout("m_addClient-> has connect ...\n");
@@ -257,6 +280,14 @@ static void m_addClient(struct bo_llsock *list, int servSock, fd_set *set)
 			 * чтобы искл блокировки */
 			bo_setTimerRcv2(sock, 5, 500);
 			bo_addll(list, sock);
+			/*
+			exec = bo_getip_bysock(list, sock, ip);
+			if(exec == 1) {
+				bo_log("INFO connect IN ip[%s][%d]", ip, sock);
+			} else {
+				bo_log("INFO connect IN ip[---]");
+			} 
+			 */ 
 		}
 	} else {
 		dbgout("m_addClient-> not serv sock \n");
@@ -270,6 +301,8 @@ static void m_addClientOut(struct bo_llsock *list, int servSock, fd_set *set,
 			   TOHT *tr)
 {
 	int sock = -1;
+	int exec = -1;
+	char ip[16] = {0};
 	/* провер подкл ли кто-нибудь на серверный сокет */
 	if(FD_ISSET(servSock, set) == 1) {
 		dbgout("m_addClientOut-> has connect ...\n");
@@ -281,6 +314,12 @@ static void m_addClientOut(struct bo_llsock *list, int servSock, fd_set *set,
 			 * чтобы искл блокировки */
 			bo_setTimerRcv2(sock, 5, 500);
 			bo_addll(list, sock);
+			exec = bo_getip_bysock(list, sock, ip);
+			if(exec == 1) {
+				bo_log("INFO connect OUT ip[%s]", ip);
+			} else {
+				bo_log("INFO connect OUT ip[---]");
+			}
 			/* m_sendClientMsg(sock, tr, list); */
 			m_sendTabPacket(sock, tr, list);
 		}
@@ -328,7 +367,8 @@ static void m_workClient(struct bo_llsock *list_in, struct bo_llsock *list_out,
 		sock = val->sock;
 		if(FD_ISSET(sock, r_set) == 1) {
 			/* реализовать в потоках ??? <- 0x42 */
-			dbgout("sock[%d] set \n", sock);
+			dbgout("sock[%d] ip[%s] set \n", sock, val->ip);
+			bo_log("INFO disconnect OUT ip[%s]", val->ip);
 			m_delRoute(val, tr);
 			bo_closeSocket(sock);
 			bo_del_bysock(list_out, sock);
@@ -355,7 +395,6 @@ static void m_workClient(struct bo_llsock *list_in, struct bo_llsock *list_out,
 				}
 				i = exec;
 			}
-			
 			dbgout("\n");
 		}
 	}
@@ -394,11 +433,20 @@ static int m_isClosed(struct bo_llsock *list, int sock)
 {
 	int fl = -1;
 	int ans = 1;
+	/*
+	char ip[16] = {0};
+	int exec = -1; 
+	 */
 	char buf;
 	fl = recv(sock, &buf, 1, MSG_PEEK);
 	if(fl < 1) {
 	/* сокет закрыт удаляем из списка */
-		printf("DEL SOCK[%d] m_isClosed\n", sock);
+		dbgout("DEL SOCK[%d] m_isClosed\n", sock);
+		/*
+		exec = bo_getip_bysock(list, sock, ip);
+		if(exec == 1)	bo_log(" INFO disconnect IN ip[%s]", ip);
+		else bo_log(" INFO disconnect IN ip[ --- ]");
+		*/
 		bo_closeSocket(sock);
 		bo_del_bysock(list, sock);
 		ans = -1;
@@ -445,7 +493,7 @@ static int m_recvClientMsg(int sock, TOHT *tr)
 /* ----------------------------------------------------------------------------
  * @DEPRICATED
  * @brief	отправ всю таблицу роутов клиенту(построчно)
- */
+ 
 static void m_sendClientMsg(int sock, TOHT *tr, struct bo_llsock *list)
 {
 	int i = 0;
@@ -454,14 +502,13 @@ static void m_sendClientMsg(int sock, TOHT *tr, struct bo_llsock *list)
 	int valSize = 0;
 	int crc = 0;
 	int exec = 0;
-	char ip[BO_IP_MAXLEN] = "null"; /* listsock.h define */
+	char ip[BO_IP_MAXLEN] = "null"; 
 	unsigned char cbuf[2] = {0};
 	int packetSize = 23;
 	int p_len = 0;
 	char packet[packetSize];
 	char dbg[packetSize-1];
 	dbg[packetSize-2] = '\0';
-	/* packet = [XXX:XXX.XXX.XXX.XXX:XXX] / [XXX:NULL];  */
 	
 	dbgout("отправка табл роутов sock[%d]\n", sock);
 	for(i = 0; i < tr->size; i++) {
@@ -472,7 +519,6 @@ static void m_sendClientMsg(int sock, TOHT *tr, struct bo_llsock *list)
 			valSize = strlen(val);
 			p_len = valSize;
 			if(valSize <= packetSize) {
-				/*dbgout("send->val[%s] %d\n", val, valSize);*/
 				memcpy(packet, key, 3);
 				packet[3] = ':';
 				memcpy(packet + 4, val, valSize);
@@ -502,9 +548,10 @@ static void m_sendClientMsg(int sock, TOHT *tr, struct bo_llsock *list)
 		}
 	}
 }
+*/
 
 /* ----------------------------------------------------------------------------
- * @brief	отправка таблицы одним пакетом
+ * @brief	отправка таблицы одним пакетом, устан флаг отправки
  */
 static void m_sendTabPacket(int sock, TOHT *tr, struct bo_llsock *list)
 {
@@ -525,17 +572,20 @@ static void m_sendTabPacket(int sock, TOHT *tr, struct bo_llsock *list)
 	
 	if(tab_not_empty == 1) {
 		exec = bo_master_sendTab(sock, tr, (char *)recvBuf);
-		dbgout("\n==== SEND TAB ====\n");
+		bo_getip_bysock(list, sock, ip);
+		bo_log("\n==== SEND TAB ====\n");
+		bo_log("To: ip[%s]\n", ip);
 		for(i = 0; i < tr->size; i++) {
 			key = *(tr->key + i);
 			if(key != NULL) {
 				val = *(tr->val + i);
-				dbgout("[%s:%s]\n", key, val);
+				bo_log("[%s:%s]\n", key, val);
 			}
 		}
-		dbgout("==== SEND END ====\n");
+		bo_log("==== SEND END ====\n");
+		
 		if(exec == -1) {
-			bo_getip_bysock(list, sock, ip);
+			
 			bo_setflag_bysock(list, sock, -1);
 			bo_log("m_sendTabPacket() can't send data to ip[%s]", ip);
 		} else {
@@ -545,7 +595,7 @@ static void m_sendTabPacket(int sock, TOHT *tr, struct bo_llsock *list)
 	
 }
 /* ----------------------------------------------------------------------------
- * @brief 
+ * @brief	повторно отправ таблицу роутов 
  */
 static void m_repeatSendRoute(struct bo_llsock *list_out, TOHT *tr)
 {
@@ -558,10 +608,39 @@ static void m_repeatSendRoute(struct bo_llsock *list_out, TOHT *tr)
 	while(i != -1) {
 		sock = -1;
 		exec = bo_get_val(list_out, &val, i);
+		/* проверяем флаг отправки */
 		if(val->flag == -1 ) {
 			sock = val->sock;
-		/*	m_sendClientMsg(sock, tr, list_out); */
 			m_sendTabPacket(sock, tr, list_out);
+		}
+		i = exec;
+	}
+}
+
+/* ----------------------------------------------------------------------------
+ * @brief	отправл ASK запрос, если возв ошибка значит сокет
+ */
+static void m_askSock(struct bo_llsock *list_out, TOHT *tr)
+{
+	int i    = -1;
+	int exec = -1, ask = -1;
+	int sock = -1;
+	struct bo_sock *val = NULL;
+	
+	i = bo_get_head(list_out);
+	while(i != -1) {
+		sock = -1;
+		exec = bo_get_val(list_out, &val, i);
+		sock = val->sock;
+		ask = -1;
+
+		ask = bo_chkSock(sock);
+		/* dbgout("ip[%s] ask[%d]\n", val->ip, ask); */
+		if(ask == -1) {
+			bo_log("master INFO disconnect OUT ip[%s]", val->ip);
+			m_delRoute(val, tr);
+			bo_closeSocket(sock);
+			bo_del_bysock(list_out, sock);
 		}
 		i = exec;
 	}

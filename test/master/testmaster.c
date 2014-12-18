@@ -93,7 +93,7 @@ static void *cltSendRoute(void *arg)
 	if(exec == -1) {printf("ERR cltSendRoute bo_closeSocket");goto error;}
 	ans = 1;
 	error:
-	return ans;
+	return (void*)ans;
 }
 
 /* ----------------------------------------------------------------------------
@@ -324,6 +324,56 @@ TEST(master, sendNULLTest) /* NEED RUN SERVER */
 	TEST_ASSERT_EQUAL(1, ans);
 }
 
+TEST(master, chkSockTest) /* NEED RUN SERVER */
+{
+	printf("chkSockTest() ... run\n");
+	int ans = -1, exec = -1;
+	int sock = -1;
+	
+	sock = bo_setConnect("127.0.0.1", 8890);
+	if(sock == -1) {
+		printf("bo_setConnect ERROR\n"); goto exit;
+	}
+	
+	exec = bo_chkSock(sock);
+	if(exec == 1) ans = 1;
+	else {
+		printf("bo_chkSock() ERROR\n");
+	}
+	
+	exit:
+	TEST_ASSERT_EQUAL(1, ans);
+}
+
+TEST(master, chkAskTest) /* MOCK NEED RUN SERVER */
+{
+	printf("chkSockTest() ... run\n");
+	int ans = -1, exec = -1;
+	int sock = -1;
+	char buf[3] = {0};
+	
+	sock = bo_setConnect("127.000.000.001", 8891);
+	bo_setTimerRcv2(sock, 5, 100);
+	if(sock == -1) {
+		printf("bo_setConnect ERROR\n"); goto exit;
+	}
+	
+	exec = bo_recvAllData(sock, (unsigned char *)buf, 3, 3);
+	if(exec > -1) {
+		if(strstr(buf, "ASK")) ans = 1;
+		else dbgout("chkAskTest() recv bad ans"); 
+	} else {
+		printf("exec[%d] errno[%s]", exec, strerror(errno));
+		printf("chkAskTest() ERROR\n");
+	}
+	
+	exec = bo_sendAllData(sock, (unsigned char *)"ASK", 3);
+	
+	sleep(5);
+	exit:
+	TEST_ASSERT_EQUAL(1, ans);
+}
+
 TEST(master, sendLogTest) /* NEED RUN SERVER */
 {
 	printf("\nsendLogTest ... RUN\n");
@@ -411,6 +461,8 @@ TEST(master, set2000getLast) /* NEED RUN SERVER */
 	int i = 0;
 	char *str;
 	
+	gen_tbl_crc16modbus();
+	
 	for(i = 0; i < 2000; i++) {
 		str = log[i];
 		sprintf(str, "%d %s", i, "0x42 .....");
@@ -419,7 +471,8 @@ TEST(master, set2000getLast) /* NEED RUN SERVER */
 	int in = bo_setConnect("127.0.0.1", 8890);
 	if(in == -1) { printf("bo_setConnect ERROR\n"); goto exit; }
 	
-	int crc; unsigned char crcTxt[2] = {0}; 
+	int crc; 
+	unsigned char crcTxt[2] = {0}; 
 	char buf[BO_ARR_ITEM_VAL] = {0};
 	
 	int len; int exec = -1;
@@ -432,7 +485,7 @@ TEST(master, set2000getLast) /* NEED RUN SERVER */
 		memcpy(buf, log[i], len);
 		buf[len] = crcTxt[0];
 		buf[len + 1] = crcTxt[1];
-
+		printf("crc[%d][%02x %02x]\n", crc, crcTxt[0], crcTxt[1]);
 		exec = bo_sendLogMsg(in, buf, len + 2);
 		if(exec == -1) {
 			printf("bo_sendLogMsg() ERROR\n");
@@ -449,7 +502,8 @@ TEST(master, set2000getLast) /* NEED RUN SERVER */
 	}
 	printf("\n");
 	
-	if(exec != strlen(log[1999])) { printf("bad exec[%d]!=len[%d] ERROR\n", exec, strlen(log)); goto exit;}
+	if(exec != strlen(log[1999])) 
+	{ printf("bad exec[%d]!=len[%d] ERROR\n", exec, strlen(log[1999])); goto exit;}
 	
 	printf("log[1999][");
 	for(i = 0; i<strlen(log[1999]); i++) {

@@ -57,10 +57,10 @@ int bo_len_ber_size (unsigned char *len_ber)
 	
 	if(n < 128) ans = 1;
 	else {
-		ans = 2;
 		/* удаляем старший бит согласно BER */
 		n = n ^ 0x80;
 		ans = (unsigned int)n;
+		ans++;
 	}
 	return ans;
 }
@@ -79,8 +79,7 @@ unsigned int bo_uncode_len(unsigned char *len_ber)
 	if(size == 1) {
 		len = *(unsigned char *)len_ber;
 	} else {
-		for(i = 1; i != size + 1; i++) {
-			if( i != 1) len <<= 8;
+		for(i = 1; i < size; i++) {
 			buf = (unsigned char)*(len_ber + i);
 			len = len |  (unsigned int)buf;
 		}
@@ -94,16 +93,44 @@ unsigned int bo_uncode_len(unsigned char *len_ber)
  */
 int bo_int_size(int num)
 {
-	int ans = 1;
-	if(num < 128) {
-		ans = 1;
-	} else {
-		while(num != 0) {
-			num >>= 8;
-			ans++;
-		}
+	int len = 0, i = 0;
+	int hb = 0;
+	
+	i = (num >> 24) & 0xFF;
+	if(i > 0 ) {
+		len++;
+		hb = 1;
 	}
-	return ans;
+	
+	i = (num >> 16) & 0xFF;
+	if(hb == 1 ) {
+		len++;
+	} else if( i > 0) {
+		if(i > 127) {
+			len++;
+		}
+		len++;
+		hb = 1;
+	}
+	
+	i = (num >> 8) & 0xFF;
+	if(hb == 1 ) {
+		len++;
+	} else if( i > 0) {
+		if(i > 127) {
+			len++;
+		}
+		len++;
+		hb = 1;
+	}
+
+	i = num & 0xFF;
+	if( (i > 127) & (hb == 0) ) {
+		len++;
+	}
+	len++;
+
+	return len;
 }
 
 /* ----------------------------------------------------------------------------
@@ -171,6 +198,20 @@ int bo_code_int(unsigned char *buf, int num)
 }
 
 /* ----------------------------------------------------------------------------
+ * @brief	раскод-ем unsigned integer
+ * @n		кол-во байт занимает число
+ * @return	 [integer]
+ */
+int bo_uncode_int(unsigned char *buf, int n)
+{
+	int i = 0, val = 0;
+	for(; i < n; i++) {
+		val <<= 8;
+		val += *(buf + i);
+	}
+	return val;
+}
+/* ----------------------------------------------------------------------------
  * @brief	код-ем OCTET STRING
  * @return	кол-во байт занимает строка	
  */
@@ -191,7 +232,7 @@ int bo_code_string(unsigned char *buf, unsigned char *str, int len)
 /* ----------------------------------------------------------------------------
  * @brief	кол-во байт для хран одно числа
  */
-static int bo_oid_size(int num)
+int bo_oid_size(int num)
 {
     int len = 1;
     
@@ -220,7 +261,7 @@ int bo_oid_length(int *oid, int n)
 }
 
 /* ----------------------------------------------------------------------------
- * @return      возвр колво байт, которые занял oid в buf 
+ * @return      возвр кол-во байт, которые занял oid в buf 
  */
 int bo_code_oid(int oid, unsigned char *buf)
 {
@@ -232,7 +273,7 @@ int bo_code_oid(int oid, unsigned char *buf)
 	}
 	
 	len = bo_oid_size(oid);
-	
+	ans = len;
 	for (i = len - 1; i >= 0; i--) {
 		v = oid & 0x7F;
 		if (i != len - 1) v |= 0x80;
@@ -242,4 +283,30 @@ int bo_code_oid(int oid, unsigned char *buf)
 	exit:
         return ans;
 }
+
+/* ----------------------------------------------------------------------------
+ * @brief	parse oid
+ * @val		oid
+ * @return	размер oid
+ */
+int bo_uncode_oid(unsigned char *buf, unsigned int *val)
+{
+	int len = 1; unsigned int t = 0, i = 0;
+	unsigned char *temp = NULL;
+	/* ДЛИНА OID */
+	temp = buf;
+	while( *temp > 127) {
+		len++;
+		temp = temp + 1; 
+	}
+	
+	for(i = 0; i < len; i++) {
+		temp = buf + i;
+		t = (t<<7) + (*temp & 0x7F);
+	}
+	
+	*val = t;
+	return len;
+}
+
 /* 0x42 */

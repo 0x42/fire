@@ -10,6 +10,7 @@
 #define _USO_H
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <pthread.h>
 
@@ -20,14 +21,13 @@
 struct actx_thread_arg {
 	int port;
 	int tout;
-	int ncmds;
-	int m;
 	int adr1;
 	int logger1;
 	int adr2;
 	int logger2;
 	unsigned int lline;
 	unsigned int nllines;
+	int test_ln;
 	int cdaId;
 	int cdaDest;
 	int cdnsId;
@@ -37,6 +37,7 @@ struct actx_thread_arg {
 	int pr1;
 	int pr2;
 	int pr3;
+	int pr4;
 };
 
 pthread_mutex_t	mx_actx;
@@ -60,6 +61,8 @@ void uso_answer_error(struct actx_thread_arg *targ, struct thr_tx_buf *b);
 void uso_quNetStat(struct actx_thread_arg *targ, struct thr_tx_buf *b);
 void uso_quLog(struct actx_thread_arg *targ, struct thr_tx_buf *b,
 	       unsigned int line, unsigned int nlines);
+
+void *actx_485(void *arg);
 
 
 #endif	/* _USO_H */

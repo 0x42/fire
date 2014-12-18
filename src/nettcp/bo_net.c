@@ -167,7 +167,6 @@ error:
 
 /* ----------------------------------------------------------------------------
  * @brief	 отпр SET|LEN|DATA -> ждем ответ OK 
- *					
  * @return	[-1] - error; [1] - OK  
  */
 int bo_sendSetMsg(int sock, char *data, unsigned int dataSize)
@@ -269,6 +268,37 @@ int bo_sendXXXMsg(int sock, char *head, char *data, int dataSize)
 	end:
 	return ans;
 }
+
+/* ----------------------------------------------------------------------------
+ * @brief	отправка ASK серверу ждем ответ ASK от сервера
+ * @return	[-1] ERROR [1] получен ответ
+ */
+int bo_chkSock(int sock)
+{
+	int ans = -1, exec = -1;
+	char head[3] = "ASK";
+	char buf[3] = {0};
+	
+	exec = bo_sendAllData(sock, (unsigned char*)head, 3);
+	if(exec == -1) {
+		bo_log("bo_chkSock() %s send[head] errno[%s]",
+			"WARN",
+			strerror(errno));
+		goto end;
+	}
+	
+	exec = bo_recvAllData(sock, (unsigned char*)buf, 3, 3);
+	if(exec == -1) {
+		bo_log("bo_chkSock() WARN don't recv ans");
+	} else {
+		if(strstr(buf, "ASK")) ans = 1;
+		else bo_log("bo_chkSock() recv bad ans"); 
+	}
+	
+end:	
+	return ans;
+}
+
 /* ----------------------------------------------------------------------------
  * @brief	созд сокет 
  */

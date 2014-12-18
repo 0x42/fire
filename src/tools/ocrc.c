@@ -51,7 +51,6 @@ static unsigned short reflect(unsigned short reg, unsigned short w)
  * Создает таблицу для вычисления контрольной суммы CRC16-Modbus на
  * основе данных параметров.
  */
-/* void gen_tbl_crc16modbus(unsigned short poly, unsigned short width, int refin)*/
 void gen_tbl_crc16modbus()
 {
 	unsigned short msb_mask = 0x1 << (width - 1);
@@ -88,14 +87,7 @@ void gen_tbl_crc16modbus()
  *
  * Вычисляет контрольную сумму CRC16-Modbus входной строки на
  * основе данных параметров.
-
-unsigned int crc16modbus(char *str,
-			 int len,
-			 unsigned short init,
-			 unsigned short width,
-			 int refin,
-			 int refout,
-			 unsigned short xorout) */
+ */
 
 unsigned int crc16modbus(char *str, int len)
 {
