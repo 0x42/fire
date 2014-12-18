@@ -7,9 +7,9 @@
 
 int apsv[256] = {0};
 int apsv_ln = 0;
+unsigned int p1, p2;
 
-unsigned int p11, p12, p13, p14;
-unsigned int p21, p22, p23, p24;
+int spr = 0;
 
 
 int tx_uso(struct actx_thread_arg *targ)
@@ -64,13 +64,14 @@ int rx_uso(struct actx_thread_arg *targ)
 		
 		for (i=0; i<n; i++) {
 			/* bo_log("rx_485: buf[i]= %d", (unsigned int)buf[i]);
-			printf("0x%02x\n", (unsigned char)buf[i]); */
+			   printf("0x%02x\n", (unsigned char)buf[i]); */
 			
 			put_rxFl(&rxBuf,
 				 read_byte(&rxBuf, buf[i], get_rxFl(&rxBuf)));
+
 			if (get_rxFl(&rxBuf) >= RX_DATA_READY) break;		
 		}
-
+		
 		if (get_rxFl(&rxBuf) >= RX_DATA_READY) {
 			/** Данные приняты */
 			break;
@@ -80,86 +81,86 @@ int rx_uso(struct actx_thread_arg *targ)
 	return 0;
 }
 
-int uso1_proc(struct actx_thread_arg *targ, int ncmd)
+void uso_proc(struct actx_thread_arg *targ)
 {
 	int i;
+	int fl = 1;
 
-	if (ncmd == 1) {
+	if (spr) {
+		spr = 0;
 		for (i=0; i<apsv_ln; i++)
 			if (apsv[i] == targ->pr1) {
-				p11 = uso(targ, &txBuf, p11, targ->pr1);
-				break;
-			}
-	} else if (ncmd == 2) {
-		for (i=0; i<apsv_ln; i++)
-			if (apsv[i] == targ->pr2) {
-				p12 = uso(targ, &txBuf, p12, targ->pr2);
-				break;
-			}
-	} else if (ncmd == 3) {
-		for (i=0; i<apsv_ln; i++)
-			if (apsv[i] == targ->pr3) {
-				p13 = uso(targ, &txBuf, p13, targ->pr3);
-				break;
-			}
-	} else if (ncmd == 4) {
-		for (i=0; i<apsv_ln; i++)
-			if (apsv[i] == targ->pr4) {
-				p14 = uso(targ, &txBuf, p14, targ->pr4);
+				p1 = uso(targ, &txBuf, p1, targ->pr1);
+				fl = 0;
+				printf("pr_proc(): sch=%d dst=%d src=%d [%02x %02x %02x %02x] %c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c\n]",
+				       p1,
+				       (unsigned char)txBuf.buf[0],
+				       (unsigned char)txBuf.buf[1],
+				       (unsigned char)txBuf.buf[2],
+				       (unsigned char)txBuf.buf[3],
+				       (unsigned char)txBuf.buf[4],
+				       (unsigned char)txBuf.buf[5],
+	       
+				       (unsigned char)txBuf.buf[6],
+				       (unsigned char)txBuf.buf[7],
+				       (unsigned char)txBuf.buf[8],
+				       (unsigned char)txBuf.buf[9],
+				       (unsigned char)txBuf.buf[10],
+				       (unsigned char)txBuf.buf[11],
+				       (unsigned char)txBuf.buf[12],
+				       (unsigned char)txBuf.buf[13],
+				       (unsigned char)txBuf.buf[14],
+				       (unsigned char)txBuf.buf[15],
+				       (unsigned char)txBuf.buf[16],
+				       (unsigned char)txBuf.buf[17],
+				       (unsigned char)txBuf.buf[18],
+				       (unsigned char)txBuf.buf[19],
+				       (unsigned char)txBuf.buf[20],
+				       (unsigned char)txBuf.buf[21],
+				       (unsigned char)txBuf.buf[22],
+				       (unsigned char)txBuf.buf[23]
+					);
 				break;
 			}
 	} else {
-		/**
-		   uso_answer(targ, &txBuf); */
-	}
-	
-	if (ncmd < apsv_ln)
-		ncmd++;
-	else
-		ncmd = 1;
-
-	return ncmd;
-}
-
-int uso2_proc(struct actx_thread_arg *targ, int ncmd)
-{
-	int i;
-
-	if (ncmd == 1) {
-		for (i=0; i<apsv_ln; i++)
-			if (apsv[i] == targ->pr1) {
-				p21 = uso(targ, &txBuf, p21, targ->pr1);
-				break;
-			}
-	} else if (ncmd == 2) {
+		spr = 1;
 		for (i=0; i<apsv_ln; i++)
 			if (apsv[i] == targ->pr2) {
-				p22 = uso(targ, &txBuf, p22, targ->pr2);
+				p2 = uso(targ, &txBuf, p2, targ->pr2);
+				fl = 0;
+				printf("pr_proc(): sch=%d dst=%d src=%d [%02x %02x %02x %02x] %c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c\n]",
+				       p1,
+				       (unsigned char)txBuf.buf[0],
+				       (unsigned char)txBuf.buf[1],
+				       (unsigned char)txBuf.buf[2],
+				       (unsigned char)txBuf.buf[3],
+				       (unsigned char)txBuf.buf[4],
+				       (unsigned char)txBuf.buf[5],
+	       
+				       (unsigned char)txBuf.buf[6],
+				       (unsigned char)txBuf.buf[7],
+				       (unsigned char)txBuf.buf[8],
+				       (unsigned char)txBuf.buf[9],
+				       (unsigned char)txBuf.buf[10],
+				       (unsigned char)txBuf.buf[11],
+				       (unsigned char)txBuf.buf[12],
+				       (unsigned char)txBuf.buf[13],
+				       (unsigned char)txBuf.buf[14],
+				       (unsigned char)txBuf.buf[15],
+				       (unsigned char)txBuf.buf[16],
+				       (unsigned char)txBuf.buf[17],
+				       (unsigned char)txBuf.buf[18],
+				       (unsigned char)txBuf.buf[19],
+				       (unsigned char)txBuf.buf[20],
+				       (unsigned char)txBuf.buf[21],
+				       (unsigned char)txBuf.buf[22],
+				       (unsigned char)txBuf.buf[23]
+					);
 				break;
 			}
-	} else if (ncmd == 3) {
-		for (i=0; i<apsv_ln; i++)
-			if (apsv[i] == targ->pr3) {
-				p23 = uso(targ, &txBuf, p23, targ->pr3);
-				break;
-			}
-	} else if (ncmd == 4) {
-		for (i=0; i<apsv_ln; i++)
-			if (apsv[i] == targ->pr4) {
-				p24 = uso(targ, &txBuf, p24, targ->pr4);
-				break;
-			}
-	} else {
-		/**
-		   uso_answer(targ, &txBuf); */
 	}
 	
-	if (ncmd < apsv_ln)
-		ncmd++;
-	else
-		ncmd = 1;
-
-	return ncmd;
+	if (fl) uso_quNetStat(targ, &txBuf);
 }
 
 void uso_printLog()
@@ -206,8 +207,14 @@ void uso_printLog()
 		strncat(data, ":", 1);
 		
 		for (i=0; i<dsz; i++) {
-			sprintf(dt, " 0x%02x", rxBuf.buf[20+ln+i]);
-			strncat(data, dt, 5);
+			if ((rxBuf.buf[20+ln+i] > 32) &&
+			    (rxBuf.buf[20+ln+i] < 128)) {
+				sprintf(dt, "%c", rxBuf.buf[20+ln+i]);
+				strncat(data, dt, 1);
+			} else {
+				sprintf(dt, " 0x%02x", rxBuf.buf[20+ln+i]);
+				strncat(data, dt, 5);
+			}
 		}
 		
 		/* printf("%u[%u] %s\n", l, ptm, data); */
@@ -218,60 +225,119 @@ void uso_printLog()
 	}
 }
 
-int uso_session(struct actx_thread_arg *targ, const char *msg,
-		int ncmd, int adr, int logger)
+void uso_print_ms() 
 {
-	int i;
+	char data[1024];
+	char dt[2] = {0};
+	
+	int j;
+	unsigned int ln;
+	
+	memset(data, 0, 1024);
+	ln = (rxBuf.buf[10] & 0xff) | (rxBuf.buf[11] << 8);
+
+	for (j=0; j<ln; j++) {
+		/*
+		sprintf(dt, "%c", (unsigned char)rxBuf.buf[12+j]);
+		strncat(data, dt, 1);
+		*/
+		data[j] = (unsigned char)rxBuf.buf[12+j];
+	}
+
+	bo_log("uso_print_ms");
+	bo_log("data [%s]", data);
+	
+	printf("dst=[%d] <- src=[%d] [%s]\n",
+	       (unsigned char)rxBuf.buf[0],
+	       (unsigned char)rxBuf.buf[1],
+	       data);
+}
+
+int uso_session(struct actx_thread_arg *targ, int s)
+{
+	int i, j;
+	int n;
+	int tst;
 
 	if (rxBuf.buf[2] == (char)targ->cdaId) {
-		if (logger)
-			uso_quLog(targ, &txBuf, targ->lline, targ->nllines);
-		else
+		if (s) {
+			s = 0;
+			if (targ->logger)
+				uso_quLog(targ, &txBuf, targ->lline, targ->nllines);
+			else if (targ->snmp_q)
+				uso_quSNMP(targ, &txBuf);
+			else
+				uso_answer(targ, &txBuf);
+		} else {
+			s = 1;
 			if (apsv_ln > 0) {
-				if (adr == targ->adr1)
-					ncmd = uso1_proc(targ, ncmd);
-				else if (adr == targ->adr2)
-					ncmd = uso2_proc(targ, ncmd);
-				else
-					bo_log("unknown adr= %d", adr);
+				if (rxBuf.buf[4] == (char)1) {
+					/** Ответ от устройства */ 
+					printf("uso_session: operation complete\n");
+					uso_answer(targ, &txBuf);
+				} else {
+					/** Послать запрос устройству */
+					printf("uso_session: next zapros\n");
+					uso_proc(targ);
+				}
 			} else {
-				bo_log("%s answer apsv= {}", msg);
+				bo_log("USO: answer apsv= {}");
 				uso_answer(targ, &txBuf);
 			}
+		}
+		
+	} else if (rxBuf.buf[2] == (char)targ->cdmsId) {
+		write(1, "USO: magistral status()\n", 24);
+		uso_print_ms();
+		/* uso_answer(targ, &txBuf); */
 	} else if (rxBuf.buf[2] == (char)targ->cdnsId) {
-		/* write(1, "uso: netstatus()\n", 17); */
-		apsv_ln = rxBuf.buf[5];
-		for (i=0; i<apsv_ln; i++)
-			apsv[i] = rxBuf.buf[6+i];
-		/* bo_log("uso: netstatus answer"); */
+		/* write(1, "USO: netstatus()\n", 17); */
+		/**
+		 * adr: 15 -> bit adr: 1000 0000 0000 0000
+		 *                     |                 |
+		 *                    15                 0
+		 */
+		n = rxBuf.buf[5];
+		apsv_ln = 0;
+		memset(apsv, 0, 256);
+		
+		for (i=n-1; i>=0; i--)
+			for (j=0; j<8; j++) {
+				tst = (rxBuf.buf[6+i] & (1<<j));
+				if (tst > 0) {
+					/* bo_log("uso: netstatus answer (adr=%d)",
+					   (n - 1 - i) * 8 + j); */
+					apsv[apsv_ln] = (n - 1 - i) * 8 + j;
+					apsv_ln++;
+				}
+			}
+		
+		/* bo_log("uso: netstatus answer (apsv_ln=%d)",
+		   apsv_ln); */
+		write(1, "uso_session: cdns\n", 18);
 		uso_answer(targ, &txBuf);
 	} else if (rxBuf.buf[2] == (char)targ->cdquLogId) {
 		/** Print Log */
-		uso_printLog();
+		if (targ->logger) uso_printLog();
+		write(1, "uso_session: qulog\n", 19);
 		uso_answer(targ, &txBuf);
 	} else {
-		bo_log("%s ??? id= %d", msg, (unsigned int)rxBuf.buf[2]);
+		bo_log("USO: ??? id= %d", (unsigned int)rxBuf.buf[2]);
+		write(1, "uso_session: error\n", 19);
 		uso_answer_error(targ, &txBuf);
 	}
 
-	return ncmd;
+	return s;
 }
 
 void *actx_485(void *arg)
 {
 	struct actx_thread_arg *targ = (struct actx_thread_arg *)arg;
-	int ncmd1 = 1;
-	int ncmd2 = 1;
 	int res;
-
-	p11 = 1;
-	p12 = 1;
-	p13 = 1;
-	p14 = 1;
-	p21 = 1;
-	p22 = 1;
-	p23 = 1;
-	p24 = 1;
+	int s = 0;
+	
+	p1 = 1;
+	p2 = 1;
 	
 	write(1, "uso:\n", 5);
 
@@ -282,42 +348,19 @@ void *actx_485(void *arg)
 			break;
 		}
 		
-		if ((rxBuf.buf[0] == (char)targ->adr1) ||
-		    (rxBuf.buf[0] == (char)targ->adr2)) {
+		if (rxBuf.buf[0] == (char)targ->adr) {
 			switch (get_rxFl(&rxBuf)) {
 			case RX_DATA_READY:
 				/** USO */
-				if (rxBuf.buf[0] == (char)targ->adr1) {
-					/** USO1 */
-					if (rxBuf.wpos == 4) {
-						/** Нас сканируют */
-						write(1, "uso1: scan()\n", 13);
-						scan(targ, &txBuf);
+				if (rxBuf.wpos == 4) {
+					/** Нас сканируют */
+					write(1, "uso: scan()\n", 13);
+					scan(targ, &txBuf);
 					
-					} else {
-						write(1, "uso1: active()\n", 15);
-						ncmd1 = uso_session(targ, "USO1:",
-								    ncmd1,
-								    targ->adr1,
-								    targ->logger1);
-					}
-				
-				} else if (rxBuf.buf[0] == (char)targ->adr2) {
-					/** USO1 */
-					if (rxBuf.wpos == 4) {
-						/** Нас сканируют */
-						write(1, "uso2: scan()\n", 13);
-						scan(targ, &txBuf);
-					
-					} else {
-						write(1, "uso2: active()\n", 15);
-						ncmd2 = uso_session(targ, "USO2:",
-								    ncmd2,
-								    targ->adr2,
-								    targ->logger2);
-					}
-				} else
-					break;
+				} else {
+					write(1, "uso: active()\n", 15);
+					s = uso_session(targ, s);
+				}
 				
 				res = tx_uso(targ);
 				if (res < 0) {

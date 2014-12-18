@@ -13,98 +13,6 @@
 
 
 /**
- * trx - Передача кадра данных активному устройству сети RS485 и
- *       получение от него ответа.
- * @targ: Указатель на структуру chan_thread_arg{}.
- * @return  0- успех, -1 неудача.
- */
-int trx(struct chan_thread_arg *targ)
-{
-	char tbuf[BUF485_SZ];  /** Буфер передатчика RS485 */
-	char buf[BUF485_SZ];  /** Буфер приемника RS485 */
-	int res;
-
-	/** Tx */
-	res = writer(&txBuf, tbuf, targ->port);	
-	if (res < 0) return -1;
-
-	/** Rx */	
-	put_rxFl(&rxBuf, RX_WAIT);  /** Состояние приема - 'ожидание данных' */
-	rxBuf.wpos = 0;  /** Позиция записи в начало буфера приемника */
-	res = 1;
-	
-	while (res) {
-		res = reader(&rxBuf, buf, targ->port, targ->tout);
-		if (res < 0) return -1;
-	}
-	
-	return 0;
-}
-
-/**
- * scan - Опрос устройств на сети RS485 (порт 1).
- * @targ: Указатель на структуру chan_thread_arg{}.
- * @dst:  Адрес устройства.
- * @return  0- успех, -1 неудача.
- *
- * Опрос производится в пределах заданного диапазона адресов,
- * прописанного в конфигурационном файле.
- * Если устройство отвечает на запрос в пределах отведенного времени, то
- * его адрес прописывается в локальной таблице маршрутов.
- * Если устройство, не отвечает на запрос, то оно удаляется из
- * локальной таблицы маршрутов.
- */
-int scan(struct chan_thread_arg *targ, int dst)
-{
-	int res;
-#ifdef __PRINT__
-	char a[4];
-#endif
-
-	prepare_cadr_scan(targ, &txBuf, dst);
-
-	/** Данные для передачи подготовлены */
-	res = trx(targ);
-	if (res < 0) return -1;
-	
-	if ((get_rxFl(&rxBuf) >= RX_DATA_READY) &&
-	    ((rxBuf.buf[1] & 0xFF) == dst)) {
-		switch (get_rxFl(&rxBuf)) {
-		case RX_DATA_READY:
-			put_rtbl(targ, &dstBuf, dst);
-#ifdef __PRINT__
-			memset(a, 0, 3);		
-			sprintf(a, "%d", dst);
-			write(1, a, 4);
-#endif
-			break;
-		case RX_ERROR:
-			/** Ошибка кадра */
-			bo_log("scan(): Cadr Error !");
-			break;
-		case RX_TIMEOUT:
-			/** Текущее устройство не отвечает,
-			 * вычеркиваем его из списка. */
-			bo_log("scan(): timeout dst= %d", dst);
-			remf_rtbl(targ, &dstBuf, dst);
-#ifdef __PRINT__
-			write(1, ".", 1);
-#endif
-			break;
-		default:
-			bo_log("scan(): state ??? fl= %d", get_rxFl(&rxBuf));
-			break;
-		}
-	} else {
-#ifdef __PRINT__
-		write(1, "-", 1);
-#endif
-	}
-
-	return 0;
-}
-
-/**
  * active_netStat - Запрос конфигурации сети RS485.
  * @targ: Указатель на структуру chan_thread_arg{}.
  * @dst:  Адрес устройства.
@@ -116,14 +24,17 @@ int scan(struct chan_thread_arg *targ, int dst)
 int active_netStat(struct chan_thread_arg *targ, int dst)
 {
 	int res;
-	int nretr = targ->nretries;
+	int i;
+	int n = 1;    /** При использовании n<<i в цикле for имеем
+		       * ряд 1,2,4.. для последующего увеличения
+		       * времени таймаута при приеме данных по каналу RS485 */
 
 	prepare_cadr_actNetStat(targ, &txBuf, dst);
 	
-	while (nretr--) {
+	for (i=0; i<targ->nretries; i++) {
 		
 		/** Данные для передачи подготовлены */
-		res = trx(targ);
+		res = trx(targ, &txBuf, &rxBuf, targ->tout*(n<<i));
 		if (res < 0) return -1;
 		
 		if ((get_rxFl(&rxBuf) >= RX_DATA_READY) &&
@@ -131,6 +42,8 @@ int active_netStat(struct chan_thread_arg *targ, int dst)
 			switch (get_rxFl(&rxBuf)) {
 			case RX_DATA_READY:
 				/* bo_log("active_netStat(): ok"); */
+				resetFlag_bufDst(&dstBuf,
+						 test_bufDst(&dstBuf, dst));
 				return 0;
 			case RX_ERROR:
 				/** Ошибка кадра */
@@ -166,14 +79,17 @@ int active_netStat(struct chan_thread_arg *targ, int dst)
 int active_getLog(struct chan_thread_arg *targ, int dst)
 {
 	int res;
-	int nretr = targ->nretries;
+	int i;
+	int n = 1;    /** При использовании n<<i в цикле for имеем
+		       * ряд 1,2,4.. для последующего увеличения
+		       * времени таймаута при приеме данных по каналу RS485 */
 
 	prepare_cadr_quLog(targ, &txBuf, dst);
 	
-	while (nretr--) {
+	for (i=0; i<targ->nretries; i++) {
 		
 		/** Данные для передачи подготовлены */
-		res = trx(targ);
+		res = trx(targ, &txBuf, &rxBuf, targ->tout*(n<<i));
 		if (res < 0) return -1;
 		
 		if ((get_rxFl(&rxBuf) >= RX_DATA_READY) &&
@@ -204,93 +120,167 @@ int active_getLog(struct chan_thread_arg *targ, int dst)
 }
 
 /**
- * active - Запросы активным устройствам на сети RS485 (порт 1).
+ * active_getSnmpStat - Запрос состояния магистрали.
  * @targ: Указатель на структуру chan_thread_arg{}.
  * @dst:  Адрес устройства.
  * @return  0- успех, -1 неудача.
  *
- * Если устройство отвечает на запрос в пределах отведенного времени, то,
- * в зависимости от месторасположения адресата, имеем следующие
- * варианты действий, ответ адресован:
- *  1) локальному пассивному устройству -
- *     ответ перенаправляется на канал 2 (пассивные устройства);
- *  2) пассивному устройству чужого узла -
- *     ответ передается на стек FIFO соответствующего узла;
- *  3) собственному сетевому контроллеру -
- *     ответ обрабатывает сам контроллер.
- *
  * Если устройство, не отвечает на запрос, то оно (после определенного
  * количества попыток) удаляется из локальной таблицы маршрутов.
  */
-int active(struct chan_thread_arg *targ, int dst)
+int active_getSnmpStat(struct chan_thread_arg *targ, int dst)
 {
-	char key[4];  /** Адрес пассивного у-ва */
 	int res;
-	int nretr = targ->nretries;
+	int i;
+	int n = 1;    /** При использовании n<<i в цикле for имеем
+		       * ряд 1,2,4.. для последующего увеличения
+		       * времени таймаута при приеме данных по каналу RS485 */
+
+	prepare_cadr_snmpStat(targ, &txBuf, dst);
 	
-	prepare_cadr_act(targ, &txBuf, dst);
-
-	while (nretr--) {
-
+	for (i=0; i<targ->nretries; i++) {
+		
 		/** Данные для передачи подготовлены */
-		res = trx(targ);
+		res = trx(targ, &txBuf, &rxBuf, targ->tout*(n<<i));
 		if (res < 0) return -1;
 		
 		if ((get_rxFl(&rxBuf) >= RX_DATA_READY) &&
 		    ((rxBuf.buf[1] & 0xFF) == dst)) {
 			switch (get_rxFl(&rxBuf)) {
 			case RX_DATA_READY:
-				
-				memset(key, 0, 3);
-				/** Адрес пассивного у-ва */
-				sprintf(key, "%03d", rxBuf.buf[0]);
-
-				if (rxBuf.buf[0] == targ->src) {
-					/** Ответ активного устройства
-					 * для сетевого контроллера */
-					if (rxBuf.buf[2] == targ->cdquLogId) {
-						/** GetLog */
-						return active_getLog(targ, dst);
-					} else if (rxBuf.buf[2] == targ->cdnsId) {
-						/** Запрос о составе сети RS485 */
-						return active_netStat(targ, dst);
-					} else if (rxBuf.buf[4] == 0) {
-						/** OPERATION_COMPLETED */
-						bo_log("active(): OPERATION_COMPLETED ");
-					} else if (rxBuf.buf[4] == 7) {
-						/** WRONG_REQUEST */
-						bo_log("active(): WRONG_REQUEST ");
-					} else {
-						/** chertechto */
-						bo_log("active(): chertechto ");
-					}
-					
-				} else if (test_bufDst(&dst2Buf, rxBuf.buf[0])) {
-					if (targ->ch2_enable) {
-						/** Кадр сети RS485 (local node) */
-						pthread_mutex_lock(&mx_psv);
-
-						/** имеем что передать пассивному устройству -
-						 * ch2_threads.c: send_dataToPassive() */
-						put_state(&psvdata_ready, 1);
-	
-						/** Ожидаем готовности послать кадр
-						    пассивному устройствуву */
-						while (get_state(&psvdata_ready))
-							pthread_cond_wait(&psvdata, &mx_psv);
-
-						pthread_mutex_unlock(&mx_psv);
-					} else
-						bo_log("active(): key= [%s] ch2 disable", key);
-					
-				} else if (rt_iskey(rtg, key)) {
-					/** Кадр сети RS485 (FIFO) */
-					sendFIFO(targ->fifo_port, key);
-				} else {
-					bo_log("active(): key= [%s] ???", key);
-				}
-				
+				/* bo_log("active_getSnmpStat(): ok"); */
 				return 0;
+			case RX_ERROR:
+				/** Ошибка кадра */
+				bo_log("active_getSnmpStat(): Cadr Error !");
+				break;
+			case RX_TIMEOUT:
+				/** Текущее устройство не успело дать ответ. */
+				bo_log("active_getSnmpStat(): timeout dst= %d", dst);
+				break;
+			default:
+				bo_log("active_getSnmpStat(): state ??? fl= %d",
+				       get_rxFl(&rxBuf));
+				break;
+			}
+		}
+	}
+	/** Текущее устройство не отвечает, вычеркиваем его из списка. */
+	remf_rtbl(targ, &dstBuf, dst);
+	
+	return 0;
+}
+
+/**
+ * active_process - Обработка ответов от активных устройств на сети RS485 (порт 1).
+ * @targ: Указатель на структуру chan_thread_arg{}.
+ * @dst:  Адрес устройства.
+ * @return  0- успех, -1 неудача.
+ *
+ * Устройство отвечает на запрос в пределах отведенного времени.
+ * В зависимости от месторасположения адресата, имеем следующие
+ * варианты действий, ответ адресован:
+ *  1) локальному пассивному устройству -
+ *     ответ перенаправляется на канал 2 (пассивные устройства);
+ *  2) пассивному устройству чужого узла -
+ *     ответ передается на стек FIFO соответствующего узла;
+ *  3) собственному сетевому контроллеру -
+ *     ответ обрабатывает сам контроллер active_getLog(), active_netStat().
+ */
+int active_process(struct chan_thread_arg *targ, int dst)
+{
+	char key[4];  /** Адрес пассивного у-ва */
+	int res = 0;
+	
+	memset(key, 0, 3);
+	/** Адрес пассивного у-ва */
+	sprintf(key, "%03d", rxBuf.buf[0]);
+
+	if (rxBuf.buf[0] == targ->src) {
+		/** Ответ активного устройства
+		 * для сетевого контроллера */
+		if (rxBuf.buf[2] == targ->cdquLogId) {
+			/** GetLog */
+			res = active_getLog(targ, dst);
+		} else if (rxBuf.buf[2] == targ->cdnsId) {
+			/** Запрос о составе сети RS485 */
+			res = active_netStat(targ, dst);
+		} else if (rxBuf.buf[2] == targ->cdmsId) {
+			/** Запрос о состоянии магистрали */
+			res = active_getSnmpStat(targ, dst);
+		} else if (rxBuf.buf[4] == 0) {
+			/** OPERATION_COMPLETED
+			    bo_log("active(): OPERATION_COMPLETED "); */
+		} else if (rxBuf.buf[4] == 7) {
+			/** WRONG_REQUEST */
+			bo_log("active(): WRONG_REQUEST ");
+		} else {
+			/** chertechto */
+			bo_log("active(): chertechto ");
+		}
+		
+	} else if (test_bufDst(&dst2Buf, rxBuf.buf[0]) != -1) {
+		if (targ->ch2_enable) {
+			/** Кадр сети RS485 (local node) */
+			pthread_mutex_lock(&mx_psv);
+
+			/** имеем что передать пассивному устройству -
+			 * ch2_threads.c: send_dataToPassive() */
+			put_state(&psvdata_ready, 1);
+			
+			/** Ожидаем готовности послать кадр
+			    пассивному устройствуву */
+			while (get_state(&psvdata_ready))
+				pthread_cond_wait(&psvdata, &mx_psv);
+
+			pthread_mutex_unlock(&mx_psv);
+		} else
+			bo_log("active(): key= [%s] ch2 disable", key);
+		
+	} else if (rt_iskey(rtg, key)) {
+		/** Кадр сети RS485 (FIFO) */
+		sendFIFO(key);
+	} else {
+		bo_log("active(): key= [%s] ???", key);
+	}
+	
+	return res;
+}
+
+
+/**
+ * active - Запросы активным устройствам на сети RS485 (порт 1).
+ * @targ: Указатель на структуру chan_thread_arg{}.
+ * @dst:  Адрес устройства.
+ * @return  0- успех, -1 неудача.
+ *
+ * Если устройство отвечает на запрос в пределах отведенного времени,
+ * то см. active_process()
+ * Если устройство, не отвечает на запрос, то оно (после определенного
+ * количества попыток) удаляется из локальной таблицы маршрутов.
+ */
+int active(struct chan_thread_arg *targ, int dst)
+{
+	int res;
+	int i;
+	int n = 1;    /** При использовании n<<i в цикле for имеем
+		       * ряд 1,2,4.. для последующего увеличения
+		       * времени таймаута при приеме данных по каналу RS485 */
+	
+	prepare_cadr_act(targ, &txBuf, dst);
+
+	for (i=0; i<targ->nretries; i++) {
+
+		/** Данные для передачи подготовлены */
+		res = trx(targ, &txBuf, &rxBuf, targ->tout*(n<<i));
+		if (res < 0) return -1;
+		
+		if ((get_rxFl(&rxBuf) >= RX_DATA_READY) &&
+		    ((rxBuf.buf[1] & 0xFF) == dst)) {
+			switch (get_rxFl(&rxBuf)) {
+			case RX_DATA_READY:
+				/**  */
+				return active_process(targ, dst);
 			case RX_ERROR:
 				/** Ошибка кадра */
 				bo_log("active(): Cadr Error !");
@@ -327,6 +317,7 @@ void *chan1(void *arg)
 	struct timeval t;
 	int count_scan = targ->tscan;
 	int dst;
+	int testDst;
 	int res;
 	
 	while (1) {
@@ -344,7 +335,7 @@ void *chan1(void *arg)
 #endif
 				dst = targ->dst_beg;
 				while (dst <= targ->dst_end) {
-					res = scan(targ, dst);
+					res = scan(targ, &txBuf, &rxBuf, &dstBuf, dst, "1");
 					if (res < 0) {
 						bo_log("chan1: exit");
 						pthread_exit(0);
@@ -361,16 +352,22 @@ void *chan1(void *arg)
 		}
 
 		if (targ->ch1_enable) {
-			dst = get_bufDst(&dstBuf);
 			if (dstBuf.wpos > 0) {
-				/** Передача конфигурации пассивных
-				 * устройств */
-				res = active_netStat(targ, dst);
-				if (res < 0) break;
+				dst = get_bufDst(&dstBuf);
+				testDst = test_bufDst(&dstBuf, dst);
+				if (testDst != -1)
+					if (getFlag_bufDst(&dstBuf, testDst)) {
+						/** Передача конфигурации
+						 * устройств на сети RS485
+						 * активным устройствам при
+						 * изменениях в сети */
+						res = active_netStat(targ, dst);
+						if (res < 0) break;
+					}
 				
 				/** Разрешение активным устройствам на
 				 *  порту 1 (1 раз в 50 мсек) */
-				res = active(targ, dst);		
+				res = active(targ, dst);
 				if (res < 0) break;
 			}
 		}

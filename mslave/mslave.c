@@ -18,12 +18,16 @@ int main(int argc, char *argv[])
 	pthread_t thread_wdt;
 	pthread_t thread_log;
 	pthread_t thread_fifoSrv;
+	pthread_t thread_snmpSrv;
+	pthread_t thread_sendfifo;
 	pthread_t thread_ch1, thread_ch2;
 	pthread_t thread_rtSend, thread_rtRecv;
 	
 	struct wdt_thread_arg wdt_targ;
 	struct log_thread_arg log_targ;
 	struct fifo_thread_arg fifoSrv_targ;
+	struct snmp_thread_arg snmpSrv_targ;
+	struct sfifo_thread_arg sendfifo_targ;
 	struct chan_thread_arg ch1_targ, ch2_targ;
 	struct rt_thread_arg rtSend_targ, rtRecv_targ;
 
@@ -55,10 +59,14 @@ int main(int argc, char *argv[])
 	char logSend_ip[16];
 	unsigned int logSend_port, logMaxLines;
 	
+	int snmp_n;
+	char *tempip;
+	
 	char ls_gen[32];
 	char req_ag[32];
 	char req_ns[32];
 	char req_gl[32];
+	char req_ms[32];
 
 	int cdaId;
 	int cdaDest;
@@ -66,6 +74,11 @@ int main(int argc, char *argv[])
 	int cdnsDest;
 	int cdquLogId;
 	int cdquDest;
+	int cdmsId;
+	int cdmsDest;
+	
+	int i;
+	char key[7] = {0};
 	
 	TOHT *cfg;
 
@@ -125,6 +138,16 @@ int main(int argc, char *argv[])
 	logSend_port = (unsigned int)cfg_getint(cfg, "LOGGER:sendPort", -1);
 	logMaxLines = (unsigned int)cfg_getint(cfg, "LOGGER:maxLines", -1);
 	
+	/** SNMP */
+	snmp_n = cfg_getint(cfg, "SNMP:n", -1);
+	if (snmp_n > 0 && snmp_n <= SNMP_IP_MAX)
+		for (i=0; i<snmp_n; i++) {
+			sprintf(key, "SNMP:%01d", i+1);
+			snmpSrv_targ.ip[i] = malloc(sizeof(char) * 16);
+			tempip = cfg_getstring(cfg, key, NULL);
+			memcpy(*(snmpSrv_targ.ip+i), tempip, strlen(tempip)+1);
+		}
+	
 	/** Загрузка параметров серийного порта */
 	/** 0: none, 1: odd, 2: even, 3: space, 4: mark */
 	rs_parity = cfg_getint(cfg, "RS:prmParity", -1);
@@ -152,6 +175,11 @@ int main(int argc, char *argv[])
 	sprintf(req_gl, cfg_getstring(cfg, "REQ:gl", NULL));
 	cdquLogId = mfnv1a(req_gl);
 	cdquDest = mfnv1a(ls_gen);
+	
+	/** Состояние магистрали */
+	sprintf(req_ms, cfg_getstring(cfg, "REQ:ms", NULL));
+	cdmsId = mfnv1a(req_ms);
+	cdmsDest = mfnv1a(ls_gen);
 	
 	/** Установка параметров и открытие порта 1 RS485 */
 	ch1_targ.port = cfg_getint(cfg, "RS485_1:port", -1) - 1;
@@ -210,12 +238,14 @@ int main(int argc, char *argv[])
 	pthread_attr_setdetachstate(&pattr, PTHREAD_CREATE_JOINABLE);
 
 	pthread_mutex_init(&mx_psv, NULL);
+	pthread_mutex_init(&mx_dtFIFO, NULL);
 	pthread_mutex_init(&mx_rtl, NULL);
 	pthread_mutex_init(&mx_rtg, NULL);
 
 	pthread_mutex_init(&mx_sendSocket, NULL);
 	
 	init_thrState(&psvdata_ready);
+	init_thrState(&fifodata_ready);
 
 	init_thrRxBuf(&rxBuf);
 	init_thrTxBuf(&txBuf);
@@ -227,6 +257,7 @@ int main(int argc, char *argv[])
 
 	/** Инициализация условных переменных с выделением памяти */
 	pthread_cond_init(&psvdata, NULL);
+	pthread_cond_init(&fifodata, NULL);
 
 
 	/** Таблицы маршрутов */
@@ -275,6 +306,7 @@ int main(int argc, char *argv[])
 	
 	rtRecv_targ.ip = rt_ipRecv;
 	rtRecv_targ.port = rt_portRecv;
+	rtRecv_targ.host_ip = ip;
 	result = pthread_create(&thread_rtRecv, &pattr, &rtbl_recv, &rtRecv_targ);
 	if (result) {
 		printf("th_rtRecv: result = %d: %s\n", result, strerror(errno));
@@ -283,12 +315,27 @@ int main(int argc, char *argv[])
 
 	rtSend_targ.ip = rt_ipSend;
 	rtSend_targ.port = rt_portSend;
+	rtSend_targ.host_ip = ip;
 	result = pthread_create(&thread_rtSend, &pattr, &rtbl_send, &rtSend_targ);
 	if (result) {
 		printf("th_rtSend: result = %d: %s\n", result, strerror(errno));
 		return 1;
 	}
 
+	if (snmp_n > 0 && snmp_n <= SNMP_IP_MAX) {
+		snmpSrv_targ.n = snmp_n;
+	
+		printf("ip=%s, n=%d\n", (snmpSrv_targ.ip[0]), snmpSrv_targ.n);
+	
+		result = pthread_create(&thread_snmpSrv, &pattr, &snmp_serv, &snmpSrv_targ);
+		if (result) {
+			printf("th_snmpSrv: result = %d: %s\n", result, strerror(errno));
+			return 1;
+		}
+
+		printf("snmp start ok\n");
+	}
+	
 	fifoSrv_targ.port = fifo_port;
 	result = pthread_create(&thread_fifoSrv, &pattr, &fifo_serv, &fifoSrv_targ);
 	if (result) {
@@ -297,6 +344,15 @@ int main(int argc, char *argv[])
 		}
 
 	write(1, "fifo start ok\n", 14);
+	
+	sendfifo_targ.port = fifo_port;
+	result = pthread_create(&thread_sendfifo, &pattr, &send_fifo, &sendfifo_targ);
+	if (result) {
+		printf("th_sendfifo: result = %d: %s\n", result, strerror(errno));
+		return 1;
+		}
+
+	write(1, "send_fifo start ok\n", 14);
 	
 	ch1_targ.ch1_enable = ch1_enable;
 	ch1_targ.ch2_enable = ch2_enable;
@@ -307,7 +363,7 @@ int main(int argc, char *argv[])
 	ch1_targ.wdt_en = wdt_en;
 	ch1_targ.nretries = nretries;
 	ch1_targ.ip = ip;
-	ch1_targ.fifo_port = fifo_port;
+	ch1_targ.snmp_n = snmp_n;
 	ch1_targ.logMaxLines = logMaxLines;
 	ch1_targ.cdaId = cdaId;
 	ch1_targ.cdaDest = cdaDest;
@@ -315,6 +371,8 @@ int main(int argc, char *argv[])
 	ch1_targ.cdnsDest = cdnsDest;
 	ch1_targ.cdquLogId = cdquLogId;
 	ch1_targ.cdquDest = cdquDest;
+	ch1_targ.cdmsId = cdmsId;
+	ch1_targ.cdmsDest = cdmsDest;
 	result = pthread_create(&thread_ch1, &pattr, &chan1, &ch1_targ);
 	if (result) {
 		printf("th_ch1: result = %d: %s\n", result, strerror(errno));
@@ -332,7 +390,7 @@ int main(int argc, char *argv[])
 	ch2_targ.wdt_en = wdt_en;
 	ch2_targ.nretries = nretries;
 	ch2_targ.ip = ip;
-	ch2_targ.fifo_port = fifo_port;
+	ch2_targ.snmp_n = snmp_n;
 	ch2_targ.logMaxLines = logMaxLines;
 	ch2_targ.cdaId = cdaId;
 	ch2_targ.cdaDest = cdaDest;
@@ -340,6 +398,8 @@ int main(int argc, char *argv[])
 	ch2_targ.cdnsDest = cdnsDest;
 	ch2_targ.cdquLogId = cdquLogId;
 	ch2_targ.cdquDest = cdquDest;
+	ch2_targ.cdmsId = cdmsId;
+	ch2_targ.cdmsDest = cdmsDest;
 	result = pthread_create(&thread_ch2, &pattr, &chan2, &ch2_targ);
 	if (result) {
 		printf("th_ch2: result = %d: %s\n", result, strerror(errno));
@@ -353,8 +413,6 @@ int main(int argc, char *argv[])
 	if (!pthread_equal(pthread_self(), thread_log))
 		pthread_join(thread_log, NULL);
 
-	write(1, "pthread_log exited ok\n", 22);
-
 	if (!pthread_equal(pthread_self(), thread_wdt))
 		pthread_join(thread_wdt, NULL);
 
@@ -363,8 +421,14 @@ int main(int argc, char *argv[])
 	if (!pthread_equal(pthread_self(), thread_rtSend))
 		pthread_join(thread_rtSend, NULL);
 
+	if (snmp_n > 0 && snmp_n <= SNMP_IP_MAX)
+		if (!pthread_equal(pthread_self(), thread_snmpSrv))
+			pthread_join(thread_snmpSrv, NULL);
+
 	if (!pthread_equal(pthread_self(), thread_fifoSrv))
 		pthread_join(thread_fifoSrv, NULL);
+	if (!pthread_equal(pthread_self(), thread_sendfifo))
+		pthread_join(thread_sendfifo, NULL);
 
 	if (!pthread_equal(pthread_self(), thread_ch1))
 		pthread_join(thread_ch1, NULL);
@@ -375,6 +439,7 @@ int main(int argc, char *argv[])
 	/** Разрушаем блокировки и условные переменные, освобождаем память. */
 
 	pthread_mutex_destroy(&mx_psv);
+	pthread_mutex_destroy(&mx_dtFIFO);
 	pthread_mutex_destroy(&mx_rtl);
 	pthread_mutex_destroy(&mx_rtg);
 
@@ -389,7 +454,10 @@ int main(int argc, char *argv[])
 	destroy_thrDstBuf(&dst2Buf);
 
 	pthread_cond_destroy(&psvdata);
+	pthread_cond_destroy(&fifodata);
+	
 	destroy_thrState(&psvdata_ready);
+	destroy_thrState(&fifodata_ready);
 	
 #if defined (__MOXA_TARGET__) && defined (__WDT__)
 	if (wdt_en) {

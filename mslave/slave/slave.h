@@ -24,16 +24,32 @@
 #include "oht.h"
 #include "ocfg.h"
 #include "ocs.h"
+#include "bo_fifo.h"
 
 
 /** Кол-во (макс.) устройств на каждой шине RS485 */
 #define DST_BUF_SZ 32
+
+/** Кол-во (макс.) IP адресов для контроля магистрали (SNMP) */
+#define SNMP_IP_MAX 10
+
+/** Структура данных для потока snmp_serv() */
+struct snmp_thread_arg {
+	char *ip[SNMP_IP_MAX];  /** Массив IP адресов для мониторинга
+			         * состояния магистрали */
+	int n;                  /** Размер массива */
+};
 
 /** Структура данных для потока fifo_serv() */
 struct fifo_thread_arg {
 	int port;         /** Номер порта FIFO сервера */
 	int qu_len;       /** Очередь коннектов */
 	int len;          /** Размер очереди */
+};
+
+/** Структура данных для потока send_fifo() */
+struct sfifo_thread_arg {
+	int port;         /** Номер порта FIFO сервера */
 };
 
 /** Структура данных для потока logSendSock_connect() */
@@ -66,25 +82,30 @@ struct chan_thread_arg {
 			   * сети RS485 */
 	int dst_end;
 	char *ip;         /** IP адрес узла */
-	int fifo_port;    /** Номер порта FIFO сервера */
+	int snmp_n;       /** Размер массива IP адресов для мониторинга
+			   * состояния магистрали */
 	int logMaxLines;  /** Максимальное количество строк лога */
 	int cdaId;        /** Идентификатор запроса 'AccessGranted' */
 	int cdaDest;      /** Идентификатор подсистемы ЛС */
-	int cdnsId;       /** Идентификатор запроса 'GetNetworkStatus' */
+	int cdnsId;       /** Идентификатор запроса 'GetNetRS485Status' */
 	int cdnsDest;     /** Идентификатор подсистемы ЛС */
 	int cdquLogId;    /** Идентификатор запроса 'GetLog' */
 	int cdquDest;     /** Идентификатор подсистемы ЛС */
+	int cdmsId;       /** Идентификатор запроса 'GetNetworkStatus' */
+	int cdmsDest;     /** Идентификатор подсистемы ЛС */
 };
 
 /** Структура данных для потоков rtbl_recv(), rtbl_send() */
 struct rt_thread_arg {
 	char *ip;
 	int port;
+	char *host_ip;    /** IP адрес узла */
 };
 
 /** Структура данных для хранения адресов усройств сети RS485 */
 struct thr_dst_buf {
 	int buf[DST_BUF_SZ];      /** Буфер адресов усройств RS485 */
+	int fbuf[DST_BUF_SZ];     /** Буфер флажков усройств RS485 */
 	pthread_mutex_t mx;       /** Защита доступа к буферу */
 	int rpos;                 /** Позиция чтения из буфера */
 	int wpos;                 /** Позиция записи в буфер */
@@ -106,9 +127,22 @@ struct sta {
 };
 
 /** Синхронизация обмена данными между активными и пассивными устройствами */
-pthread_cond_t psvdata;  /** Условная переменная */
-pthread_mutex_t	mx_psv;  /** защита */
+pthread_cond_t psvdata;    /** Условная переменная */
+pthread_mutex_t	mx_psv;    /** защита */
 struct sta psvdata_ready;  /** Переменная состояния */
+
+/** Структура данных для организации обмена данными между узлами */
+struct thr_fifo_buf {
+	char buf[BUF485_SZ+8];  /** Буфер данных для передачи через FIFO */
+	char ip[16];            /** Адрес IP узла */
+	unsigned int ln;        /** Длина данных */
+};
+struct thr_fifo_buf sfifo;
+
+/** Синхронизация обмена данными между узлами через стек FIFO */
+pthread_cond_t fifodata;    /** Условная переменная */
+pthread_mutex_t	mx_dtFIFO;  /** защита */
+struct sta fifodata_ready;  /** Переменная состояния */
 
 /** Атрибуты функционирования нитей PTHREAD */
 pthread_attr_t pattr;
@@ -165,22 +199,46 @@ int get_state(struct sta *st);
 
 void init_thrDstBuf(struct thr_dst_buf *b);
 void destroy_thrDstBuf(struct thr_dst_buf *b);
+
+void clrFlags_bufDst(struct thr_dst_buf *b);
+void setFlags_bufDst(struct thr_dst_buf *b);
+void setFlag_bufDst(struct thr_dst_buf *b, int pos);
+void resetFlag_bufDst(struct thr_dst_buf *b, int pos);
+int getFlag_bufDst(struct thr_dst_buf *b, int pos);
+
 int test_bufDst(struct thr_dst_buf *b, int data);
 int remf_bufDst(struct thr_dst_buf *b, int data);
 int put_bufDst(struct thr_dst_buf *b, int data);
 int get_bufDst(struct thr_dst_buf *b);
 
+void send_rtbl(char *ip);
 void put_rtbl(struct chan_thread_arg *targ, struct thr_dst_buf *b, int dst);
 void remf_rtbl(struct chan_thread_arg *targ, struct thr_dst_buf *b, int dst);
 void putLog();
-void sendFIFO(int fifo_port, char *key);
+void sendFIFO(char *key);
 
 void prepare_cadr(struct thr_tx_buf *b, char *buf, int ln);
 void prepare_cadr_scan(struct chan_thread_arg *targ, struct thr_tx_buf *b, int dst);
 void prepare_cadr_act(struct chan_thread_arg *targ, struct thr_tx_buf *b, int dst);
 void prepare_cadr_actNetStat(struct chan_thread_arg *targ, struct thr_tx_buf *b, int dst);
 void prepare_cadr_quLog(struct chan_thread_arg *targ, struct thr_tx_buf *b, int dst);
+void prepare_cadr_snmpStat(struct chan_thread_arg *targ,
+			   struct thr_tx_buf
+			   *b,
+			   int dst);
 
+int trx(struct chan_thread_arg *targ,
+	struct thr_tx_buf *tb,
+	struct thr_rx_buf *rb,
+	int tout);
+int scan(struct chan_thread_arg *targ,
+	 struct thr_tx_buf *tb,
+	 struct thr_rx_buf *rb,
+	 struct thr_dst_buf *db,
+	 int dst,
+	 char *msg);
+
+extern void bo_fifo_thrmode(int port, int queue_len, int fifo_len);
 
 /** ------------------------- Потоки ------------------------- */
 void *wdt(void *arg);        /** WatchDog */
@@ -192,7 +250,9 @@ void *rtbl_recv(void *arg);  /** Получение глобальной таб�
 void *rtbl_send(void *arg);  /** Отправка локальной таблицы маршрутов
 			      * мастеру */
 void *fifo_serv(void *arg);  /** Сервер FIFO */
+void *send_fifo(void *arg);  /** Стек FIFO */
 void *logSendSock_connect(void *arg);  /** Сервер LOG */
+void *snmp_serv(void *arg);  /** Сервер SNMP */
 
 
 #endif	/* _SLAVE_H */

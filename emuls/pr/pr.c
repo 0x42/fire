@@ -30,13 +30,28 @@ void gen_pr_default_cfg(char *cfile)
 	cfg_put(cfg, "RS:speed", "19200");
 	cfg_put(cfg, "RS:tout", "5");
 
-	cfg_put(cfg, "PR1:adr", "3");
-	cfg_put(cfg, "PR2:adr", "5");
+	cfg_put(cfg, "PR:adr", "3");
 
 	cfg_put(cfg, "USO:adr1", "159");
 	cfg_put(cfg, "USO:adr2", "160");
-	cfg_put(cfg, "USO:adr3", "229");
-	cfg_put(cfg, "USO:adr4", "230");
+
+	/** Длина данных кадра */
+	cfg_put(cfg, "TEST_1:ln", "1");
+	/** Количество сообщений */
+	cfg_put(cfg, "TEST_1:m", "100");
+	/** Длина сообщения */
+	cfg_put(cfg, "TEST_1:msg_ln", "10");
+	/** Сообщение */
+	cfg_put(cfg, "TEST_1:msg", "uso1(229)-");
+
+	/** Длина данных кадра */
+	cfg_put(cfg, "TEST_2:ln", "0");
+	/** Количество сообщений */
+	cfg_put(cfg, "TEST_2:m", "100");
+	/** Длина сообщения */
+	cfg_put(cfg, "TEST_2:msg_ln", "10");
+	/** Сообщение */
+	cfg_put(cfg, "TEST_2:msg", "uso2(159)-");
 
 	cfg_save(cfg, out);
 	fclose(out);
@@ -69,7 +84,7 @@ void probot(struct actx_thread_arg *targ, struct thr_tx_buf *b)
 	
 	put_txBuf(b, rxBuf.buf[2]);  /** Id */
 	put_txBuf(b, rxBuf.buf[3]);  /** Dest */
-	put_txBuf(b, (char)0);       /** Status */
+	put_txBuf(b, (char)1);       /** Status */
 	put_txBuf(b, rxBuf.buf[5]);  /** DataSZ */
 
 	for (i=0; i<rxBuf.buf[5]; i++)

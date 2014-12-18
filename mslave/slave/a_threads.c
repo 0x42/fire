@@ -1,6 +1,8 @@
 /*
  *		Moxa-slave
+ *                  Сервис SNMP
  *                  Сервер FIFO
+ *                  Send FIFO
  *                  Сервер LOG коннект
  *                  Таблица маршрутов (получение)
  *                  Таблица маршрутов (отправка)
@@ -17,8 +19,24 @@
 #include "bo_net.h"
 #include "bo_fifo.h"
 #include "bo_net_master_core.h"
+#include "bo_snmp_mng.h"
 
-/* extern void bo_fifo_thrmode(int port, int queue_len, int fifo_len); */
+
+/**
+ * snmp_serv - Сервис SNMP.
+ * @arg:  Параметры для потока.
+ *
+ * Мониторинг состояния магистрали.
+ */
+void *snmp_serv(void *arg)
+{
+	struct snmp_thread_arg *targ = (struct snmp_thread_arg *)arg;
+	
+	bo_snmp_main(targ->ip, targ->n);
+	
+	bo_log("snmp_serv: exit");
+	pthread_exit(0);
+}
 
 /**
  * fifo_serv - Сервер FIFO.
@@ -41,26 +59,100 @@ void *fifo_serv(void *arg)
 }
 
 /**
- * logSendSock_connect - Создает сокет и подключается к серверу логов на мастере.
+ * send_fifo - Посылка данных на чужой узел в стек FIFO.
+ * @arg:  Параметры для потока.
+ *
+ *
+ */
+void *send_fifo(void *arg)
+{
+	struct sfifo_thread_arg *targ = (struct sfifo_thread_arg *)arg;
+	int ans;
+	int np;
+
+	while (1) {
+		pthread_mutex_lock(&mx_dtFIFO);
+
+		put_state(&fifodata_ready, 1);
+		
+		/** Ожидаем готовности формирования кадра для отправки
+		 * чужому узлу */
+		while (get_state(&fifodata_ready))
+			pthread_cond_wait(&fifodata, &mx_dtFIFO);
+
+		pthread_mutex_unlock(&mx_dtFIFO);
+		
+		np = 0;
+		ans = 0;
+		while (ans != 1) {
+			ans = bo_sendDataFIFO(sfifo.ip,
+					      targ->port,
+					      sfifo.buf,
+					      sfifo.ln);
+			usleep(200000);
+			np++;
+			if (np >= 3) break;
+		}
+		
+		if (np > 1)
+			bo_log("send_fifo(): bo_sendDataFIFO(): np=%d", np);
+	}
+	
+	bo_log("send_fifo: exit");
+	pthread_exit(0);
+}
+
+/**
+ * logSendSock_connect - Создает сокет и подключается к серверу логов
+ *                       на мастере.
  * @arg:  Параметры для потока.
  *
  */
 void *logSendSock_connect(void *arg)
 {
 	struct log_thread_arg *targ = (struct log_thread_arg *)arg;
+	int exec = -1;
+	int sock_temp;
 
 	while (1) {
-		logSend_sock = bo_setConnect(targ->logSend_ip, targ->logSend_port);
-		if (logSend_sock < 0) {
+		sock_temp = -1;
+		sock_temp = bo_setConnect(targ->logSend_ip,
+					  targ->logSend_port);
+		if (sock_temp < 0) {
 			bo_log("logSendSock_connect(): logSend_sock=bo_setConnect() ERROR");
 			sleep(10);
 			continue;
 		}
-		break;
+		
+		pthread_mutex_lock(&mx_sendSocket);
+
+		logSend_sock = sock_temp;
+
+		pthread_mutex_unlock(&mx_sendSocket);
+		
+		bo_log("logSend_sock(): IN socket[%d] ok", logSend_sock);
+		
+		while (1) {
+			/** Организовать функцию проверки сокета на
+			 * наличие коннекта !!! */
+			pthread_mutex_lock(&mx_sendSocket);
+			
+			exec = bo_chkSock(logSend_sock);
+			if (exec == -1) {
+				bo_closeSocket(logSend_sock);
+				bo_log("logSend_sock(): IN socket[%d] close", logSend_sock);
+				
+				pthread_mutex_unlock(&mx_sendSocket);
+				sleep(10);
+				break;
+			}
+
+			pthread_mutex_unlock(&mx_sendSocket);
+			sleep(10);
+		}
 	}
 	
-	bo_log("logSend_sock: socket ok");
-	
+	bo_log("logSendSock_connect: exit");
 	pthread_exit(0);
 }
 
@@ -89,7 +181,7 @@ void *rtbl_recv(void *arg)
 		p.buf = rtBuf;
 		p.bufSize = BO_MAX_TAB_BUF;
 
-		bo_log("rtbl_recv(): socket ok");
+		bo_log("rtbl_recv(): OUT socket[%d] ok", rtRecv_sock);
 		
 		while (1) {
 			FD_ZERO(&r_set);
@@ -107,16 +199,24 @@ void *rtbl_recv(void *arg)
 			} else {
 				/* если событие произошло */
 				pthread_mutex_lock(&mx_rtg);
+
 				ans = bo_master_core(&p);
+
 				pthread_mutex_unlock(&mx_rtg);
 				if (ans < 0) {
 					bo_log("rtbl_recv(): bo_master_core ERROR");
 					break;
 				}
+				
+				/** Установить флажки для загрузки новой
+				 * конфигурации сети RS485 */
+				setFlags_bufDst(&dstBuf);
 			}
 		}
 		
 		bo_closeSocket(rtRecv_sock);
+		bo_log("rtbl_recv(): OUT socket[%d] close", rtRecv_sock);
+		
 	}
 	
 	bo_log("rtbl_recv: exit");
@@ -132,21 +232,27 @@ void *rtbl_send(void *arg)
 {
 	struct rt_thread_arg *targ = (struct rt_thread_arg *)arg;
 	int exec = -1;
+	int sock_temp;
 	
 	while (1) {
-		pthread_mutex_lock(&mx_rtl);
-
-		rtSend_sock = bo_setConnect(targ->ip, targ->port);
-		
-		if (rtSend_sock < 0) {
+		sock_temp = -1;
+		sock_temp = bo_setConnect(targ->ip, targ->port);
+		if (sock_temp < 0) {
 			bo_log("rtbl_send: bo_setConnect ERROR");
-			pthread_mutex_unlock(&mx_rtl);
 			sleep(10);
 			continue;
 		}
+		pthread_mutex_lock(&mx_rtl);
+
+		rtSend_sock = sock_temp;
+
+		/** Отправка локальной таблицы мастеру */
+		send_rtbl(targ->host_ip);
+
 		pthread_mutex_unlock(&mx_rtl);
 		
-		bo_log("rtbl_send(): socket ok");
+		bo_log("rtbl_send(): IN socket[%d] ok", rtSend_sock);
+		
 		
 		while (1) {
 			/** Организовать функцию проверки сокета на
@@ -155,12 +261,15 @@ void *rtbl_send(void *arg)
 			
 			exec = bo_chkSock(rtSend_sock);
 			if (exec == -1) {
-				pthread_mutex_unlock(&mx_rtl);
-				break;
+				bo_closeSocket(rtSend_sock);
+				bo_log("rtbl_send(): IN socket[%d] close", rtSend_sock);
 				
+				pthread_mutex_unlock(&mx_rtl);
+				sleep(10);
+				break;
 			}
+
 			pthread_mutex_unlock(&mx_rtl);
-			
 			sleep(10);
 		}
 	}
