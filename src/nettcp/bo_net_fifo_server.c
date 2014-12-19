@@ -85,6 +85,7 @@ static void(*statusTable[])(struct ParamSt *) = {
  * @id			текущ ID пол-го сообщения
  */
 struct ParamSt {
+	char ip[16];
 	int packetLen;
 	int clientfd;
 	unsigned char *buffer;
@@ -234,7 +235,10 @@ static void fifoReadPacket(int clientSock, unsigned char *buffer, int bufSize,
 	int i = 1;
 	struct ParamSt param;
 	char idBuf[9] = {0};
+	int exec = -1;
+	
 	param.clientfd = clientSock;
+	memset(param.ip, 0, 16);
 	param.buffer   = buffer;
 	param.bufSize  = bufSize;
 	param.id_msg   = tab;
@@ -248,6 +252,8 @@ static void fifoReadPacket(int clientSock, unsigned char *buffer, int bufSize,
 	 * порт, иначе придется ждать 2MSL */
 	setsockopt(clientSock, SOL_SOCKET, SO_REUSEADDR, &i, sizeof(i));
 	
+	exec = bo_getIp(clientSock, param.ip);
+	if(exec == -1) memset(param.ip, '-', 15);
 	while(stop == -1) {
 		/*dbgout("\nFIFO = %s\n", PacketStatusTxt[packetStatus]);
 		*/
@@ -338,7 +344,6 @@ static void fifoReadPacket(int clientSock, unsigned char *buffer, int bufSize,
 	unsigned char head[3] = "VAL";
 	unsigned char headNO[3] = " NO"; 
 
-	bo_printFIFO();
 	
 	param->packetLen = bo_getFIFO(param->buffer, param->bufSize);
 	boIntToChar(param->packetLen, len);
@@ -472,18 +477,25 @@ static void fifoAddToFIFO(struct ParamSt *param)
 			dbgout("%c", *(param->buffer + i) );
 		}
 		dbgout("]\n");
+		fifo_log("From ip[%s]\n", param->ip);
 		exec = bo_checkDblMsg(param);
 		if(exec == 1) {
+			fifo_log("++++ ADD FIFO ++++\n");
+			fifo_val10_log(param->buffer, param->packetLen);
 			flag = bo_addFIFO(param->buffer, param->packetLen);
 			if(flag == -1) {
+				fifo_log(" ERR WHEN ADD\n");
 				bo_log(" %s fifoAddToFIFO() bo_addFIFO can't add data to FIFO bad Length value[%d]",
 					"FIFO", param->packetLen);
 				goto error;
 			} else if(flag == 0) {
+				fifo_log(" NO ADD. FIFO FULL\n");
 				bo_log(" FIFO fifoAddToFIFO() can't add data FIFO is full ");
 				goto error;
 			}
+			fifo_log("\n++++ END ADD ++++\n");
 		} else if(exec == 0) {
+			fifo_log(" ---- RECV DOUBLE ----\n");
 			dbgout("\n DOUBLE MESSAGE DOUBLE MESSAGE DOUBLE MESSAGE \n");
 			bo_log("FIFO fifoAddToFIFO() value don't push to FIFO");
 		} else goto error;

@@ -162,12 +162,13 @@ int bo_getFifoVal(unsigned char *buf, int bufSize) /*THREAD SAFE */
 	int ans = -1;
 	
 	pthread_mutex_lock(&fifo_mut);
-
+	fifo_log("---- GET VAL ----\n");
 	if(fifo.mem != NULL) {
 		ans = bo_get_fifo(buf, bufSize);
 		if(ans != -1) bo_del_head();
 	}
-
+	fifo_val10_log(buf, bufSize);
+	fifo_log("---- END GET VAL ----\n");
 	pthread_mutex_unlock(&fifo_mut);
 
 	return ans;

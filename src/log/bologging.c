@@ -410,5 +410,106 @@ void tr_log(char *msg, ...)
 	va_end(ap);
 }
 
+void fifo_log(char *msg, ...)
+{
+	FILE *file = NULL;
+	int print_in_file = -1;
+	char *file_name = "mslave_fifo.debug";
+	char *p = NULL;
+	va_list ap;
+	int ival; double dval; char *sval;
+	const int find_error = -1;
+#ifdef __PRINT_FIFO__
+	print_in_file = 1;
+#endif
+	if(print_in_file == 1) {
+		file = fopen(file_name, "a+");
+		if(file) {
+			va_start(ap, msg);
+			for(p = msg; *p; p++) {
+				if(*p != '%') {
+					if(fprintf(file, "%c", *p) < 0) goto error;
+					continue;
+				}
+				switch(*++p) {
+					case 'd':
+						ival = va_arg(ap, int);
+						if(fprintf(file, "%d", ival) < 0) goto error;
+						break;
+					case 'f':
+						dval = va_arg(ap, double);
+						if(fprintf(file, "%f", dval) < 0) goto error;
+						break;
+					case 's':
+						sval = va_arg(ap, char *);
+						if(fprintf(file, "%s", sval) < 0) goto error;
+						break;
+					default:
+						if(fprintf(file, "%c", *p) < 0) goto error;
+						break;
+				}
+			}
+			if(find_error == 1) {
+				error:
+				printf("fifo_log() ERROR can't wite in file [%s]", 
+				strerror(errno));
+			} 
+
+			if(fclose(file) < 0) {
+				printf("fifo_log() ERROR can't close file [%s]", 
+					strerror(errno));
+			}
+		} else {
+			printf("fifo_log() ERROR can't open file [%s]", 
+				strerror(errno));
+		}
+	}
+	va_end(ap);
+}
+
+void fifo_val10_log(unsigned char *buf, int size)
+{
+
+	FILE *file = NULL;
+	int print_in_file = -1;
+	char *file_name = "mslave_fifo.debug";
+	int i = 0;
+	char temp[75] = {0};
+	int ptr = 0;
+	int end = 0;
+#ifdef __PRINT_FIFO__
+	print_in_file = 1;
+#endif
+	if(print_in_file == 1) {
+		file = fopen(file_name, "a+");
+		if(file) {
+			if(size < 24) {
+				end = size;
+			} else {
+				end = 24;
+			}
+			
+			ptr = 0;
+			for(i = 0; i < end; i++) {
+				sprintf(temp + ptr, "%02x ", *(buf + i) );
+				ptr +=3;
+			}
+			temp[75] = 0;
+			
+			if(fprintf(file, "%s", temp) < 0) {
+				printf("fifo_val10_log CAN'T write to file[%s]",
+					strerror(errno));
+			}
+			
+			if(fclose(file) < 0) {
+				printf("fifo_val10_log() ERROR can't close file [%s]", 
+					strerror(errno));
+			}
+		} else {
+			printf("fifo_val10_log() ERROR can't open file [%s]", 
+				strerror(errno));
+		}
+	}
+}
 
 /* [0x42] */

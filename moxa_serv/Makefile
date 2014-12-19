@@ -9,6 +9,7 @@ LDFLAGS		     = -lpthread
 CFLAGS		     = -Wall -c -g
 # Выводит отлад инфу в терминал
 CFLAGS		     += -D __PRINT__ 
+CFLAGS		     += -D __PRINT_FIFO__
 # =============================================
 
 INC_DIR		     = -I../src/log -I../src/tools -I../src/nettcp

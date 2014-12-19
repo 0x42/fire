@@ -35,5 +35,9 @@ void bo_getTimeNow(char *timeStr, int sizeBuf);
 
 void tr_log(char *msg, ...);
 
+void fifo_log(char *msg, ...);
+
+void fifo_val10_log(unsigned char *buf, int size);
+
 #endif
 /* [0x42] */

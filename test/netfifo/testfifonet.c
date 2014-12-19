@@ -289,20 +289,27 @@ TEST(fifo, send100MSGSET10) /* NEED RUN SERVER */
 	int ans = 0;
 	int exec = 0;
 	int flag = -1;
+	int i_rand;
 	int Nsize = 20;
-	unsigned char msg[20] = "123456789 123456789 "; 
-	unsigned char buf[20] = {0};
+	unsigned char msg[20] = {0};
+	unsigned char id[8] = {0};
+	unsigned char packet[28] = {0};
 	char len[2] = {0};
 	int NN = 0;
 	int R = 0;
 	int i = 0;
 	while (NN < 20) {
-		printf(" =============\n NN = %d\n ============\n", NN);
-		exec = bo_sendDataFIFO("127.0.0.1", 8888, msg, Nsize);
-		if(exec == -1) {
-			printf("send error %s\n", strerror(errno));
-			goto error;
-		}
+		i++;
+		i_rand = i;
+		sprintf(id, "%08d", i_rand);
+		memcpy(packet, id, 8);
+		sprintf(msg, "%20d", i);
+		memcpy( (packet + 8) , msg, 20);
+		
+		exec = bo_sendDataFIFO("127.0.0.1", 8888, packet, 28);
+		if(exec == -1) { printf("testThr send %s\n", strerror(errno)); goto error; }
+		
+		/*
 		memset(buf, 0, Nsize);
 		exec = bo_recvDataFIFO("127.0.0.1", 8888, buf, Nsize);
 		if(exec == -1) {
@@ -316,7 +323,7 @@ TEST(fifo, send100MSGSET10) /* NEED RUN SERVER */
 				goto error;
 			}
 		}
-		
+		*/
 		NN++;
 	}
 	exec = 1;

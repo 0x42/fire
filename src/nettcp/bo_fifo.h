@@ -6,6 +6,7 @@
 #include <string.h>
 #include <pthread.h>
 #include "../tools/dbgout.h"
+#include "../log/bologging.h"
 
 void bo_printFIFO(); /* THREAD SAFE */ 
 
