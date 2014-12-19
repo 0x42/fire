@@ -583,4 +583,4 @@ static int bo_checkDblMsg(struct ParamSt *param)
 	return ans;
 }
  
- 
+ /* 0x42 */

@@ -44,6 +44,7 @@ static void m_addSockToSet(struct bo_llsock *list_in, fd_set *r_set);
 static int  m_isClosed(struct bo_llsock *list_in, int sock);
 static void m_askSock(struct bo_llsock *list_out, TOHT *tr);
 
+static void prt_TR(TOHT *tr);
 /* Buffer for recieve data */
 static unsigned char *recvBuf;
 static int  recvBufLen = BO_MAX_TAB_BUF;
@@ -230,7 +231,7 @@ static void m_servWork(int sock_in, int sock_out,
 		} else if(exec > 0){
 			dbgout("\n------ EVENT ->\n");
 			/* если событие произошло у серв сокетов in&out 
-			 * добавляем в список*/
+			 * добавляем в список */
 			dbgout("CHK SERV IN \n");
 			m_addClient(llist_in,  sock_in,  &r_set);
 			
@@ -335,13 +336,14 @@ static void m_workClient(struct bo_llsock *list_in, struct bo_llsock *list_out,
 			fd_set *r_set, fd_set *w_set, TOHT *tr)
 {
 	int i = -1;
-	int exec = -1;
+	int exec = -1, ok = -1;
 	int sock = -1;
 	int max_desc = FD_SETSIZE;
 	/* флаг получен измен */
 	int flag = -1;
 	struct bo_sock *val = NULL;
 	struct timeval tval;
+	char ip[16] = {0}; 
 	tval.tv_sec = 0;
 	tval.tv_usec = 50;
 	
@@ -355,7 +357,14 @@ static void m_workClient(struct bo_llsock *list_in, struct bo_llsock *list_out,
 			/* реализовать в потоках ??? <- 0x42 */
 			dbgout("sock[%d] set\n", sock);
 			if(m_isClosed(list_in, sock) == 1) 
-				if(m_recvClientMsg(sock, tr) == 1) flag = 1;
+				if(m_recvClientMsg(sock, tr) == 1) {
+					ok = bo_getip_bysock(list_in, sock, ip);
+					if(ok == 1) {
+						tr_log("From ip[%s]\n", ip);
+					}
+					prt_TR(tr);
+					flag = 1;
+				}
 		}
 		i = exec;
 	}
@@ -476,7 +485,7 @@ static int m_recvClientMsg(int sock, TOHT *tr)
 	p.log = logArr;
 	
 	t_msg = bo_master_core(&p);
-
+	
 	dbgout("==== TAB ROUTE ==== \n");
 	for(i = 0; i < tr->size; i++) {
 		key = *(tr->key + i);
@@ -573,19 +582,17 @@ static void m_sendTabPacket(int sock, TOHT *tr, struct bo_llsock *list)
 	if(tab_not_empty == 1) {
 		exec = bo_master_sendTab(sock, tr, (char *)recvBuf);
 		bo_getip_bysock(list, sock, ip);
-		bo_log("\n==== SEND TAB ====\n");
-		bo_log("To: ip[%s]\n", ip);
+		tr_log("\n>>>> SEND TAB >>>>\n");
+		tr_log("To: ip[%s]\n", ip);
 		for(i = 0; i < tr->size; i++) {
 			key = *(tr->key + i);
 			if(key != NULL) {
 				val = *(tr->val + i);
-				bo_log("[%s:%s]\n", key, val);
+				tr_log("[%s:%s]\n", key, val);
 			}
 		}
-		bo_log("==== SEND END ====\n");
-		
+		tr_log(">>>> SEND END >>>>\n");
 		if(exec == -1) {
-			
 			bo_setflag_bysock(list, sock, -1);
 			bo_log("m_sendTabPacket() can't send data to ip[%s]", ip);
 		} else {
@@ -595,7 +602,7 @@ static void m_sendTabPacket(int sock, TOHT *tr, struct bo_llsock *list)
 	
 }
 /* ----------------------------------------------------------------------------
- * @brief	повторно отправ таблицу роутов 
+ * @brief	повторно отправ таблицу роутов !!! отправляем всем
  */
 static void m_repeatSendRoute(struct bo_llsock *list_out, TOHT *tr)
 {
@@ -609,10 +616,11 @@ static void m_repeatSendRoute(struct bo_llsock *list_out, TOHT *tr)
 		sock = -1;
 		exec = bo_get_val(list_out, &val, i);
 		/* проверяем флаг отправки */
-		if(val->flag == -1 ) {
+		/* if(val->flag == -1 ) { */
 			sock = val->sock;
+			tr_log(">>>> REPEAT SEND >>>>\n");
 			m_sendTabPacket(sock, tr, list_out);
-		}
+		/*} */
 		i = exec;
 	}
 }
@@ -641,6 +649,9 @@ static void m_askSock(struct bo_llsock *list_out, TOHT *tr)
 			m_delRoute(val, tr);
 			bo_closeSocket(sock);
 			bo_del_bysock(list_out, sock);
+			tr_log("---- DEL CONNECT ----\n");
+			tr_log("ip[%s]\n", val->ip);
+			m_repeatSendRoute(list_out, tr);
 		}
 		i = exec;
 	}
@@ -667,6 +678,21 @@ static void m_delRoute(struct bo_sock *item, TOHT *tr)
 			}
 		}
 	}
+}
+
+static void prt_TR(TOHT *tr)
+{
+	char *key; char *val;
+	int i = 0;
+	tr_log("<<<< RECV CHG <<<<\n");
+	for(i = 0; i < tr->size; i++) {
+		key = *(tr->key + i);
+		if(key != NULL) {
+			val = *(tr->val + i);
+			tr_log("[%s:%s]\n", key, val);
+		}
+	}
+	tr_log("<<<< RECV END <<<<\n");
 }
 
 /* 0x42 */

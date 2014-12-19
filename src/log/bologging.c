@@ -349,4 +349,66 @@ void bo_getTimeNow(char *timeStr, int sizeBuf)
 		printf("bo_getTimeNow() - ERROR - массив не достаточного размера\n");
 	sprintf(timeStr, "%s%d ", buffer, micro);
 }
+
+/* ----------------------------------------------------------------------------
+ * @brief		вывод таблицы роутов в файл
+ */
+void tr_log(char *msg, ...)
+{
+	FILE *file = NULL;
+	int print_in_file = -1;
+	char *file_name = "master_tab.debug";
+	char *p = NULL;
+	va_list ap;
+	int ival; double dval; char *sval;
+	const int find_error = -1;
+#ifdef __PRINT_TAB_ROUTE__
+	print_in_file = 1;
+#endif
+	if(print_in_file == 1) {
+		file = fopen(file_name, "a+");
+		if(file) {
+			va_start(ap, msg);
+			for(p = msg; *p; p++) {
+				if(*p != '%') {
+					if(fprintf(file, "%c", *p) < 0) goto error;
+					continue;
+				}
+				switch(*++p) {
+					case 'd':
+						ival = va_arg(ap, int);
+						if(fprintf(file, "%d", ival) < 0) goto error;
+						break;
+					case 'f':
+						dval = va_arg(ap, double);
+						if(fprintf(file, "%f", dval) < 0) goto error;
+						break;
+					case 's':
+						sval = va_arg(ap, char *);
+						if(fprintf(file, "%s", sval) < 0) goto error;
+						break;
+					default:
+						if(fprintf(file, "%c", *p) < 0) goto error;
+						break;
+				}
+			}
+			if(find_error == 1) {
+				error:
+				printf("tr_log() log_fprintf() ERROR can't wite in file [%s]", 
+				strerror(errno));
+			} 
+
+			if(fclose(file) < 0) {
+				printf("tr_log() ERROR can't close file [%s]", 
+					strerror(errno));
+			}
+		} else {
+			printf("tr_log() ERROR can't open file [%s]", 
+				strerror(errno));
+		}
+	}
+	va_end(ap);
+}
+
+
 /* [0x42] */

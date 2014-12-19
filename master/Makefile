@@ -10,6 +10,7 @@ CFLAGS		     = -Wall -c -g
 
 # Выводит отлад инфу в терминал
 CFLAGS		     += -D __PRINT__ 
+CFLAGS		     += -D __PRINT_TAB_ROUTE__
 # =========================================
 
 INC_DIR		     = -I../src/log -I../src/tools -I../src/nettcp -I../mslave/slave

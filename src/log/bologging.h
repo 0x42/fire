@@ -33,5 +33,7 @@ int  bo_isBigLogSize(int *nrow, int maxrow, char *name, char *oldname);
 /* NO THR SAFE*/
 void bo_getTimeNow(char *timeStr, int sizeBuf);
 
+void tr_log(char *msg, ...);
+
 #endif
 /* [0x42] */

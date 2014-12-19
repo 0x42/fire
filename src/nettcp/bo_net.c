@@ -348,12 +348,14 @@ int bo_setConnect(char *ip, int port)
 				conSet = 1; 
 				break;
 			} else {
+				/*
 				bo_log("bo_setConnect() n[%d] \nerrno[%s] ip[%s] \
 					port[%d] ",
 					n,
 					strerror(errno),
 					ip,
 					port);
+				*/
 				n++;
 			}
 			usleep(100000);
