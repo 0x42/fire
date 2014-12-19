@@ -347,18 +347,21 @@ TEST(master, chkSockTest) /* NEED RUN SERVER */
 
 TEST(master, chkAskTest) /* MOCK NEED RUN SERVER */
 {
-	printf("chkSockTest() ... run\n");
+	printf("chkAskTest() ... run\n");
 	int ans = -1, exec = -1;
 	int sock = -1;
 	char buf[3] = {0};
 	
 	sock = bo_setConnect("127.000.000.001", 8891);
-	bo_setTimerRcv2(sock, 5, 100);
+	
+	bo_setTimerRcv2(sock, 60, 100);
 	if(sock == -1) {
 		printf("bo_setConnect ERROR\n"); goto exit;
 	}
-	
+	bo_log("chkAskTest wait ASK");
 	exec = bo_recvAllData(sock, (unsigned char *)buf, 3, 3);
+	bo_log("chkAskTest end wait ASK");
+
 	if(exec > -1) {
 		if(strstr(buf, "ASK")) ans = 1;
 		else dbgout("chkAskTest() recv bad ans"); 

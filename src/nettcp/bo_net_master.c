@@ -345,6 +345,7 @@ static void m_workClient(struct bo_llsock *list_in, struct bo_llsock *list_out,
 	int flag = -1;
 	struct bo_sock *val = NULL;
 	struct timeval tval;
+	char *key; char *temp_val;
 	char ip[16] = {0}; 
 	tval.tv_sec = 0;
 	tval.tv_usec = 50;
@@ -362,7 +363,16 @@ static void m_workClient(struct bo_llsock *list_in, struct bo_llsock *list_out,
 				if(m_recvClientMsg(sock, tr) == 1) {
 					ok = bo_getip_bysock(list_in, sock, ip);
 					if(ok == 1) {
-						dbgout("From ip[%s]\n", ip);
+						bo_log("From ip[%s]", ip);
+						bo_log("<<<< TAB ROUTE <<<< ");
+						for(i = 0; i < tr->size; i++) {
+							key = *(tr->key + i);
+							if(key != NULL) {
+								temp_val = *(tr->val + i);
+								bo_log("[%s:%s]", key, temp_val);
+							}
+						}
+						bo_log("<<<< END TAB <<<< ");
 					}
 					flag = 1;
 				}

@@ -133,17 +133,17 @@ void *recvOnePacket(void *arg)
 	double diff_milli = difftime(end.tv_usec, begin.tv_usec);
 	printf("\nRECV N pack[%d]time:[%f] \n", 1, (diff_sec + diff_milli)/1000000);
 	
-	struct timeval tval;
-	tval.tv_sec = 1;
-	tval.tv_usec = 0;
-	FD_ZERO(&rset);
-	FD_SET(out1, &rset);
-	exec = select(1024, &rset, NULL, NULL, &tval);
-	if(exec != 0) {
-		printf("ERROR server send more data than wait\n");
-		ans = -1;
-		goto end;
-	}
+//	struct timeval tval;
+//	tval.tv_sec = 1;
+//	tval.tv_usec = 0;
+//	FD_ZERO(&rset);
+//	FD_SET(out1, &rset);
+//	exec = select(1024, &rset, NULL, NULL, &tval);
+//	if(exec != 0) {
+//		printf("ERROR server send more data than wait\n");
+//		ans = -1;
+//		goto end;
+//	}
 	char bb1[BO_MAX_TAB_BUF]= {0};
 	
 	exec = bo_master_crtPacket(HT_TR, bb1);
