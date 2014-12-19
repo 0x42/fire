@@ -19,12 +19,17 @@
 struct actx_thread_arg {
 	int port;
 	int tout;
-	int adr1;
-	int adr2;
+	int adr;
 	int uso1;
 	int uso2;
-	int uso3;
-	int uso4;
+	int test1_ln;
+	int test1_m;
+	int test1_msgln;
+	char *test1_msg;
+	int test2_ln;
+	int test2_m;
+	int test2_msgln;
+	char *test2_msg;
 };
 
 pthread_mutex_t	mx_actx;

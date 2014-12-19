@@ -23,6 +23,8 @@ int main(int argc, char *argv[])
 	char req_ag[32];
 	char req_ns[32];
 	char req_gl[32];
+	char req_ms[32];
+	char req_sq[32];
 
 	int cdaId;
 	int cdaDest;
@@ -30,6 +32,13 @@ int main(int argc, char *argv[])
 	int cdnsDest;
 	int cdquLogId;
 	int cdquDest;
+	int cdmsId;
+	int cdmsDest;
+	int cdsqId;
+	int cdsqDest;
+
+	char test_msg[32];
+	char snmp_ip[16];
 	
 	int rs_parity, rs_databits, rs_stopbit;
 	int rs_speed;
@@ -71,19 +80,12 @@ int main(int argc, char *argv[])
 
 	tout = cfg_getint(cfg, "RS:tout", -1);
 	
-	actx_targ.adr1 = cfg_getint(cfg, "USO1:adr", -1);
-	actx_targ.logger1 = cfg_getint(cfg, "USO1:logger", -1);
-
-	actx_targ.adr2 = cfg_getint(cfg, "USO2:adr", -1);
-	actx_targ.logger2 = cfg_getint(cfg, "USO2:logger", -1);
-
-	actx_targ.logger2 = cfg_getint(cfg, "USO2:logger", -1);
+	actx_targ.adr = cfg_getint(cfg, "USO:adr", -1);
+	actx_targ.logger = cfg_getint(cfg, "USO:logger", -1);
+	actx_targ.snmp_q = cfg_getint(cfg, "USO:snmp", -1);
 
 	actx_targ.lline = cfg_getint(cfg, "LOGGER:line", -1);
 	actx_targ.nllines = cfg_getint(cfg, "LOGGER:nlines", -1);
-
-	/** Количество данных в кадре теста */
-	actx_targ.test_ln = cfg_getint(cfg, "TEST:lnTest", -1);
 
 	/** Главная подсистема ЛС 'General' */
 	sprintf(ls_gen, cfg_getstring(cfg, "LS:gen", NULL));
@@ -103,10 +105,30 @@ int main(int argc, char *argv[])
 	cdquLogId = mfnv1a(req_gl);
 	cdquDest = mfnv1a(ls_gen);
 	
+	/** StartQuench */
+	sprintf(req_sq, cfg_getstring(cfg, "REQ:sq", NULL));
+	cdsqId = mfnv1a(req_sq);
+	cdsqDest = mfnv1a(ls_gen);
+	
+	/** Состояние магистрали */
+	sprintf(req_ms, cfg_getstring(cfg, "REQ:ms", NULL));
+	cdmsId = mfnv1a(req_ms);
+	cdmsDest = mfnv1a(ls_gen);
+
 	actx_targ.pr1 = cfg_getint(cfg, "PR:adr1", -1);
 	actx_targ.pr2 = cfg_getint(cfg, "PR:adr2", -1);
-	actx_targ.pr3 = cfg_getint(cfg, "PR:adr3", -1);
-	actx_targ.pr4 = cfg_getint(cfg, "PR:adr4", -1);
+	
+	/** Длина данных кадра */
+	actx_targ.test_ln = cfg_getint(cfg, "TEST:ln", -1);
+	/** Количество сообщений */
+	actx_targ.test_m = cfg_getint(cfg, "TEST:m", -1);
+	/** Длина сообщения */
+	actx_targ.test_msgln = cfg_getint(cfg, "TEST:msg_ln", -1);
+	/** Сообщение */
+	sprintf(test_msg, cfg_getstring(cfg, "TEST:msg", NULL));
+
+	/** Тест SNMP */
+	sprintf(snmp_ip, cfg_getstring(cfg, "SNMP:ip", NULL));
 	
 	/** Установка параметров и открытие серийного порта */
 	SerialSetParam(rs_port, rs_parity, rs_databits, rs_stopbit);
@@ -139,6 +161,12 @@ int main(int argc, char *argv[])
 	actx_targ.cdnsDest = cdnsDest;
 	actx_targ.cdquLogId = cdquLogId;
 	actx_targ.cdquDest = cdquDest;
+	actx_targ.cdmsId = cdmsId;
+	actx_targ.cdmsDest = cdmsDest;
+	actx_targ.cdsqId = cdsqId;
+	actx_targ.cdsqDest = cdsqDest;
+	actx_targ.test_msg = test_msg;
+	actx_targ.snmp_ip = snmp_ip;
 	result = pthread_create(&thread_actx, &pattr, &actx_485, &actx_targ);
 	if (result) {
 		printf ("thread_actx: result = %d: %s\n", result,

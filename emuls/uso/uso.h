@@ -21,23 +21,28 @@
 struct actx_thread_arg {
 	int port;
 	int tout;
-	int adr1;
-	int logger1;
-	int adr2;
-	int logger2;
+	int adr;
+	int logger;
+	int snmp_q;
+	char *snmp_ip;
 	unsigned int lline;
 	unsigned int nllines;
-	int test_ln;
 	int cdaId;
 	int cdaDest;
 	int cdnsId;
 	int cdnsDest;
 	int cdquLogId;
 	int cdquDest;
+	int cdmsId;
+	int cdmsDest;
+	int cdsqId;
+	int cdsqDest;
 	int pr1;
 	int pr2;
-	int pr3;
-	int pr4;
+	int test_ln;
+	int test_m;
+	int test_msgln;
+	char *test_msg;
 };
 
 pthread_mutex_t	mx_actx;
@@ -61,6 +66,7 @@ void uso_answer_error(struct actx_thread_arg *targ, struct thr_tx_buf *b);
 void uso_quNetStat(struct actx_thread_arg *targ, struct thr_tx_buf *b);
 void uso_quLog(struct actx_thread_arg *targ, struct thr_tx_buf *b,
 	       unsigned int line, unsigned int nlines);
+void uso_quSNMP(struct actx_thread_arg *targ, struct thr_tx_buf *b);
 
 void *actx_485(void *arg);
 
