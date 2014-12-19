@@ -44,7 +44,6 @@ static void m_addSockToSet(struct bo_llsock *list_in, fd_set *r_set);
 static int  m_isClosed(struct bo_llsock *list_in, int sock);
 static void m_askSock(struct bo_llsock *list_out, TOHT *tr);
 
-static void prt_TR(TOHT *tr);
 /* Buffer for recieve data */
 static unsigned char *recvBuf;
 static int  recvBufLen = BO_MAX_TAB_BUF;
@@ -132,6 +131,7 @@ static void m_readConfig(TOHT *cfg, int n, char **argv)
 	char *fileName	= NULL;
 	char *f_log	= "master_route.log";
 	char *f_log_old = "master_route.log(old)";
+
 	int  nrow    = 0;
 	int  max_con = 250;
 	int  maxrow  = 1000;
@@ -156,6 +156,8 @@ static void m_readConfig(TOHT *cfg, int n, char **argv)
 			f_log	  = cfg_getstring(cfg, "log:file", f_log);
 			f_log_old = cfg_getstring(cfg, "log:file_old", f_log_old);
 			maxrow    = cfg_getint(cfg, "log:maxrow", maxrow);
+			
+
 		} else {
 			bo_log(" WARNING error[%s] %s", 
 				"can't read config file",
@@ -360,9 +362,8 @@ static void m_workClient(struct bo_llsock *list_in, struct bo_llsock *list_out,
 				if(m_recvClientMsg(sock, tr) == 1) {
 					ok = bo_getip_bysock(list_in, sock, ip);
 					if(ok == 1) {
-						tr_log("From ip[%s]\n", ip);
+						dbgout("From ip[%s]\n", ip);
 					}
-					prt_TR(tr);
 					flag = 1;
 				}
 		}
@@ -582,16 +583,16 @@ static void m_sendTabPacket(int sock, TOHT *tr, struct bo_llsock *list)
 	if(tab_not_empty == 1) {
 		exec = bo_master_sendTab(sock, tr, (char *)recvBuf);
 		bo_getip_bysock(list, sock, ip);
-		tr_log("\n>>>> SEND TAB >>>>\n");
-		tr_log("To: ip[%s]\n", ip);
+		dbgout("\n>>>> SEND TAB >>>>\n");
+		dbgout("To: ip[%s]\n", ip);
 		for(i = 0; i < tr->size; i++) {
 			key = *(tr->key + i);
 			if(key != NULL) {
 				val = *(tr->val + i);
-				tr_log("[%s:%s]\n", key, val);
+				dbgout("[%s:%s]\n", key, val);
 			}
 		}
-		tr_log(">>>> SEND END >>>>\n");
+		dbgout(">>>> SEND END >>>>\n");
 		if(exec == -1) {
 			bo_setflag_bysock(list, sock, -1);
 			bo_log("m_sendTabPacket() can't send data to ip[%s]", ip);
@@ -618,7 +619,6 @@ static void m_repeatSendRoute(struct bo_llsock *list_out, TOHT *tr)
 		/* проверяем флаг отправки */
 		/* if(val->flag == -1 ) { */
 			sock = val->sock;
-			tr_log(">>>> REPEAT SEND >>>>\n");
 			m_sendTabPacket(sock, tr, list_out);
 		/*} */
 		i = exec;
@@ -649,8 +649,7 @@ static void m_askSock(struct bo_llsock *list_out, TOHT *tr)
 			m_delRoute(val, tr);
 			bo_closeSocket(sock);
 			bo_del_bysock(list_out, sock);
-			tr_log("---- DEL CONNECT ----\n");
-			tr_log("ip[%s]\n", val->ip);
+			dbgout("DEL CONNECT ip[%s]\n",val->ip);
 			m_repeatSendRoute(list_out, tr);
 		}
 		i = exec;
@@ -680,6 +679,7 @@ static void m_delRoute(struct bo_sock *item, TOHT *tr)
 	}
 }
 
+/*
 static void prt_TR(TOHT *tr)
 {
 	char *key; char *val;
@@ -694,5 +694,5 @@ static void prt_TR(TOHT *tr)
 	}
 	tr_log("<<<< RECV END <<<<\n");
 }
-
+*/
 /* 0x42 */

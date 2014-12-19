@@ -3,7 +3,6 @@
 
 STATIC void sysErr(char *msg, ...);
 STATIC void sysErrParam(char *msg, va_list *ap);
-STATIC void bo_setLogParam(char *fname, char *oldfname, int nrow, int maxrow);
 STATIC int wrtLog(char *msg, va_list *ap, char **errTxt);
 STATIC int log_fprintf(FILE *f, char *timeBuf, va_list *ap, char *msg);
 STATIC int readNRow(const char *fname);
@@ -21,6 +20,7 @@ static struct {
 	int nrow;
 	/*макс кол-во строк в лог файле*/
 	int maxrow;
+
 } log = {0};
 
 /* инициализация MUTEX*/
@@ -64,9 +64,9 @@ void loggingINIT()
 	/* получ-ие pid процесса*/
 	log.pid = getpid();
 	/* ЧИТАТЬ С КОНФ ФАЙЛА*/
-	log.name = "default.log";
-	log.oldname = "default_OLD.log";
-	log.maxrow = 1000;
+	log.name     = "default.log";
+	log.oldname  = "default_OLD.log";
+	log.maxrow   = 1000;
 	/* ================= */
         logInit = 1;
 	log.nrow = readNRow(log.name);
@@ -350,14 +350,17 @@ void bo_getTimeNow(char *timeStr, int sizeBuf)
 	sprintf(timeStr, "%s%d ", buffer, micro);
 }
 
+/* [0x42] */
+
 /* ----------------------------------------------------------------------------
  * @brief		вывод таблицы роутов в файл
  */
+/*
 void tr_log(char *msg, ...)
 {
 	FILE *file = NULL;
 	int print_in_file = -1;
-	char *file_name = "master_tab.debug";
+	char *file_name = log.tab_log;
 	char *p = NULL;
 	va_list ap;
 	int ival; double dval; char *sval;
@@ -403,8 +406,8 @@ void tr_log(char *msg, ...)
 					strerror(errno));
 			}
 		} else {
-			printf("tr_log() ERROR can't open file [%s]", 
-				strerror(errno));
+			printf("tr_log() ERROR can't open file[%s] [%s]", 
+				strerror(errno), file_name);
 		}
 	}
 	va_end(ap);
@@ -414,7 +417,7 @@ void fifo_log(char *msg, ...)
 {
 	FILE *file = NULL;
 	int print_in_file = -1;
-	char *file_name = "mslave_fifo.debug";
+	char *file_name = log.fifo_log;
 	char *p = NULL;
 	va_list ap;
 	int ival; double dval; char *sval;
@@ -472,7 +475,7 @@ void fifo_val10_log(unsigned char *buf, int size)
 
 	FILE *file = NULL;
 	int print_in_file = -1;
-	char *file_name = "mslave_fifo.debug";
+	char *file_name = log.fifo_log;
 	int i = 0;
 	char temp[75] = {0};
 	int ptr = 0;
@@ -511,5 +514,4 @@ void fifo_val10_log(unsigned char *buf, int size)
 		}
 	}
 }
-
-/* [0x42] */
+*/

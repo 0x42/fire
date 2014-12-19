@@ -26,18 +26,19 @@ int  bo_log(char *msg, ...);
 
 /* THR SAFE*/
 void bo_setLogParam(char *fname, char *oldfname, int nrow, int maxrow);
+
 /* NO THR SAFE*/
 void bo_resetLogInit();
 /* NO THR SAFE*/
 int  bo_isBigLogSize(int *nrow, int maxrow, char *name, char *oldname);
 /* NO THR SAFE*/
 void bo_getTimeNow(char *timeStr, int sizeBuf);
-
+/*
 void tr_log(char *msg, ...);
 
 void fifo_log(char *msg, ...);
 
 void fifo_val10_log(unsigned char *buf, int size);
-
+*/
 #endif
 /* [0x42] */

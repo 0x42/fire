@@ -477,25 +477,21 @@ static void fifoAddToFIFO(struct ParamSt *param)
 			dbgout("%c", *(param->buffer + i) );
 		}
 		dbgout("]\n");
-		fifo_log("From ip[%s]\n", param->ip);
+		dbgout("From ip[%s]\n", param->ip);
 		exec = bo_checkDblMsg(param);
 		if(exec == 1) {
-			fifo_log("++++ ADD FIFO ++++\n");
-			fifo_val10_log(param->buffer, param->packetLen);
 			flag = bo_addFIFO(param->buffer, param->packetLen);
 			if(flag == -1) {
-				fifo_log(" ERR WHEN ADD\n");
+				dbgout(" ERR WHEN ADD\n");
 				bo_log(" %s fifoAddToFIFO() bo_addFIFO can't add data to FIFO bad Length value[%d]",
 					"FIFO", param->packetLen);
 				goto error;
 			} else if(flag == 0) {
-				fifo_log(" NO ADD. FIFO FULL\n");
+				dbgout(" NO ADD. FIFO FULL\n");
 				bo_log(" FIFO fifoAddToFIFO() can't add data FIFO is full ");
 				goto error;
 			}
-			fifo_log("\n++++ END ADD ++++\n");
 		} else if(exec == 0) {
-			fifo_log(" ---- RECV DOUBLE ----\n");
 			dbgout("\n DOUBLE MESSAGE DOUBLE MESSAGE DOUBLE MESSAGE \n");
 			bo_log("FIFO fifoAddToFIFO() value don't push to FIFO");
 		} else goto error;
