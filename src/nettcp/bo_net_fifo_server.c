@@ -13,7 +13,7 @@ extern unsigned int boCharToInt(unsigned char *buf);
 struct ParamSt;
 static void readConfig(TOHT *cfg, int n, char **argv);
 
-static void fifoServWork	(int sockfdMain);
+static void fifoServWork	();
 static void fifoReadPacket	(int clientSock, unsigned char *buffer, 
 				 int bufSize, int *endPr, TOHT *tab);
 static void fifoReadHead	(struct ParamSt *param);
@@ -101,22 +101,19 @@ struct ParamSt {
  */
 void bo_fifo_thrmode(int port, int queue_len, int fifo_len)
 {
-	int sock = 0;
 	bo_log(" %s %s %s", "FIFO", "INFO", "START(THR mode) moxa_serv");
 	fifoconf.port      = port;
 	fifoconf.queue_len = queue_len;
 	fifoconf.fifo_len  = fifo_len;
 	
-	if( (sock = bo_servStart(fifoconf.port, fifoconf.queue_len)) != -1) {
-		if(bo_initFIFO(fifoconf.fifo_len) == 1) {
-			fifoServWork(sock); 
-			bo_delFIFO();
-		}
-		bo_closeSocket(sock);
+	if(bo_initFIFO(fifoconf.fifo_len) == 1) {
+		fifoServWork(); 
+		bo_delFIFO();
 	}
 	
 	bo_log("%s %s %s", "FIFO", "INFO", "END	moxa_serv");
 }
+
 /* ----------------------------------------------------------------------------
  * @brief		Запуск сервера FIFO
  *			request: SET|GET|DEL|MEM|END
@@ -125,22 +122,20 @@ void bo_fifo_thrmode(int port, int queue_len, int fifo_len)
  */
 void bo_fifo_main(int n, char **argv)
 {
-	int sock = 0;
 	TOHT *cfg = NULL;
 	readConfig(cfg, n, argv);
 	bo_log(" %s %s %s", "FIFO", "INFO", "START moxa_serv");
 
-	if( (sock = bo_servStart(fifoconf.port, fifoconf.queue_len)) != -1) {
-		if(bo_initFIFO(fifoconf.fifo_len) == 1) {
-			fifoServWork(sock); 
-			bo_delFIFO();
-		}
-		bo_closeSocket(sock);
+	if(bo_initFIFO(fifoconf.fifo_len) == 1) {
+		fifoServWork(); 
+		bo_delFIFO();
 	}
+
 	if(cfg != NULL) cfg_free(cfg);
 	
 	bo_log("%s %s %s", "FIFO", "INFO", "END	moxa_serv");
 };
+
 /* ----------------------------------------------------------------------------
  * @brief		Читаем данные с конфиг файла
  */
@@ -173,11 +168,10 @@ static void readConfig(TOHT *cfg, int n, char **argv)
 
  /* ---------------------------------------------------------------------------
   * @brief		осн цикл сервера. вход соед и отдает его worker'у
-  * @sock		дескриптор главного сокета на который поступают
-  *			соединения. Не закрывать его!!!
   */
-static void fifoServWork(int sockfdMain)
- {
+static void fifoServWork()
+{
+	int sockfdMain = -1;
 	int stop = 1;
 	int countErr  = 0;
 	char *errTxt = NULL;
@@ -201,24 +195,38 @@ static void fifoServWork(int sockfdMain)
 		goto exit;
 	}
 	
+	sockfdMain = -1;
 	while(stop == 1) {
-		if(bo_waitConnect(sockfdMain, &clientfd, &errTxt) == 1) {
-			countErr = 0;
-			/* передаем флаг stop. Ф-ия может поменять его на -1
-			   если придет пакет END */
-			fifoReadPacket(clientfd, buffer1, bufferSize, &stop, tab);
+		
+		if( sockfdMain  != -1 ) {
+			if(bo_waitConnect(sockfdMain, &clientfd, &errTxt) == 1) {
+				countErr = 0;
+				/* передаем флаг stop. Ф-ия может поменять его на -1
+				   если придет пакет END */
+				fifoReadPacket(clientfd, buffer1, bufferSize, &stop, tab);
+			} else {
+				countErr++;
+				bo_log(" %s %s %s errno[%s]", "FIFO", "ERROR", 
+					"fifoServWork()", errTxt);
+
+			}
 		} else {
-			countErr++;
-			bo_log(" %s %s %s errno[%s]", "FIFO","ERROR", 
-				"fifoServWork()", errTxt);
-			if(countErr == 10) stop = -1;
+			sleep(5);
+			sockfdMain = bo_servStart(fifoconf.port, fifoconf.queue_len);
+		}
+		if(countErr == 5) {
+			bo_log(" FIFO ERROR fifoServWork() restart server socket");
+			countErr = 0;
+			bo_closeSocket(sockfdMain);
+			sockfdMain = -1;
 		}
 	}
 	
+	bo_closeSocket(sockfdMain);
 	exit:
 	if(tab != NULL) ht_free(tab);
 	if(buffer1 != NULL) free(buffer1);
- }
+}
  
 /* ---------------------------------------------------------------------------
   * @brief		читаем пакет и пишем/забираем/удаляем в/из FIFO
