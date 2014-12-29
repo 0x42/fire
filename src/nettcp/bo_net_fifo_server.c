@@ -305,6 +305,7 @@ static void fifoReadPacket(int clientSock, unsigned char *buffer, int bufSize,
 		packetStatus = ANSERR;
 	}
  }
+ 
  /* ---------------------------------------------------------------------------
   * @brief		читаем длину запроса,
   * @param		ParamSt {packetLen = кол-во символов опред длину пакета
@@ -339,6 +340,7 @@ static void fifoReadPacket(int clientSock, unsigned char *buffer, int bufSize,
 		packetStatus = ANSERR;
 	}
  }
+ 
  /* ---------------------------------------------------------------------------
   * @brief		снимаем со стека 1 запрос и отправляем клиенту
   * status -> READHEAD |   в случае успешной отправки ждем ответ от клиента
@@ -403,11 +405,13 @@ static void fifoReadPacket(int clientSock, unsigned char *buffer, int bufSize,
 	}
 	return;
  }
+ 
  /* ---------------------------------------------------------------------------
   * @brief		empty functions
   */
  static void fifoQuit(struct ParamSt *param) { }
  static void fifoEnd(struct ParamSt *param) { }
+ 
  /* ---------------------------------------------------------------------------
   * @brief		send answer " OK"
   */
