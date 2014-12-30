@@ -600,6 +600,47 @@ TEST(fifo, fifo2add3)
 	TEST_ASSERT_EQUAL(1, flag);
 }
 
+TEST(fifo, fifoAddDel)
+{
+	printf("fifoAddDel ...\n");
+	int flag = -1, n = -1;
+	if(bo_initFIFO(3) == 1) {
+		char msg[] = "abc";
+		char buf[10] = {0};
+
+		if(bo_addFIFO("001", 3) < 1) { printf("can't add value 1\n"); goto exit;}
+		bo_printFIFO_test();
+		if(bo_addFIFO("002", 3) < 1) { printf("can't add value 1\n"); goto exit;}
+		bo_printFIFO_test();
+		if(bo_addFIFO("003", 3) < 1) { printf("can't add value 1\n"); goto exit;}
+		bo_printFIFO_test();
+		
+		if( bo_addFIFO("004", 3) != 0) { printf("fifo is full add value \n"); goto exit;}
+		bo_printFIFO_test();
+		
+		bo_fifo_delLastAdd();
+		bo_fifo_delLastAdd();
+		bo_fifo_delLastAdd();
+		
+		n = bo_getFIFO(buf, 10);
+		if(n != -1) {
+			printf("fifo has val after del tail\n");
+			goto exit;
+		}
+		
+		
+		if(bo_addFIFO(msg, 3) == -1) { printf("can't add value 1\n"); goto exit;}
+		flag = 1;
+		bo_printFIFO_test();
+	} else {
+		printf("can't init fifo \n");
+	}
+	
+	exit:
+
+	TEST_ASSERT_EQUAL(1, flag);
+}
+
 TEST(fifo, add100get100)
 {
 	printf("add100get100() ...\n");

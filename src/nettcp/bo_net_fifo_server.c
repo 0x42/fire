@@ -8,10 +8,10 @@
 #include "../tools/ocfg.h"
 #include "../tools/oht.h"
 
-extern unsigned int boCharToInt(unsigned char *buf);
+extern unsigned int boCharToInt	(unsigned char *buf);
 
 struct ParamSt;
-static void readConfig(TOHT *cfg, int n, char **argv);
+static void readConfig		(TOHT *cfg, int n, char **argv);
 
 static void fifoServWork	();
 static void fifoReadPacket	(int clientSock, unsigned char *buffer, 
@@ -28,8 +28,10 @@ static void fifoDelHead		(struct ParamSt *param);
 static void fifoEnd		(struct ParamSt *param);
 static void fifoMem		(struct ParamSt *param);
 
-static unsigned int readPacketLength(struct ParamSt *param);
-static int bo_checkDblMsg(struct ParamSt *param);
+static unsigned int readPacketLength	(struct ParamSt *param);
+static int bo_checkDblMsg		(struct ParamSt *param);
+static int bo_chkDbl_setMark		(struct ParamSt *param);
+
 /* ----------------------------------------------------------------------------
  * @port	- порт на котором висит слуш сокет
  * @queue_len	- кол-во необр запросов в очереди, при перепол возвращает 
@@ -503,6 +505,12 @@ static void fifoAddToFIFO(struct ParamSt *param)
 				bo_log(" FIFO fifoAddToFIFO() can't add data FIFO is full ");
 				goto error;
 			}
+			exec = bo_chkDbl_setMark(param);
+			if(exec == -1) {
+				/* del last msg from fifo */
+				bo_fifo_delLastAdd();
+				goto error;
+			}
 		} else if(exec == 0) {
 			dbgout("\n DOUBLE MESSAGE DOUBLE MESSAGE DOUBLE MESSAGE \n");
 			bo_log("FIFO fifoAddToFIFO() value don't push to FIFO");
@@ -590,11 +598,6 @@ static int bo_checkDblMsg(struct ParamSt *param)
 			}
 		}
 
-		exec = ht_put(param->id_msg, ip, param->id);
-		if(exec == -1) {
-			bo_log("bo_checkDblMsg() WARN can't add ID to table");
-			goto exit;
-		}
 		ans = 1;
 	} else {
 		bo_log("bo_checkDblMsg() ERROR can't get ip by sock");
@@ -602,5 +605,29 @@ static int bo_checkDblMsg(struct ParamSt *param)
 	exit:
 	return ans;
 }
- 
+/* ----------------------------------------------------------------------------
+ * @return	[1] OK [-1] ERROR
+ */
+static int bo_chkDbl_setMark(struct ParamSt *param)
+{
+	int exec = -1;
+	char ip[16] = {0};
+	
+	exec = bo_getIp(param->clientfd, ip);
+	if(exec == 1) {
+	
+		exec = ht_put(param->id_msg, ip, param->id);
+		if(exec == -1) {
+			bo_log("bo_chkDbl_setMark() WARN can't add ID to table");
+			goto exit;
+		}
+		exec = 1;
+	} else {
+		exec = -1;
+		bo_log("bo_checkDbl_setMark() ERROR can't get ip by sock");
+	}
+	
+	exit:
+	return exec;
+}
  /* 0x42 */

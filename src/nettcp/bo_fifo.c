@@ -52,6 +52,26 @@ void bo_printFIFO()
 
 	pthread_mutex_unlock(&fifo_mut);
 }
+
+void bo_printFIFO_test() 
+{
+	int i = 0, j = 0;
+	struct BO_ITEM_FIFO *item_fifo;
+
+	printf("FIFO: itemN[%d] free[%d] count[%d]\n", 
+	fifo.itemN, 
+	fifo.free,
+	fifo.count);
+
+	for(i = 0; i < fifo.itemN; i++) {
+		item_fifo = fifo.mem + i;
+		printf("\n%d:[", i);
+		for(j = 0; j < 5; j++) {
+			printf("%c", item_fifo->val[j]);
+		}
+		printf("]\n");
+	}
+}
 /* ----------------------------------------------------------------------------
  * @brief	Создаем очередь 
  * @itemN	размер очередь в байтах
@@ -153,6 +173,7 @@ static int bo_get_fifo(unsigned char *buf, int bufSize)
 	
 	return ans;
 }
+
 /* ----------------------------------------------------------------------------
  * @brief	берем голову удал голову
  * @return	[-1] - нет данных в очереди [N] - размер данных
@@ -170,6 +191,7 @@ int bo_getFifoVal(unsigned char *buf, int bufSize) /*THREAD SAFE */
 
 	return ans;
 }
+
 /* ----------------------------------------------------------------------------
  * @brief		Делаем головой очереди следующий элемент
  */
@@ -183,12 +205,27 @@ void bo_delHead() /*THREAD SAFE*/
 static void bo_del_head()
 {
 	if(fifo.count != 0) {
-		memset(fifo.mem+fifo.head, 0, sizeof(struct BO_ITEM_FIFO));
+		memset(fifo.mem + fifo.head, 0, sizeof(struct BO_ITEM_FIFO));
 		fifo.count--;
 		fifo.free++;
 		if(fifo.head == fifo.last) fifo.head = 0;
 		else fifo.head++;
 	}
+}
+
+/* ----------------------------------------------------------------------------
+ * @brief	удаляем хвост списка
+ */
+void bo_fifo_delLastAdd()
+{
+	pthread_mutex_lock(&fifo_mut);
+	if(fifo.count != 0) {
+		fifo.count--;
+		fifo.free++;
+		if(fifo.tail == 0) fifo.tail = fifo.last;
+		else fifo.tail--;
+	}
+	pthread_mutex_unlock(&fifo_mut);
 }
 /* ----------------------------------------------------------------------------
  * @brief	кол-во свободных item
@@ -197,6 +234,7 @@ int bo_getFree()
 {
 	return fifo.free;
 }
+
 /* ----------------------------------------------------------------------------
  * @brief	колво хран эелементов
  */
@@ -204,6 +242,7 @@ int bo_getCount()
 {
 	return fifo.count;
 }
+
 /* ----------------------------------------------------------------------------
  * @brief	прибираем за собой
  */
@@ -221,3 +260,5 @@ void bo_delFIFO()
 	
 	pthread_mutex_unlock(&fifo_mut); 
 }
+
+/* 0x42 */

@@ -10,9 +10,13 @@
 
 void bo_printFIFO(); /* THREAD SAFE */ 
 
+void bo_printFIFO_test();
+
 int bo_initFIFO(int size); /* THREAD SAFE */ 
 
 int bo_addFIFO(unsigned char *obj, int size); /* THREAD SAFE */ 
+
+void bo_fifo_delLastAdd(); /* THREAD SAFE */
 
 int bo_getFifoVal(unsigned char *buf, int bufSize); /* THREAD SAFE */ 
 

@@ -21,5 +21,5 @@ TEST_GROUP_RUNNER(fifo)
 	RUN_TEST_CASE(fifo, getToLittleBuf);
 	RUN_TEST_CASE(fifo, setNullMsg);
 	RUN_TEST_CASE(fifo, addBigMsgThanItemFifo);
-
+	RUN_TEST_CASE(fifo, fifoAddDel);
 }
