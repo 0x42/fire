@@ -406,8 +406,8 @@ void fifo_log(char *msg, ...)
 					strerror(errno));
 			}
 		} else {
-			printf("fifo_log() ERROR can't open file [%s]", 
-				strerror(errno));
+			printf("fifo_log() ERROR can't open file [%s][%s]", 
+				strerror(errno), file_name);
 		}
 	}
 	va_end(ap);
