@@ -511,7 +511,7 @@ static void fifoAddToFIFO(struct ParamSt *param)
 			}
 			exec = bo_chkDbl_setMark(param);
 			if(exec == -1) {
-				fifo_log("DOUBLE MSG");
+				fifo_log("ERROR SET ID MSG");
 				/* del last msg from fifo */
 				bo_fifo_delLastAdd();
 				goto error;
