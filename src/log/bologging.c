@@ -41,6 +41,7 @@ static int logInit = -1;
 void bo_setLogParam(char *fname, char *oldfname, int nrow, int maxrow)
 {
 	pthread_mutex_lock(&bolog_mutex); 
+	loggingINIT();
 	log.pid = getpid();
 	log.name = fname;
         log.oldname = oldfname;
