@@ -16,10 +16,12 @@ static struct {
 	/* имя лог файла*/
 	char *name;
 	char *oldname;
+	char *fifo_log;
 	/*текущ. кол-во строк в лог файле*/
 	int nrow;
 	/*макс кол-во строк в лог файле*/
 	int maxrow;
+	
 
 } log = {0};
 
@@ -66,6 +68,10 @@ void loggingINIT()
 	/* ЧИТАТЬ С КОНФ ФАЙЛА*/
 	log.name     = "default.log";
 	log.oldname  = "default_OLD.log";
+	log.fifo_log = "fifo.trace";
+#ifdef __MOXA__
+	log.fifo_log = "/mnt/ramdisk/fifo.trace";
+#endif	
 	log.maxrow   = 1000;
 	/* ================= */
         logInit = 1;
@@ -120,8 +126,6 @@ int bo_log(char *msg, ...)
  *		освобождать не надо тк результат из errno 
  * @return	>0 = ok; <0 = error 
  */
-
-
 STATIC int wrtLog(char *msg, va_list *ap, char **errTxt)
 {
 	int ans = 1;
@@ -150,6 +154,7 @@ STATIC int wrtLog(char *msg, va_list *ap, char **errTxt)
 	}
 	return ans;
 }
+
 /* ----------------------------------------------------------------------------
  * @brief		вывод в файл
  * @param timeBuf	время
@@ -192,11 +197,11 @@ STATIC int wrtLog(char *msg, va_list *ap, char **errTxt)
 	if(fprintf(f, "\n") < 0) return -1;
 	return ans;
 }
+ 
 /* ----------------------------------------------------------------------------
  * @return	возвр. кол-во строк в fname файле ecли файл не сущест.
  *		или не удалось открыть возв 0
  */
-
  int readNRow(const char *fname)
 {
 	int nrow = 0;
@@ -241,7 +246,6 @@ STATIC int wrtLog(char *msg, va_list *ap, char **errTxt)
 	}
 }
 
- 
 void sysErrParam(char *msg, va_list *ap)
 {
 	FILE *file = NULL;
@@ -260,6 +264,7 @@ void sysErrParam(char *msg, va_list *ap)
 		printf("%s%s\n", "ERROR sysErr() ", strerror(errno));
 	}
 }
+
 /* ----------------------------------------------------------------------------
  * @brief	 проверяем размер файла log.name если nrow = maxrow то log.name
  *		 сохраняем c именем log.oldname. Создаем пустой файл c 
@@ -284,6 +289,7 @@ int bo_isBigLogSize(int *nrow, int maxrow, char *name, char *oldname)
 	}
 	return ans;
 }
+
 /* ----------------------------------------------------------------------------
  * @brief		удаляем файл fname если сущ-ет
  * @param fname		имя файла для удаления
@@ -350,6 +356,105 @@ void bo_getTimeNow(char *timeStr, int sizeBuf)
 	sprintf(timeStr, "%s%d ", buffer, micro);
 }
 
+void fifo_log(char *msg, ...)
+{
+	FILE *file = NULL;
+	int print_in_file = -1;
+	char *file_name = log.fifo_log;
+	char *p = NULL;
+	va_list ap;
+	int ival; double dval; char *sval;
+	const int find_error = -1;
+#ifdef __PRINT_FIFO__
+	print_in_file = 1;
+#endif
+	if(print_in_file == 1) {
+		file = fopen(file_name, "a+");
+		if(file) {
+			va_start(ap, msg);
+			for(p = msg; *p; p++) {
+				if(*p != '%') {
+					if(fprintf(file, "%c", *p) < 0) goto error;
+					continue;
+				}
+				switch(*++p) {
+					case 'd':
+						ival = va_arg(ap, int);
+						if(fprintf(file, "%d", ival) < 0) goto error;
+						break;
+					case 'f':
+						dval = va_arg(ap, double);
+						if(fprintf(file, "%f", dval) < 0) goto error;
+						break;
+					case 's':
+						sval = va_arg(ap, char *);
+						if(fprintf(file, "%s", sval) < 0) goto error;
+						break;
+					default:
+						if(fprintf(file, "%c", *p) < 0) goto error;
+						break;
+				}
+			}
+			if(find_error == 1) {
+				error:
+				printf("fifo_log() ERROR can't wite in file [%s]", 
+				strerror(errno));
+			} 
+
+			if(fclose(file) < 0) {
+				printf("fifo_log() ERROR can't close file [%s]", 
+					strerror(errno));
+			}
+		} else {
+			printf("fifo_log() ERROR can't open file [%s]", 
+				strerror(errno));
+		}
+	}
+	va_end(ap);
+}
+
+void fifo_log10(unsigned char *buf, int size)
+{
+	FILE *file = NULL;
+	int print_in_file = -1;
+	char *file_name = log.fifo_log;
+	int i = 0;
+	char temp[75] = {0};
+	int ptr = 0;
+	int end = 0;
+#ifdef __PRINT_FIFO__
+	print_in_file = 1;
+#endif
+	if(print_in_file == 1) {
+		file = fopen(file_name, "a+");
+		if(file) {
+			if(size < 24) {
+				end = size;
+			} else {
+				end = 24;
+			}
+			ptr = 0;
+			for(i = 0; i < end; i++) {
+				sprintf(temp + ptr, "%02x ", *(buf + i) );
+				ptr +=3;
+			}
+			temp[74] = 0;
+			if(fprintf(file, "%s", temp) < 0) {
+				printf("fifo_log10 CAN'T write to file[%s]",
+					strerror(errno));
+			}
+			
+			if(fclose(file) < 0) {
+				printf("fifo_log10() ERROR can't close file [%s]", 
+					strerror(errno));
+			}
+		} else {
+			printf("fifo_log10() ERROR can't open file [%s]", 
+				strerror(errno));
+		}
+	}
+}
+
 /* [0x42] */
 
 /* ----------------------------------------------------------------------------
@@ -413,105 +518,4 @@ void tr_log(char *msg, ...)
 	va_end(ap);
 }
 
-void fifo_log(char *msg, ...)
-{
-	FILE *file = NULL;
-	int print_in_file = -1;
-	char *file_name = log.fifo_log;
-	char *p = NULL;
-	va_list ap;
-	int ival; double dval; char *sval;
-	const int find_error = -1;
-#ifdef __PRINT_FIFO__
-	print_in_file = 1;
-#endif
-	if(print_in_file == 1) {
-		file = fopen(file_name, "a+");
-		if(file) {
-			va_start(ap, msg);
-			for(p = msg; *p; p++) {
-				if(*p != '%') {
-					if(fprintf(file, "%c", *p) < 0) goto error;
-					continue;
-				}
-				switch(*++p) {
-					case 'd':
-						ival = va_arg(ap, int);
-						if(fprintf(file, "%d", ival) < 0) goto error;
-						break;
-					case 'f':
-						dval = va_arg(ap, double);
-						if(fprintf(file, "%f", dval) < 0) goto error;
-						break;
-					case 's':
-						sval = va_arg(ap, char *);
-						if(fprintf(file, "%s", sval) < 0) goto error;
-						break;
-					default:
-						if(fprintf(file, "%c", *p) < 0) goto error;
-						break;
-				}
-			}
-			if(find_error == 1) {
-				error:
-				printf("fifo_log() ERROR can't wite in file [%s]", 
-				strerror(errno));
-			} 
-
-			if(fclose(file) < 0) {
-				printf("fifo_log() ERROR can't close file [%s]", 
-					strerror(errno));
-			}
-		} else {
-			printf("fifo_log() ERROR can't open file [%s]", 
-				strerror(errno));
-		}
-	}
-	va_end(ap);
-}
-
-void fifo_val10_log(unsigned char *buf, int size)
-{
-
-	FILE *file = NULL;
-	int print_in_file = -1;
-	char *file_name = log.fifo_log;
-	int i = 0;
-	char temp[75] = {0};
-	int ptr = 0;
-	int end = 0;
-#ifdef __PRINT_FIFO__
-	print_in_file = 1;
-#endif
-	if(print_in_file == 1) {
-		file = fopen(file_name, "a+");
-		if(file) {
-			if(size < 24) {
-				end = size;
-			} else {
-				end = 24;
-			}
-			
-			ptr = 0;
-			for(i = 0; i < end; i++) {
-				sprintf(temp + ptr, "%02x ", *(buf + i) );
-				ptr +=3;
-			}
-			temp[75] = 0;
-			
-			if(fprintf(file, "%s", temp) < 0) {
-				printf("fifo_val10_log CAN'T write to file[%s]",
-					strerror(errno));
-			}
-			
-			if(fclose(file) < 0) {
-				printf("fifo_val10_log() ERROR can't close file [%s]", 
-					strerror(errno));
-			}
-		} else {
-			printf("fifo_val10_log() ERROR can't open file [%s]", 
-				strerror(errno));
-		}
-	}
-}
 */

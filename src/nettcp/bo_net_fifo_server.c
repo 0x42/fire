@@ -210,7 +210,6 @@ static void fifoServWork()
 				countErr++;
 				bo_log(" %s %s %s errno[%s]", "FIFO", "ERROR", 
 					"fifoServWork()", errTxt);
-
 			}
 		} else {
 			sleep(5);
@@ -277,6 +276,7 @@ static void fifoReadPacket(int clientSock, unsigned char *buffer, int bufSize,
 	
 	bo_closeSocket(clientSock);	
 }
+
  /* ---------------------------------------------------------------------------
   * @brief		чтение заголовка запроса
   *			SET|GET|DEL|END
@@ -486,27 +486,32 @@ static void fifoAddToFIFO(struct ParamSt *param)
 		param->buffer += 8;
 		param->packetLen -=8;
 		
-		dbgout("msg[");
-		for(i = 0; i < param->packetLen; i++) {
-			dbgout("%c", *(param->buffer + i) );
-		}
-		dbgout("]\n");
 		dbgout("From ip[%s]\n", param->ip);
 		exec = bo_checkDblMsg(param);
 		if(exec == 1) {
 			flag = bo_addFIFO(param->buffer, param->packetLen);
+			fifo_log("<<<fifo[free=%d, count=%d]ip[%s]\n", 
+				bo_getFree(), 
+				bo_getCount(), 
+				param->ip);
+			fifo_log("id[%s]\n[", param->id);
+			fifo_log10(param->buffer, param->packetLen);
+			fifo_log("]\n");
 			if(flag == -1) {
 				dbgout(" ERR WHEN ADD\n");
+				fifo_log(" ERROR");
 				bo_log(" %s fifoAddToFIFO() bo_addFIFO can't add data to FIFO bad Length value[%d]",
 					"FIFO", param->packetLen);
 				goto error;
 			} else if(flag == 0) {
+				fifo_log("FIFO FULL");
 				dbgout(" NO ADD. FIFO FULL\n");
 				bo_log(" FIFO fifoAddToFIFO() can't add data FIFO is full ");
 				goto error;
 			}
 			exec = bo_chkDbl_setMark(param);
 			if(exec == -1) {
+				fifo_log("DOUBLE MSG");
 				/* del last msg from fifo */
 				bo_fifo_delLastAdd();
 				goto error;
@@ -529,6 +534,7 @@ static void fifoAddToFIFO(struct ParamSt *param)
 		packetStatus = ANSERR;
 	}
 }
+
 /* ---------------------------------------------------------------------------
  * @brief		отправляем сообщение OK если сообщ отправ то удал Head
  * status -> QUIT			
@@ -541,6 +547,7 @@ static void fifoDelHead(struct ParamSt *param)
 	if(exec != -1) bo_delHead();
 	packetStatus = QUIT;
 }
+
 /* ----------------------------------------------------------------------------
  * @brief		пишем в файд memory.trace состояние памяти
  *			(mstats - not exists see mallinfo <- 0x42) 
@@ -605,6 +612,7 @@ static int bo_checkDblMsg(struct ParamSt *param)
 	exit:
 	return ans;
 }
+
 /* ----------------------------------------------------------------------------
  * @return	[1] OK [-1] ERROR
  */
@@ -630,4 +638,5 @@ static int bo_chkDbl_setMark(struct ParamSt *param)
 	exit:
 	return exec;
 }
+
  /* 0x42 */

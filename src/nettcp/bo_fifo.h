@@ -26,6 +26,8 @@ void bo_delHead(); /* THREAD SAFE */
 
 int bo_getFree(); /* THREAD SAFE */ 
 
+int bo_getCount();
+
 void bo_delFIFO(); /* THREAD SAFE */ 
 
 #endif	

@@ -18,7 +18,7 @@
 #include <sys/types.h>
 #include <pthread.h>
 //#include "../tools/dbgout.h"
-/* отключаем static на время тестирования*/
+/* отключаем static на время тестирования */
 /* #define STATIC static */
 
 /*THR SAFE*/
@@ -32,11 +32,15 @@ void bo_resetLogInit();
 /* NO THR SAFE*/
 int  bo_isBigLogSize(int *nrow, int maxrow, char *name, char *oldname);
 /* NO THR SAFE*/
-void bo_getTimeNow(char *timeStr, int sizeBuf);
+void bo_getTimeNow(char *timeStr, int sizedBuf);
+
+void fifo_log(char *msg, ...);
+
+void fifo_log10(unsigned char *buf, int size);
+
 /*
 void tr_log(char *msg, ...);
 
-void fifo_log(char *msg, ...);
 
 void fifo_val10_log(unsigned char *buf, int size);
 */
