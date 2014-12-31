@@ -16,7 +16,7 @@ struct BO_ITEM_FIFO {
 static struct FIFO {
 	int itemN;
 	struct BO_ITEM_FIFO *mem;
-	int head; /*  индекс указ на голову*/
+	int head; /*  индекс указ на голову */
 	int tail; 
 	int last;
 	int count;

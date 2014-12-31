@@ -291,22 +291,22 @@ TEST(fifo, send100MSGSET10) /* NEED RUN SERVER */
 	int flag = -1;
 	int i_rand;
 	int Nsize = 20;
-	unsigned char msg[20] = {0};
+	unsigned char msg[1000] = {0};
 	unsigned char id[8] = {0};
-	unsigned char packet[28] = {0};
+	unsigned char packet[1300] = {0};
 	char len[2] = {0};
 	int NN = 0;
 	int R = 0;
 	int i = 0;
-	while (NN < 20) {
+	while (NN < 100) {
 		i++;
 		i_rand = i;
 		sprintf(id, "%08d", i_rand);
 		memcpy(packet, id, 8);
-		sprintf(msg, "%20d", i);
-		memcpy( (packet + 8) , msg, 20);
+		sprintf(msg, "%1000d", i);
+		memcpy( (packet + 8) , msg, 1000);
 		
-		exec = bo_sendDataFIFO("127.0.0.1", 8888, packet, 28);
+		exec = bo_sendDataFIFO("127.0.0.1", 8888, packet, 1200);
 		if(exec == -1) { printf("testThr send %s\n", strerror(errno)); goto error; }
 		
 		/*
