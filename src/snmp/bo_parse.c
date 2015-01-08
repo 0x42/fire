@@ -42,24 +42,25 @@ static struct ParseState {
 } PS;
 
 static struct OID_Next oid_next;
+static int new_value; /*[0] - old value [1] - get new value */
 /* ----------------------------------------------------------------------------
  * @return	[-1] ERROR [1] OK	
  */
-int bo_parse_oid(unsigned char *snmp, int len, struct PortItem *port)
+int bo_parse_oid(unsigned char *snmp, int len, struct PortItem *port, int *newVal)
 {
 	int ans   = 1;
 	PS.snmp   = snmp;
 	PS.len    = len;
 	PS.status = READHEAD;
 	PS.ptr    = 0;
-	
+	new_value = 0;
 	while(1) {
 		/* dbgout("KA[%s]\n", ParseStatusTxt[PS.status]); */
 		if(PS.status == ERR) ans = -1;
 		if(PS.status == QUIT) break;
 		statusTable[PS.status](port);
 	}
-	
+	if(new_value == 1) *newVal = 1;
 	return ans;
 }
 
@@ -257,6 +258,7 @@ static int bo_parse_VALLINK(struct PortItem *p)
 		goto exit;
 	}
 	PS.ptr += exec;
+	if(p->link != link) new_value = 1;
 	p->link = link;
 	ans = 1;
 	

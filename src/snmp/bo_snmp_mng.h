@@ -36,6 +36,10 @@ void bo_snmp_unlock_mut();
  */
 struct OPT_SWITCH *bo_snmp_get_tab();
 
+/* ----------------------------------------------------------------------------
+ * @return  [0]на магистрали нет изменений [1] есть изменения
+ */
+int bo_snmp_isChange();
 
 #endif	/* BO_SNMP_MNG_H */
 

@@ -12,7 +12,7 @@
 #define PORTITEM_DESCR 21
 
 struct PortItem {
-    int flg;    /* [1] OK [-1] don't get data */
+    int flg;    /* [1] OK [-1] don't get data   */
     int link;
     int speed;
     int id;
@@ -26,7 +26,7 @@ struct PortItem {
  * @port    полученые данные из сообщения
  * @return  [-1] ERROR [>0] requestId
  */
-int bo_parse_oid(unsigned char *snmp, int len, struct PortItem *port);
+int bo_parse_oid(unsigned char *snmp, int len, struct PortItem *port, int *new_val);
 
 int bo_parse_INTEGER(unsigned char *buf, int *num);
 

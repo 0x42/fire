@@ -8,6 +8,11 @@ static void bo_prt_switch(int n);
 
 /* таблица OPTICAL SWITCH */
 static struct OPT_SWITCH *tab_sw = NULL;
+/* флаг изменения на магистрали 
+ * [0] - нет изменений
+ * [1] - есть изменения
+ */
+static int sw_net_chg = 1;
 
 static pthread_mutex_t opt_sw_mut = PTHREAD_MUTEX_INITIALIZER;
 
@@ -21,8 +26,14 @@ void bo_snmp_unlock_mut()
 	pthread_mutex_unlock(&opt_sw_mut);
 }
 
+int bo_snmp_isChange()
+{
+	return sw_net_chg;
+}
+
 struct OPT_SWITCH *bo_snmp_get_tab() 
 {
+	sw_net_chg = 0;
 	return tab_sw;
 }
 
@@ -62,17 +73,19 @@ void bo_snmp_main(char *ip[], int n)
 	}
 	
 	while(stop == 1) {
-		sleep(1);
-
-		/* dbgout("\n ==================== \n"); */
+		sleep(10);
+		dbgout("\n ==================== \n"); 
 		for(i = 0; i < n; i++) {
 			o_sw = tab_sw + i;
 			bo_snmp_lock_mut();
 			bo_checkSwitch(sock, o_sw);
+			if(bo_snmp_isChange() == 1) {
+				bo_snmp_get_tab();
+				bo_prt_switch(i); 
+			}
 			bo_snmp_unlock_mut();
-			/* bo_prt_switch(i); */
 		}
-		/* dbgout("\n ==================== \n"); */
+		dbgout("\n ==================== \n"); 
 	}
 	
 	exit:
@@ -93,6 +106,7 @@ static void bo_checkSwitch(int sock, struct OPT_SWITCH *o_sw) {
 	                  {1, 3, 6, 1, 4, 1, 8691, 7, 6, 1, 10, 3, 1, 3},
 			  {1, 3, 6, 1, 4, 1, 8691, 7, 6, 1,  9, 1, 1, 2}
 			};
+	int flag = 0, temp = 0;
 	/* NEXT ROW: */
 	struct PortItem *portItem = NULL;
 	struct PortItem *ports = NULL;
@@ -105,9 +119,9 @@ static void bo_checkSwitch(int sock, struct OPT_SWITCH *o_sw) {
 	
 	ports = o_sw->ports;
 	for(j = 0; j < BO_OPT_SW_PORT_N; j++) {
+		flag += (ports + j)->flg;
 		(ports + j)->flg = -1;
 	}
-	
 	
 	portItem = o_sw->ports;
 	oid_next = bo_getPortVal(sock, ip, portItem);
@@ -135,6 +149,11 @@ static void bo_checkSwitch(int sock, struct OPT_SWITCH *o_sw) {
 		portItem = (o_sw->ports + 4);
 		oid_next = bo_getPortVal(sock, ip, portItem);
 	}
+	
+	for(j = 0; j < BO_OPT_SW_PORT_N; j++) {
+		temp += (ports + j)->flg;
+	}
+	if(temp != flag) sw_net_chg = 1;
 }
 
 static struct OID_Next *bo_getPortVal(int sock, char *ip, struct PortItem *portItem)
@@ -164,7 +183,7 @@ static struct OID_Next *bo_getPortVal(int sock, char *ip, struct PortItem *portI
 	
 	FD_ZERO(&r_set);
 	FD_SET(sock, &r_set);
-	exec = select(sock+1, &r_set, NULL, NULL, &tval);
+	exec = select(sock + 1, &r_set, NULL, NULL, &tval);
 	if(exec < 1) {
 		dbgout("getPortVal().select don't get event ip[%s]\n", ip);
 		goto exit;
@@ -174,7 +193,7 @@ static struct OID_Next *bo_getPortVal(int sock, char *ip, struct PortItem *portI
 	if(exec > 0) {
 		if(ip_recv != NULL) {
 			if(!strstr(ip_recv, ip)) goto exit;
-			exec = bo_parse_oid(buf, exec, portItem);
+			exec = bo_parse_oid(buf, exec, portItem, &sw_net_chg);
 			if(exec == 1) {
 				/*
 				dbgout("id[%d] link[%d] speed[%d] descr[%s]\n", portItem->id, 

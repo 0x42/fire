@@ -188,6 +188,31 @@ static void *cltSendTabRoute(void *arg)
 	
 	return ans;
 }
+/* ----------------------------------------------------------------------------
+ * Отправка сообщения 
+ */
+TEST(master, boMasterSEND_TR) /* NEED RUN TEST */
+{
+	gen_tbl_crc16modbus();
+	int in_sock, out_sock;
+	int exec = -11;
+	char buf[BO_MAX_TAB_BUF] = {0};
+	TOHT *tr = ht_new(10);
+	ht_put(tr, "001", "192.001.001.002:2");
+	ht_put(tr, "002", "255.255.255.255:1");
+	ht_put(tr, "003", "192.168.111.001:2");
+	
+	in_sock  = bo_setConnect("127.0.0.1", 8890);
+	out_sock = bo_setConnect("127.0.0.1", 8891);
+	
+	exec = bo_master_sendTab(in_sock, tr, buf);
+	if(exec == -1) {printf("ERR bo_MasterSEND_TR bo_sendSetMsg");goto error;}
+	
+	return 0;
+	
+	error:
+	printf("error boMasterSEND_TR\n");
+}
 
 /* ----------------------------------------------------------------------------
  * Отправка некорректного пакета 

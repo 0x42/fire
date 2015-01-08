@@ -40,11 +40,7 @@ void fifo_log(char *msg, ...);
 
 void fifo_log10(unsigned char *buf, int size);
 
-/*
 void tr_log(char *msg, ...);
 
-
-void fifo_val10_log(unsigned char *buf, int size);
-*/
 #endif
 /* [0x42] */

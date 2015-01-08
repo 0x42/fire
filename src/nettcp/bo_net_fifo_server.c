@@ -63,8 +63,10 @@ static char *PacketStatusTxt[] = {"READHEAD", "SET", "GET", "QUIT",
 static enum PacketStatus {READHEAD = 0, SET, GET, QUIT, ANSERR, ANSOK, 
 	ANSNO, ADDFIFO, DEL, END, MEM} packetStatus;
 	
-/* массив содерж указатели на функции(возвращают void;
- * аргумент у функций указ на struct ParamSt) */	
+/* ----------------------------------------------------------------------------
+ * массив содерж указатели на функции(возвращают void;
+ * аргумент у функций указ на struct ParamSt) 
+ */	
 static void(*statusTable[])(struct ParamSt *) = {
 	fifoReadHead, 
 	fifoSetData, 

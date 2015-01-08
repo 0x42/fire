@@ -183,6 +183,7 @@ static struct bo_llsock *m_crtLL(int size)
 	}
 	return ll;
 }
+
 /* ----------------------------------------------------------------------------
  * @brief		Ждет наступления события у сокетов -> 
  *			Читаем сообщение с сокета SET|LOG|RLO
@@ -330,6 +331,7 @@ static void m_addClientOut(struct bo_llsock *list, int servSock, fd_set *set,
 		dbgout("m_addClientOut-> not serv sock \n");
 	}
 }
+
 /* ----------------------------------------------------------------------------
  * @brief	проверяем сокеты из списка которые отправляют данные серверу
  * @tr		таблица роутов(для маршрутизации)
@@ -362,18 +364,19 @@ static void m_workClient(struct bo_llsock *list_in, struct bo_llsock *list_out,
 			if(m_isClosed(list_in, sock) == 1) 
 				if(m_recvClientMsg(sock, tr) == 1) {
 					ok = bo_getip_bysock(list_in, sock, ip);
-					if(ok == 1) {
-						bo_log("From ip[%s]", ip);
-						bo_log("<<<< TAB ROUTE <<<< ");
-						for(i = 0; i < tr->size; i++) {
-							key = *(tr->key + i);
-							if(key != NULL) {
-								temp_val = *(tr->val + i);
-								bo_log("[%s:%s]", key, temp_val);
-							}
+					
+					if(ok == 1) tr_log("From ip[%s]", ip);
+					else tr_log("From ip[can't read ip]");
+					
+					tr_log("<<<< TAB ROUTE <<<< ");
+					for(i = 0; i < tr->size; i++) {
+						key = *(tr->key + i);
+						if(key != NULL) {
+							temp_val = *(tr->val + i);
+							tr_log("[%s:%s]", key, temp_val);
 						}
-						bo_log("<<<< END TAB <<<< ");
 					}
+					tr_log("<<<< END TAB <<<< ");
 					flag = 1;
 				}
 		}
@@ -497,15 +500,18 @@ static int m_recvClientMsg(int sock, TOHT *tr)
 	
 	t_msg = bo_master_core(&p);
 	
+	tr_log("==== TAB ROUTE ==== \n");
 	dbgout("==== TAB ROUTE ==== \n");
 	for(i = 0; i < tr->size; i++) {
 		key = *(tr->key + i);
 		if(key != NULL) {
 			val = *(tr->val + i);
 			dbgout("[%s:%s]\n", key, val);
+			tr_log("[%s:%s]\n", key, val);
 		}
 	}
 	dbgout("==== END TAB ==== \n");
+	tr_log("==== END TAB ==== \n");
 
 	return t_msg;
 }
@@ -593,16 +599,16 @@ static void m_sendTabPacket(int sock, TOHT *tr, struct bo_llsock *list)
 	if(tab_not_empty == 1) {
 		exec = bo_master_sendTab(sock, tr, (char *)recvBuf);
 		bo_getip_bysock(list, sock, ip);
-		dbgout("\n>>>> SEND TAB >>>>\n");
-		dbgout("To: ip[%s]\n", ip);
+		tr_log("\n>>>> SEND TAB >>>>\n");
+		tr_log("To: ip[%s]\n", ip);
 		for(i = 0; i < tr->size; i++) {
 			key = *(tr->key + i);
 			if(key != NULL) {
 				val = *(tr->val + i);
-				dbgout("[%s:%s]\n", key, val);
+				tr_log("[%s:%s]\n", key, val);
 			}
 		}
-		dbgout(">>>> SEND END >>>>\n");
+		tr_log(">>>> SEND END >>>>\n");
 		if(exec == -1) {
 			bo_setflag_bysock(list, sock, -1);
 			bo_log("m_sendTabPacket() can't send data to ip[%s]", ip);
@@ -612,6 +618,7 @@ static void m_sendTabPacket(int sock, TOHT *tr, struct bo_llsock *list)
 	}
 	
 }
+
 /* ----------------------------------------------------------------------------
  * @brief	повторно отправ таблицу роутов !!! отправляем всем
  */

@@ -17,6 +17,7 @@ static struct {
 	char *name;
 	char *oldname;
 	char *fifo_log;
+	char *master_tab;
 	/*текущ. кол-во строк в лог файле*/
 	int nrow;
 	/*макс кол-во строк в лог файле*/
@@ -58,26 +59,29 @@ void bo_resetLogInit()
 {
 	logInit = -1;
 }
+
 /* ----------------------------------------------------------------------------
  * @brief		иниц-ия struct log получение имени файла для логирования
  */
-
 void loggingINIT()
 {
 	/* получ-ие pid процесса*/
 	log.pid = getpid();
 	/* ЧИТАТЬ С КОНФ ФАЙЛА*/
-	log.name     = "default.log";
-	log.oldname  = "default_OLD.log";
-	log.fifo_log = "fifo.trace";
+	log.name       = "default.log";
+	log.oldname    = "default_OLD.log";
+	log.fifo_log   = "fifo.trace";
+	log.master_tab = "master_tab.trace";
 #ifdef __MOXA__
-	log.fifo_log = "/mnt/ramdisk/fifo.trace";
+	log.fifo_log   = "/mnt/ramdisk/fifo.trace";
+	log.master_tab = "/mnt/ramdisk/master_tab.trace"
 #endif	
-	log.maxrow   = 1000;
+	log.maxrow     = 1000;
 	/* ================= */
-        logInit = 1;
+        logInit  = 1;
 	log.nrow = readNRow(log.name);
 }
+
 /* ----------------------------------------------------------------------------
  * @brief		выводим в logFileName инф-ое сообщение
  *			%d - int %f - float %s - string
@@ -456,17 +460,14 @@ void fifo_log10(unsigned char *buf, int size)
 	}
 }
 
-/* [0x42] */
-
 /* ----------------------------------------------------------------------------
- * @brief		вывод таблицы роутов в файл
+ * @brief		вывод таблицы роутов в trace файд
  */
-/*
 void tr_log(char *msg, ...)
 {
 	FILE *file = NULL;
 	int print_in_file = -1;
-	char *file_name = log.tab_log;
+	char *file_name = log.master_tab;
 	char *p = NULL;
 	va_list ap;
 	int ival; double dval; char *sval;
@@ -519,4 +520,4 @@ void tr_log(char *msg, ...)
 	va_end(ap);
 }
 
-*/
+/* [0x42] */
