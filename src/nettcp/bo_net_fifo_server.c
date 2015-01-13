@@ -28,6 +28,7 @@ static void fifoDelHead		(struct ParamSt *param);
 static void fifoEnd		(struct ParamSt *param);
 static void fifoMem		(struct ParamSt *param);
 
+static void bo_parseOnCommands	();
 static unsigned int readPacketLength	(struct ParamSt *param);
 static int bo_checkDblMsg		(struct ParamSt *param);
 static int bo_chkDbl_setMark		(struct ParamSt *param);
@@ -491,7 +492,9 @@ static void fifoAddToFIFO(struct ParamSt *param)
 		dbgout("From ip[%s]\n", param->ip);
 		exec = bo_checkDblMsg(param);
 		if(exec == 1) {
+			
 			flag = bo_addFIFO(param->buffer, param->packetLen);
+			
 			fifo_log("<<<fifo[free=%d, count=%d]ip[%s]\n", 
 				bo_getFree(), 
 				bo_getCount(), 
@@ -511,6 +514,7 @@ static void fifoAddToFIFO(struct ParamSt *param)
 				bo_log(" FIFO fifoAddToFIFO() can't add data FIFO is full ");
 				goto error;
 			}
+			
 			exec = bo_chkDbl_setMark(param);
 			if(exec == -1) {
 				fifo_log("ERROR SET ID MSG");
@@ -537,6 +541,17 @@ static void fifoAddToFIFO(struct ParamSt *param)
 	}
 }
 
+static void bo_parseOnCommands(unsigned char *buf, int bufSize)
+{
+	int packN = 0;
+	int len = 0;
+	unsigned char *ptr = NULL;
+	
+	ptr = buf;
+	len = boCharToInt(ptr);
+	
+	
+}
 /* ---------------------------------------------------------------------------
  * @brief		отправляем сообщение OK если сообщ отправ то удал Head
  * status -> QUIT			

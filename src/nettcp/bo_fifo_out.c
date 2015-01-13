@@ -75,13 +75,73 @@ int bo_add_fifo_out(unsigned char *val, int size, char *ip) /* THREAD SAFE */
 	if(pos != -1) {
 		ptr = fifo.mem + pos;
 		temp = ptr->size + size + 4;
-		if(temp > BO_FIFO_ITEM_VAL) goto exit;
-		
-		ptr->val
+		if(temp > BO_FIFO_ITEM_VAL) {
+			ans = 0;
+			goto exit;
+		}
+		/* |LEN| */
+		boIntToChar(size, len);
+		memcpy(ptr->val + ptr->size, len, 2);
+		ptr->size += 2;
+		/* |DATA| */
+		memcpy(ptr->val + ptr->size, val, size);
+		ptr->size += size;
+		ans = 1;
 	} else {
-	
+		if(fifo.free == 0) { 
+			ans = 0;
+			goto exit;
+		}
+		ptr = fifo.mem + fifo.tail;
+		/* LEN */
+		boIntToChar(size, len);
+		memcpy(ptr->val, len, 2);
+		ptr->size += 2;
+		/* DATA*/
+		memcpy(ptr->val + ptr->size, val, size);
+		ptr->size += size;
+		/* IP */
+		memcpy(ptr->ip, ip, strlen(ip));
+		if(fifo.count == 0) fifo.head = fifo.tail;
+		
+		if(fifo.tail == fifo.last) fifo.tail = 0;
+		else fifo.tail++;
+		
+		fifo.count++;
+		fifo.free--;
+		ans = 1;
 	}
 	exit:
+	pthread_mutex_unlock(&fifo_out_mut);
+	return ans;
+}
+
+/* ----------------------------------------------------------------------------
+ * @brief	берем данные из очереди FIFO OUT
+ * @ip		размер должен быть = 16
+ * @return	[-1] нет данных в очереди [N] размер данных записаных в буфер
+ */
+int bo_get_fifo_out(unsigned char *buf, int bufSize, char *ip)
+{
+	int ans = -1;
+	struct BO_ITEM_FIFO_OUT *ptr = NULL;
+	pthread_mutex_lock(&fifo_out_mut);
+	if(fifo.count != 0) {
+		ptr = fifo.mem + fifo.head;
+		if(bufSize >= ptr->size) {
+			memcpy(buf, ptr->val, ptr->size);
+			memcpy(ip, ptr->ip, strlen(ptr->ip));
+			ans = ptr->size;
+			
+			memset(ptr->ip, 0, 16);
+			ptr->size = 0;
+			
+			fifo.count--;
+			fifo.free++;
+			if(fifo.head == fifo.last) fifo.head = 0;
+			else fifo.head++;
+		}
+	}
 	pthread_mutex_unlock(&fifo_out_mut);
 	return ans;
 }

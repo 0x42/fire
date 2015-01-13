@@ -23,7 +23,8 @@ SRC1 = \
     ../../src/tools/dbgout.c \
     ../../src/nettcp/bo_net_fifo_server.c \
     ../../src/log/bologging.c \
-    ../../src/tools/ocrc.c
+    ../../src/tools/ocrc.c \
+    ../../src/nettcp/bo_fifo_out.c
 
 SRC3 = \
     ../bolog/test_runners/Test_log_Runners.c \

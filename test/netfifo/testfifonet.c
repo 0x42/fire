@@ -10,6 +10,7 @@
 #include <pthread.h>
 #include "../../src/nettcp/bo_net.h"
 #include "../../src/nettcp/bo_fifo.h"
+#include "../../src/nettcp/bo_fifo_out.h"
 #include "../../src/tools/ocrc.h"
 
 #include "unity_fixture.h"
@@ -785,4 +786,164 @@ TEST(fifo, addBigMsgThanItemFifo)
 	TEST_ASSERT_EQUAL(1, flag);
 }
 
+/* ----------------------------------------------------------------------------
+ * @brief	TEST queue FIFO OUT
+ */
+TEST(fifo, out_addOneGetOne)
+{
+	int flag = -1;
+	int exec = -1;
+	int itemN = 5;
+	
+	exec = bo_init_fifo_out(itemN);
+	if(exec == -1) { printf("can't create FIFO_OUT\n"); goto exit; }
+	char ip[]  = "192.168.1.1";
+	unsigned char val[6] = "abcdef";
+	unsigned char buf[100] = {0};
+	char buf_ip[16] = {0};
+	int j = 0, i = 0 , temp = 0;
+	for(; j < 1000; j++) {
+		exec = bo_add_fifo_out(val, 6, ip);
+		if(exec == -1) {printf("can't add to FIFO_OUT\n"); goto exit;}
+
+		exec = bo_get_fifo_out(buf, 100, buf_ip);
+		if(exec == -1) {printf("can't get from FIFO_OUT\n"); goto exit;}
+		i = 0; temp = 0;
+
+		temp = boCharToInt(buf);
+		if(temp >= exec) {printf("get bad value size1 from FIFO_OUT\n"); goto exit;}
+
+		if(temp != 6) {printf("get bad value size2 from FIFO_OUT\n"); goto exit;}
+		for(;i < exec; i++) {
+			if(val[i] != buf[i+2])
+				{printf("get bad value from FIFO_OUT\n"); goto exit;}
+
+		}
+		if(!strstr(ip, buf_ip)) {
+			printf("get bad ip from FIFO_OUT\n"); 
+			goto exit;
+		}
+
+	}
+	flag = 1;
+	exit:
+	TEST_ASSERT_EQUAL(1, flag);
+}
+
+TEST(fifo, out_addToOneIP)
+{
+	int flag = -1;
+	int exec = -1;
+	int itemN = 5;
+	
+	exec = bo_init_fifo_out(itemN);
+	if(exec == -1) { printf("can't create FIFO_OUT\n"); goto exit; }
+	char ip[]  = "192.168.1.1";
+	unsigned char val[6] = "abcdef";
+	unsigned char buf[100] = {0};
+	char buf_ip[16] = {0};
+	int j = 0, i = 0 , temp = 0, all = 0 , n = 10;
+	int valN = 0;
+	for(; j < n; j++) {
+		exec = bo_add_fifo_out(val, 6, ip);
+		if(exec == -1) {printf("can't add to FIFO_OUT\n"); goto exit;}
+	}
+
+	all = bo_get_fifo_out(buf, 100, buf_ip);
+	if(all == -1) {printf("can't get from FIFO_OUT\n"); goto exit;}
+	i = 0; temp = 0;
+	for(j = 0; j < all; ) {
+		temp = boCharToInt(buf+j);
+		j += 2;
+		if(temp != 6) {printf("get bad value size2 from FIFO_OUT\n"); goto exit;}
+		
+		for(i = 0;i < exec; i++) {
+			if(val[i] != buf[i + j])
+				{printf("get bad value from FIFO_OUT\n"); goto exit;}
+
+		}
+		valN++;
+		j += temp;
+	}
+	if(valN != n) {
+		printf("get bad count of val from FIFO_OUT\n"); 
+		goto exit;
+	}
+	if(!strstr(ip, buf_ip)) {
+		printf("get bad ip from FIFO_OUT\n"); 
+		goto exit;
+	}
+	
+	flag = 1;
+	exit:
+	TEST_ASSERT_EQUAL(1, flag);
+}
+
+TEST(fifo, out_overflowFifo)
+{
+	int flag = -1;
+	int exec = -1;
+	int itemN = 2;
+	
+	exec = bo_init_fifo_out(itemN);
+	if(exec == -1) { printf("can't create FIFO_OUT\n"); goto exit; }
+	char ip1[]  = "192.168.1.1";
+	char ip2[]  = "192.168.1.2";
+	char ip3[]  = "192.168.1.3";
+
+	unsigned char val[6] = "abcdef";
+	unsigned char buf[100] = {0};
+	char buf_ip[16] = {0};
+	int j = 0, i = 0 , temp = 0;
+	
+	exec = bo_add_fifo_out(val, 6, ip1);
+	if(exec == -1) {printf("can't add1 to FIFO_OUT\n"); goto exit;}
+
+	exec = bo_add_fifo_out(val, 6, ip2);
+	if(exec == -1) {printf("can't add2 to FIFO_OUT\n"); goto exit;}
+	
+	exec = bo_add_fifo_out(val, 6, ip3);
+	if(exec == -1) {printf("add3 to FIFO_OUT\n"); goto exit;}
+	
+	exec = bo_get_fifo_out(buf, 100, buf_ip);
+	if(exec == -1) {printf("can't get from FIFO_OUT\n"); goto exit;}
+	i = 0; temp = 0;
+
+	temp = boCharToInt(buf);
+	if(temp >= exec) {printf("get bad value size1 from FIFO_OUT\n"); goto exit;}
+
+	if(temp != 6) {printf("get bad value size2 from FIFO_OUT\n"); goto exit;}
+	for(;i < exec; i++) {
+		if(val[i] != buf[i+2])
+			{printf("get bad value from FIFO_OUT\n"); goto exit;}
+
+	}
+	if(!strstr(ip1, buf_ip)) {
+		printf("get bad ip1 from FIFO_OUT\n"); 
+		goto exit;
+	}
+
+	exec = bo_get_fifo_out(buf, 100, buf_ip);
+	if(exec == -1) {printf("can't get from FIFO_OUT\n"); goto exit;}
+	i = 0; temp = 0;
+
+	temp = boCharToInt(buf);
+	if(temp >= exec) {printf("get bad value size2 from FIFO_OUT\n"); goto exit;}
+
+	if(temp != 6) {printf("get bad value size2 from FIFO_OUT\n"); goto exit;}
+	for(;i < exec; i++) {
+		if(val[i] != buf[i+2])
+			{printf("get bad value from FIFO_OUT\n"); goto exit;}
+
+	}
+	if(!strstr(ip2, buf_ip)) {
+		printf("get bad ip2 from FIFO_OUT\n"); 
+		goto exit;
+	}
+	
+	
+	flag = 1;
+	exit:
+	TEST_ASSERT_EQUAL(1, flag);
+}
 /* 0x42 */
