@@ -367,10 +367,10 @@ void *get10thr(void *arg)
 	while(i < 2000) {
 		exec = bo_getFifoVal(buf, 30);
 		if(exec != -1) {
-			sprintf(msg, "%20d", i);
+			sprintf(msg, "%18d", i);
 //			printf("[%d]get10thr[%d][%s]\n", i, exec, buf);
 			
-			if(exec != 20) {
+			if(exec != 18) {
 				bo_log("get10thr() return length value from FIFO");
 				goto error;
 			}
@@ -401,20 +401,27 @@ void *testThr(void *arg)
 	unsigned char msg[20] = {0};
 	unsigned char id[8] = {0};
 	unsigned char packet[28] = {0};
+	unsigned char len[2] = {0};
 	pthread_t thr3; int st_thr = -1;
 	int i_rand = 0;
 	srand( (unsigned) time(NULL));
-	
+	sleep(5);
 	int n = 0;
 	for(i = 0; i < 2000; i++) {
 		n++;
-		if(n == 999) {sleep(5); n = 0;}
-//		i_rand = rand()%1000;
+		if(n == 999) {
+			printf("\ntimeout ...\n");
+			sleep(5); n = 0;
+		}
 		i_rand = i;
 		sprintf(id, "%08d", i_rand);
 		memcpy(packet, id, 8);
-		sprintf(msg, "%20d", i);
-		memcpy( (packet + 8) , msg, 20);
+		
+		boIntToChar(18, len);
+		memcpy((packet + 8), len, 2);
+		
+		sprintf(msg, "%18d", i);
+		memcpy( (packet + 10) , msg, 18);
 		
 		exec = bo_sendDataFIFO("127.0.0.1", 8888, packet, 28);
 		if(exec == -1) { printf("testThr send %s\n", strerror(errno)); goto error; }
@@ -544,6 +551,7 @@ void *testThrIDmsg(void *arg)
 		error: printf("ERROR");
 	}
 }
+
 /* ----------------------------------------------------------------------------
  * @brief	Test queue FIFO
  */
@@ -946,4 +954,7 @@ TEST(fifo, out_overflowFifo)
 	exit:
 	TEST_ASSERT_EQUAL(1, flag);
 }
+
+
+
 /* 0x42 */

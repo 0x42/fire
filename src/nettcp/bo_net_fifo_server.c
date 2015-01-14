@@ -28,7 +28,7 @@ static void fifoDelHead		(struct ParamSt *param);
 static void fifoEnd		(struct ParamSt *param);
 static void fifoMem		(struct ParamSt *param);
 
-static void bo_parseOnCommands	();
+static int bo_parseOnCommands	(unsigned char *buf, int bufSize);
 static unsigned int readPacketLength	(struct ParamSt *param);
 static int bo_checkDblMsg		(struct ParamSt *param);
 static int bo_chkDbl_setMark		(struct ParamSt *param);
@@ -492,20 +492,18 @@ static void fifoAddToFIFO(struct ParamSt *param)
 		dbgout("From ip[%s]\n", param->ip);
 		exec = bo_checkDblMsg(param);
 		if(exec == 1) {
-			
-			flag = bo_addFIFO(param->buffer, param->packetLen);
-			
 			fifo_log("<<<fifo[free=%d, count=%d]ip[%s]\n", 
 				bo_getFree(), 
 				bo_getCount(), 
 				param->ip);
 			fifo_log("id[%s]\n[", param->id);
-			fifo_log10(param->buffer, param->packetLen);
-			fifo_log("]\n");
+
+			flag = bo_parseOnCommands(param->buffer, param->packetLen);
+	
 			if(flag == -1) {
 				dbgout(" ERR WHEN ADD\n");
 				fifo_log(" ERROR");
-				bo_log(" %s fifoAddToFIFO() bo_addFIFO can't add data to FIFO bad Length value[%d]",
+				bo_log(" %s fifoAddToFIFO() bo_addFIFO can't add data to FIFO length[%d]",
 					"FIFO", param->packetLen);
 				goto error;
 			} else if(flag == 0) {
@@ -540,17 +538,46 @@ static void fifoAddToFIFO(struct ParamSt *param)
 		packetStatus = ANSERR;
 	}
 }
-
-static void bo_parseOnCommands(unsigned char *buf, int bufSize)
+/**/
+static int bo_parseOnCommands(unsigned char *buf, int bufSize)
 {
+	int ans = -1;
 	int packN = 0;
-	int len = 0;
+	int len = 0, exec = 0, temp = 0;
 	unsigned char *ptr = NULL;
 	
+	exec = bo_insertFIFO();
+	if(exec == -1) {
+		bo_log("bo_parseOnCommands() -> bo_insertFIFO() return ERROR");
+		bo_cancelFIFO();
+		ans = -1;
+		goto exit;
+	}
+	
 	ptr = buf;
-	len = boCharToInt(ptr);
-	
-	
+	while(temp < bufSize) {
+		len = boCharToInt(ptr);
+		temp += 2;
+		ptr += 2; /* length use two bytes */
+		exec = bo_addFIFO(ptr, len);
+		fifo_log("len[%d]-->",len);
+		fifo_log10(ptr, len);
+		if(exec != 1) {
+			bo_cancelFIFO();
+			ans = exec;
+			goto exit;
+		}
+		fifo_log("<-- OK\n");
+		packN++;
+		ptr  += len;
+		temp += len;
+	}
+	fifo_log("]packN = [%d]\n", packN);
+	bo_commitFIFO();
+	ans = 1;
+
+	exit:
+	return ans;
 }
 /* ---------------------------------------------------------------------------
  * @brief		отправляем сообщение OK если сообщ отправ то удал Head

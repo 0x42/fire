@@ -23,6 +23,14 @@ static struct FIFO {
 	int free;
 } fifo = {0};
 
+static struct TRANSACTION {
+	/* [1] bo_insertFIFO was call [0] bo_insertFIFO wasn't call */
+	int insert_status; 
+	int tail;
+	int count;
+	int free;
+} trans;
+
 static int bo_get_fifo(unsigned char *buf, int bufSize);
 static void bo_del_head();
 
@@ -84,13 +92,16 @@ int bo_initFIFO(int itemN)	/*THREAD SAFE */
 		malloc(sizeof(struct BO_ITEM_FIFO)*itemN);
 	if(fifo.mem == NULL) goto exit;
 	memset(fifo.mem, 0, sizeof(struct BO_ITEM_FIFO)*itemN);
-	fifo.itemN = itemN;
-	fifo.head = 0;
-	fifo.tail = 0;
-	fifo.last = itemN - 1;
-	fifo.count = 0;
-	fifo.free = itemN;
-	ans = 1;
+	fifo.itemN	= itemN;
+	fifo.head	= 0;
+	fifo.tail	= 0;
+	fifo.last	= itemN - 1;
+	fifo.count	= 0;
+	fifo.free	= itemN;
+	trans.tail	= -1;
+	trans.count	= -1;
+	trans.free	= -1;
+	ans		= 1;
 	
 	exit:
 	pthread_mutex_unlock(&fifo_mut);
@@ -107,9 +118,10 @@ int  bo_addFIFO(unsigned char *val, int size) /* THREAD SAFE */
 {
 	int ans = -1;
 	struct BO_ITEM_FIFO *ptr = NULL;	
-
+/*
 	pthread_mutex_lock(&fifo_mut);
-
+*/
+	
 	if(val == NULL) goto exit;
 	if(size < 1)  goto exit;
 	if(size > BO_FIFO_ITEM_VAL) goto exit;
@@ -129,8 +141,64 @@ int  bo_addFIFO(unsigned char *val, int size) /* THREAD SAFE */
 	}
 	
 	exit:
+/*
 	pthread_mutex_unlock(&fifo_mut);
+*/
+ 	return ans;
+}
+/* ----------------------------------------------------------------------------
+ * @brief	сохраняем данные очереди для отката, если bo_addFIFO 
+ *		вернет ошибку. После добавл данных необ-мо вызвать функцию
+ *		bo_commitFIFO() | bo_cancelFIFO()
+ * @return	[1] OK [-1] ERROR 
+ */
+int bo_insertFIFO()
+{
+	int ans = 1;
+	pthread_mutex_lock(&fifo_mut);
+	/* проверка пред-ая транзакция закончилась корректно */
+	if(trans.insert_status == 0) {
+		trans.insert_status	= 1;
+		
+		trans.tail		= fifo.tail;
+		trans.count		= fifo.count;
+		trans.free		= fifo.free;
+	} else {
+		bo_log("bo_insertFIFO ERROR IN CODE run twice");
+		ans = -1;
+	}
 	return ans;
+}
+
+/* ----------------------------------------------------------------------------
+ * @brief	call this function after bo_insertFIFO()
+ */
+void bo_commitFIFO()
+{
+	if(trans.insert_status == 1) {
+		trans.tail		= -1;
+		trans.count		= -1;
+		trans.free		= -1;
+		trans.insert_status	= 0;
+		pthread_mutex_unlock(&fifo_mut);
+	} else {
+		bo_log("bo_commitFIFO() ERROR call before bo_insertFIFO()");
+	}
+}
+
+/* ----------------------------------------------------------------------------
+ * @brief	call this function after bo_cancelFIFO()
+ */
+void bo_cancelFIFO()
+{
+	if(trans.insert_status == 1) {
+		fifo.tail		= trans.tail;
+		fifo.count		= trans.count;
+		fifo.free		= trans.free;
+		bo_commitFIFO();
+	} else {
+		bo_log("bo_cancelFIFO() ERROR call before bo_insertFIFO()");
+	}
 }
 /* ----------------------------------------------------------------------------
  * @brief	берем элемент из очереди

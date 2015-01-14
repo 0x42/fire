@@ -10,7 +10,7 @@ TEST_GROUP_RUNNER(fifo)
 //	RUN_TEST_CASE(fifo, sendSETL10MSG9);
 //	RUN_TEST_CASE(fifo, sendOnlyHead);
 //	RUN_TEST_CASE(fifo, send100MSGSET10);
-//	RUN_TEST_CASE(fifo, testThrModel);
+	RUN_TEST_CASE(fifo, testThrModel);
 //	RUN_TEST_CASE(fifo, testIDmsg);
 	/* тест FIFO */
 //	RUN_TEST_CASE(fifo, addOneGetOne);
@@ -23,7 +23,7 @@ TEST_GROUP_RUNNER(fifo)
 //	RUN_TEST_CASE(fifo, addBigMsgThanItemFifo);
 //	RUN_TEST_CASE(fifo, fifoAddDel);
 	/* TEST FIFO OUT*/
-	RUN_TEST_CASE(fifo, out_addOneGetOne);
-	RUN_TEST_CASE(fifo, out_addToOneIP);
-	RUN_TEST_CASE(fifo, out_overflowFifo);
+//	RUN_TEST_CASE(fifo, out_addOneGetOne);
+//	RUN_TEST_CASE(fifo, out_addToOneIP);
+//	RUN_TEST_CASE(fifo, out_overflowFifo);
 }

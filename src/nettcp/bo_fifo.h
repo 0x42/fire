@@ -13,8 +13,17 @@ void bo_printFIFO(); /* THREAD SAFE */
 void bo_printFIFO_test();
 
 int bo_initFIFO(int size); /* THREAD SAFE */ 
-
-int bo_addFIFO(unsigned char *obj, int size); /* THREAD SAFE */ 
+/* -------------------------------------------------------------------------- */
+/* THREAD SAFE */
+int bo_addFIFO(unsigned char *obj, int size);  
+int bo_insertFIFO();
+ /* @brief	call this function after bo_insertFIFO()  */
+void bo_commitFIFO();
+ /* @brief	call this function after bo_cancelFIFO()
+  *             if bo_addFIFO() return ERROR|FULL
+  *   */
+void bo_cancelFIFO();
+/* -------------------------------------------------------------------------- */
 
 void bo_fifo_delLastAdd(); /* THREAD SAFE */
 
