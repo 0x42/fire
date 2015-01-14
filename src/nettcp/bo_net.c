@@ -1,5 +1,6 @@
 #include "bo_net.h"
 
+static int bo_sendData(int sock, char *data, unsigned int dataSize);
 
 /*
  * @brief		откр сокет
@@ -112,11 +113,55 @@ int bo_waitConnect(int sock, int *clientfd, char **errTxt)
 }
 
 /* ----------------------------------------------------------------------------
+ * @brief	 ищет по ip нужный socket в списке; если данные не удалось отправить
+ *		 сокет закрывается и пересоздается попытка повторяется 
+ * @return	[-1] - error [1]- OK
+ */
+int bo_sendDataFIFO(char *ip, unsigned int port, 
+	char *data, unsigned int dataSize)
+{
+	int ans = -1;
+	
+	return ans;
+}
+/* ----------------------------------------------------------------------------
+ * @brief	отправка данных 
+ * @return	[-1] ERROR [1] - OK
+ */
+static int bo_sendData(int sock, char *data, unsigned int dataSize) 
+{
+	int exec = -1, ans = -1;
+	char head[3] = "SET";
+	unsigned char len[2] = {0};
+	char buf[3] = {0};
+	
+	if(sock != -1) {
+		boIntToChar(dataSize, len);
+		exec = bo_sendAllData(sock, (unsigned char*)head, 3);
+		if(exec == -1) goto exit;
+		
+		exec = bo_sendAllData(sock, len, 2);
+		if(exec == -1) goto exit;
+		
+		exec = bo_sendAllData(sock, (unsigned char*)data, dataSize);
+		if(exec == -1) goto exit;
+		
+		exec = bo_recvAllData(sock, (unsigned char*)buf, 3, 3);
+		if(exec == -1) goto exit;
+		
+		if(strstr(buf, "OK")) ans = 1;
+		else goto exit;
+	} 
+	exit:
+	return ans;
+}
+
+/* ----------------------------------------------------------------------------
  * @brief	устанав соед с узлом -> отпр SET|LEN|DATA -> ждем ответ OK ->
  *		закр сокет
  * @return	[-1] - error; [1] - OK  
  */
-int bo_sendDataFIFO(char *ip, unsigned int port, 
+int bo_sendDataFIFO_depricated(char *ip, unsigned int port, 
 	char *data, unsigned int dataSize)
 {
 	int ans  = -1;
