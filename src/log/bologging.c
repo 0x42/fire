@@ -74,7 +74,7 @@ void loggingINIT()
 	log.master_tab = "master_tab.trace";
 #ifdef __MOXA__
 	log.fifo_log   = "/mnt/ramdisk/fifo.trace";
-	log.master_tab = "/mnt/ramdisk/master_tab.trace"
+	log.master_tab = "/mnt/ramdisk/master_tab.trace";
 #endif	
 	log.maxrow     = 1000;
 	/* ================= */
