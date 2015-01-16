@@ -112,8 +112,8 @@ int bo_add_sock_lst(char *ip)
 	int ans		= -1;
 	int exec	= -1;
 	
-	i = getFreeInd();
-
+	i = *sock_lst.free;
+	printf("bo_add_sock_lst free index[%d]\n", i);
 	if(i != -1) {
 		exec = bo_add(ip);
 		if(exec == -1) {
@@ -121,6 +121,7 @@ int bo_add_sock_lst(char *ip)
 			ans = -1;
 			goto exit;
 		}
+		ans = 1;
 	} else {
 		/* find lazy sock del it and add new */
 		i = get_lazy_sock();
@@ -146,38 +147,37 @@ static int bo_add(char *ip)
 	int ans		= -1;
 	struct BO_ITEM_SOCK_LST *item = NULL;
 	
+
+	sock = bo_setConnect(ip, port_serv);
+	if(sock == -1) {
+		bo_log("bo_send_lst.c->bo_add->bo_setConnect ip[%s] errno[%s]",
+			ip,
+			strerror(errno));
+		goto exit;
+	}
+
 	i = getFreeInd();
 
-	if(i != -1) {
-		sock = bo_setConnect(ip, port_serv);
-		if(sock == -1) {
-			bo_log("bo_send_lst.c->bo_add->bo_setConnect ip[%s] errno[%s]",
-				ip,
-				strerror(errno));
-			goto exit;
-		}
-		
-		item = sock_lst.arr + i;
-		item->sock = sock;
-		item->rate = 12000;
-		memset(item->ip, 0, 16);
-		memcpy(item->ip, ip, strlen(ip));
-		
-		if(sock_lst.n == 0) {
-			/* добавление первого элемента */
-			*(sock_lst.prev + i) = -1;
-			*(sock_lst.next + i) = -1;
-			sock_lst.head = i;
-		} else {
-			temp = sock_lst.tail; 
-			*(sock_lst.prev + i)	 = temp;
-			*(sock_lst.next + i)	 = -1;
-			*(sock_lst.next + temp)	 = i;
-		}
-		sock_lst.tail = i;
-		sock_lst.n++;
-		ans = 1;
+	item = sock_lst.arr + i;
+	item->sock = sock;
+	item->rate = 12000;
+	memset(item->ip, 0, 16);
+	memcpy(item->ip, ip, strlen(ip));
+
+	if(sock_lst.n == 0) {
+		/* добавление первого элемента */
+		*(sock_lst.prev + i) = -1;
+		*(sock_lst.next + i) = -1;
+		sock_lst.head = i;
+	} else {
+		temp = sock_lst.tail; 
+		*(sock_lst.prev + i)	 = temp;
+		*(sock_lst.next + i)	 = -1;
+		*(sock_lst.next + temp)	 = i;
 	}
+	sock_lst.tail = i;
+	sock_lst.n++;
+	ans = 1;
 	
 	exit:
 	return ans;
@@ -244,24 +244,57 @@ static int get_lazy_sock()
 /* ----------------------------------------------------------------------------
  * @return	[-1] no sock [>0]  sock 
  */
-static int get_sock_by_ip(char *ip)
+int bo_get_sock_by_ip(char *ip)
 {
 	int ans = -1, i = -1;
 	struct BO_ITEM_SOCK_LST *item = NULL; 
 
-//	if(sock_lst.count == 0) goto exit; 
-	
 	i = sock_lst.head;
-	do {
+	while(i != -1) {
 		item = sock_lst.arr + i;
+		printf("bo_get_sock_by_ip -> ip[%s]", item->ip);
 		if(strstr(ip, item->ip)) {
 			ans = item->sock;
 			goto exit;
 		}
-//		if(i == sock_lst.last) i = 0;
-		else i++;
-	} while(i != sock_lst.tail);
+		i = *(sock_lst.next + i);
+	}
 	
 	exit:
 	return ans;
+}
+
+void bo_print_sock_lst() 
+{
+	int i = 0;
+	int size = 0;
+	struct BO_ITEM_SOCK_LST *item = NULL;
+	
+	size = sock_lst.size;
+	size = 4;
+	printf("size[%d] n[%d]\nind :", size, sock_lst.n);
+	for(i = 0; i < size; i++) {
+		printf("[%d] ", i);
+	}
+	printf("\nval :");
+	for(i = 0; i < size; i++) {
+		item = sock_lst.arr + i;
+		printf("[%d] ", item->sock);
+	}
+	printf("\nprev:");
+	
+	for(i = 0; i < size; i++) {
+		printf("[%d] ", *(sock_lst.prev + i));
+	}
+	printf("\nnext:");
+	
+	for(i = 0; i < size; i++) {
+		printf("[%d] ", *(sock_lst.next + i));
+	}
+	printf("\nfree:");
+	
+	for(i = 0; i < size; i++) {
+		printf("[%d] ", *(sock_lst.free + i));
+	}
+	printf("\n");
 }

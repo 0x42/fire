@@ -39,5 +39,12 @@ int bo_add_sock_lst(char *ip);
 
 void bo_del_sock_lst();
 
+/* ----------------------------------------------------------------------------
+ * @return	[-1] no sock [>0]  sock 
+ */
+int bo_get_sock_by_ip(char *ip);
+
+void bo_print_sock_lst();
+
 #endif	/* BO_SEND_LST_H */
 

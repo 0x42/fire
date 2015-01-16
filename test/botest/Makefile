@@ -36,7 +36,13 @@ SRC4 = \
     ../llist/test_runners/Test_llist_Runners.c \
     ../llist/test_runners/all_tests.c \
     ../llist/testllist.c \
-    ../../src/tools/listsock.c
+    ../../src/tools/listsock.c \
+    ../../src/nettcp/bo_send_lst.c \
+    ../../src/nettcp/bo_net.c \
+    ../../src/log/bologging.c \
+    ../../src/tools/dbgout.c \
+    ../../src/tools/ort.c \
+    ../../src/tools/oht.c
 
 SRC5 = \
     ../master/test_runners/Test_master_Runners.c \
@@ -66,7 +72,7 @@ fifo:
 	./$(TARGET)
 
 llist:
-	$(CC) $(INC_DIRS) $(SRC_FILES_UNITY) $(SRC4) -o $(TARGET)
+	$(CC) $(INC_DIRS) $(SRC_FILES_UNITY) $(SRC4) -lpthread  -o $(TARGET)
 	./$(TARGET)
 
 log:
