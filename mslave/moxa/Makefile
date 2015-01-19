@@ -8,6 +8,8 @@ CFLAGS = -O2 -fomit-frame-pointer -fno-builtin -fpic -msingle-pic-base
 CFLAGS += -D __MOXA_TARGET__
 #CFLAGS += -D __WDT__
 CFLAGS += -D __PRINT__
+#CFLAGS += -D __MOXA__
+#CFLAGS += -D __PRINT_FIFO__
 
 LDFLAGS =  -Wl,-elf2flt="-r -z -s 32768"
 INC_DIRS = -I/usr/local/arm-elf/include -I../ -I../../src/log \
@@ -31,11 +33,12 @@ SRC14 = ../../src/nettcp/bo_cycle_arr.c
 SRC15 = ../../src/nettcp/bo_net_master_core_log.c
 SRC16 = ../../src/nettcp/bo_net_fifo_server.c
 SRC17 = ../../src/nettcp/bo_fifo.c
-SRC18 = ../../src/snmp/bo_asn.c
-SRC19 = ../../src/snmp/bo_parse.c
-SRC20 = ../../src/snmp/bo_snmp.c
-SRC21 = ../../src/snmp/bo_snmp_mng.c
-SRC22 = ../../src/netudp/bo_udp.c
+SRC18 = ../../src/nettcp/bo_fifo_out.c
+SRC19 = ../../src/snmp/bo_asn.c
+SRC20 = ../../src/snmp/bo_parse.c
+SRC21 = ../../src/snmp/bo_snmp.c
+SRC22 = ../../src/snmp/bo_snmp_mng.c
+SRC23 = ../../src/netudp/bo_udp.c
 SRC_SL1 = ../slave/slave.c
 SRC_SL2 = ../slave/ch1_threads.c
 SRC_SL3 = ../slave/ch2_threads.c
@@ -60,11 +63,12 @@ OBJ14 = build/bo_cycle_arr.o
 OBJ15 = build/bo_net_master_core_log.o
 OBJ16 = build/bo_net_fifo_server.o
 OBJ17 = build/bo_fifo.o
-OBJ18 = build/bo_asn.o
-OBJ19 = build/bo_parse.o
-OBJ20 = build/bo_snmp.o
-OBJ21 = build/bo_snmp_mng.o
-OBJ22 = build/bo_udp.o
+OBJ18 = build/bo_fifo_out.o
+OBJ19 = build/bo_asn.o
+OBJ20 = build/bo_parse.o
+OBJ21 = build/bo_snmp.o
+OBJ22 = build/bo_snmp_mng.o
+OBJ23 = build/bo_udp.o
 OBJ_SL1 = build/slave.o
 OBJ_SL2 = build/ch1_threads.o
 OBJ_SL3 = build/ch2_threads.o
@@ -100,6 +104,7 @@ default:
 	$(CC) $(INC_DIRS) $(CFLAGS) -c $(SRC20) -o $(OBJ20)
 	$(CC) $(INC_DIRS) $(CFLAGS) -c $(SRC21) -o $(OBJ21)
 	$(CC) $(INC_DIRS) $(CFLAGS) -c $(SRC22) -o $(OBJ22)
+	$(CC) $(INC_DIRS) $(CFLAGS) -c $(SRC23) -o $(OBJ23)
 
 	$(CC) $(INC_DIRS) $(CFLAGS) -c $(SRC_SL1) -o $(OBJ_SL1)
 	$(CC) $(INC_DIRS) $(CFLAGS) -c $(SRC_SL2) -o $(OBJ_SL2)
@@ -110,7 +115,7 @@ default:
 	$(CC) $(CFLAGS) $(LDFLAGS) $(OBJ1) $(OBJ2) $(OBJ3) $(OBJ4) $(OBJ5) \
 		$(OBJ6) $(OBJ7) $(OBJ8) $(OBJ9) $(OBJ10) $(OBJ11) $(OBJ12) \
 		$(OBJ13) $(OBJ14) $(OBJ15) $(OBJ16) $(OBJ17) $(OBJ18) $(OBJ19) \
-		$(OBJ20) $(OBJ21) $(OBJ22) \
+		$(OBJ20) $(OBJ21) $(OBJ22) $(OBJ23) \
 		$(OBJ_SL1) $(OBJ_SL2) $(OBJ_SL3) $(OBJ_SL4) \
 		$(OBJ_T1) -o $(T1) -lpthread
 
@@ -118,6 +123,6 @@ clean:
 	rm -f $(OBJ1) $(OBJ2) $(OBJ3) $(OBJ4) $(OBJ5) $(OBJ6) $(OBJ7) \
 		$(OBJ8) $(OBJ9) $(OBJ10) $(OBJ11) $(OBJ12) $(OBJ13) $(OBJ14) \
 		$(OBJ15) $(OBJ16) $(OBJ17) $(OBJ18) $(OBJ19) \
-		$(OBJ20) $(OBJ21) $(OBJ22)
+		$(OBJ20) $(OBJ21) $(OBJ22) $(OBJ23)
 	rm -f $(OBJ_SL1) $(OBJ_SL2) $(OBJ_SL3) $(OBJ_SL4) $(OBJ_T1) $(T1)
 

@@ -18,9 +18,6 @@ int main(int argc, char *argv[])
 	char lfile[64];
 	char lfile_old[64];
 
-	char test1_msg[32];
-	char test2_msg[32];
-
 	int rs_parity, rs_databits, rs_stopbit;
 	int rs_speed;
 	int rs_port;	
@@ -63,26 +60,8 @@ int main(int argc, char *argv[])
 
 	actx_targ.adr = cfg_getint(cfg, "PR:adr", -1);
 	
-	actx_targ.uso1 = cfg_getint(cfg, "USO:adr1", -1);
-	actx_targ.uso2 = cfg_getint(cfg, "USO:adr2", -1);
-	
-	/** Длина данных кадра */
-	actx_targ.test1_ln = cfg_getint(cfg, "TEST_1:ln", -1);
-	/** Количество сообщений */
-	actx_targ.test1_m = cfg_getint(cfg, "TEST_1:m", -1);
 	/** Длина сообщения */
-	actx_targ.test1_msgln = cfg_getint(cfg, "TEST_1:msg_ln", -1);
-	/** Сообщение */
-	sprintf(test1_msg, cfg_getstring(cfg, "TEST_1:msg", NULL));
-
-	/** Длина данных кадра */
-	actx_targ.test2_ln = cfg_getint(cfg, "TEST_2:ln", -1);
-	/** Количество сообщений */
-	actx_targ.test2_m = cfg_getint(cfg, "TEST_2:m", -1);
-	/** Длина сообщения */
-	actx_targ.test2_msgln = cfg_getint(cfg, "TEST_2:msg_ln", -1);
-	/** Сообщение */
-	sprintf(test2_msg, cfg_getstring(cfg, "TEST_2:msg", NULL));
+	actx_targ.test_msgln = cfg_getint(cfg, "TEST:msg_ln", -1);
 
 
 	/** Установка параметров и открытие серийного порта */
@@ -109,8 +88,6 @@ int main(int argc, char *argv[])
 
 	actx_targ.port = rs_port;
 	actx_targ.tout = tout;
-	actx_targ.test1_msg = test1_msg;
-	actx_targ.test2_msg = test2_msg;
 	result = pthread_create(&thread_actx, &pattr, &actx_485, &actx_targ);
 	if (result) {
 		printf ("thread_actx: result = %d: %s\n", result,

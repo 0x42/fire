@@ -1,5 +1,5 @@
 /*
- *		Демо Лафетный ствол 2 шт.
+ *		Демо Лафетный ствол.
  *
  * Version:	@(#)pr.h	1.0.0	01/09/14
  * Authors:	ovelb
@@ -20,16 +20,7 @@ struct actx_thread_arg {
 	int port;
 	int tout;
 	int adr;
-	int uso1;
-	int uso2;
-	int test1_ln;
-	int test1_m;
-	int test1_msgln;
-	char *test1_msg;
-	int test2_ln;
-	int test2_m;
-	int test2_msgln;
-	char *test2_msg;
+	int test_msgln;
 };
 
 pthread_mutex_t	mx_actx;
@@ -42,8 +33,13 @@ struct thr_tx_buf txBuf;
 
 void gen_pr_default_cfg(char *cfile);
 
-void scan(struct actx_thread_arg *targ, struct thr_tx_buf *b);
-void probot(struct actx_thread_arg *targ, struct thr_tx_buf *b);
+int tx(int port);
+int rx(int port);
+
+void scan(struct thr_tx_buf *b);
+/* void probot(struct actx_thread_arg *targ, struct thr_tx_buf *b,
+ * unsigned int sch); */
+void probot(struct thr_tx_buf *b, int msgln);
 
 void *actx_485(void *arg);
 

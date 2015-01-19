@@ -338,9 +338,9 @@ int prepare_buf_tx(struct thr_tx_buf *b, char *buf)
 int writer(struct thr_tx_buf *b, char *buf, int port)
 {
 	int n;  /** Кол-во байт подготовленных для передачи */
-
+	
 	n = prepare_buf_tx(b, buf);
-
+	
 	if (SerialWrite(port, buf, n) <= 0) {
 		bo_log("writer: SerialWrite exit");
 		return -1;

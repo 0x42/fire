@@ -7,7 +7,8 @@ CC = gcc
 
 #CFLAGS = -O2 -Wall -g -fPIC
 #CFLAGS = -Wall -g -fPIC -ansi -pedantic
-CFLAGS = -Wall -g -fPIC -D PC_TARGET
+CFLAGS = -Wall -g -fPIC
+CFLAGS += -D __PC_TARGET__
 LDFLAGS =
 INC_DIRS = -I/usr/include -I/usr/local/include -I../ -I../../src/log \
 	-I../../src/lib -I../../src/tools -I../uso -I../pr

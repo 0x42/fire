@@ -33,15 +33,13 @@
 #include <errno.h>
 #include <termios.h>
 
-#ifdef MOXA_TARGET
+#ifdef __MOXA_TARGET__
 #include <asm/ioctls.h>
-#endif
-
-#ifdef PC_TARGET
+#else
 #include <sys/ioctl.h>
 #endif
 
-#ifdef MOXA_TARGET
+#ifdef __MOXA_TARGET__
 #include "moxadevice.h"
 #endif
 
@@ -79,7 +77,7 @@ int	SerialDataInOutputQueue( int port);
 int	SerialFlowControl( int port, int control);
 int	SerialSetSpeed( int port, unsigned int speed);
 
-#ifdef MOXA_TARGET
+#ifdef __MOXA_TARGET__
 int	SerialSetMode( int port, unsigned int mode);
 int	SerialGetMode( int port);
 #endif

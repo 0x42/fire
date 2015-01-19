@@ -27,20 +27,16 @@ struct actx_thread_arg {
 	char *snmp_ip;
 	unsigned int lline;
 	unsigned int nllines;
+	int cdDest;
 	int cdaId;
-	int cdaDest;
 	int cdnsId;
-	int cdnsDest;
 	int cdquLogId;
-	int cdquDest;
 	int cdmsId;
-	int cdmsDest;
 	int cdsqId;
-	int cdsqDest;
-	int pr1;
-	int pr2;
+	int pr;
 	int test_ln;
 	int test_m;
+	int test_nm;
 	int test_msgln;
 	char *test_msg;
 };
@@ -58,15 +54,19 @@ TOHT *cmd;
 
 void gen_uso_default_cfg(char *cfile);
 
-void scan(struct actx_thread_arg *targ, struct thr_tx_buf *b);
-unsigned int uso(struct actx_thread_arg *targ, struct thr_tx_buf *b,
-		 unsigned int sch, int dst);
-void uso_answer(struct actx_thread_arg *targ, struct thr_tx_buf *b);
-void uso_answer_error(struct actx_thread_arg *targ, struct thr_tx_buf *b);
-void uso_quNetStat(struct actx_thread_arg *targ, struct thr_tx_buf *b);
-void uso_quLog(struct actx_thread_arg *targ, struct thr_tx_buf *b,
+int tx(struct actx_thread_arg *targ);
+int rx(struct actx_thread_arg *targ);
+
+int scan(struct actx_thread_arg *targ, struct thr_tx_buf *b);
+int uso_answer(struct actx_thread_arg *targ, struct thr_tx_buf *b);
+int uso(struct actx_thread_arg *targ,
+	struct thr_tx_buf *b,
+	unsigned int sch,
+	int dst);
+int uso_quNetStat(struct actx_thread_arg *targ, struct thr_tx_buf *b);
+int uso_quLog(struct actx_thread_arg *targ, struct thr_tx_buf *b,
 	       unsigned int line, unsigned int nlines);
-void uso_quSNMP(struct actx_thread_arg *targ, struct thr_tx_buf *b);
+int uso_quSNMP(struct actx_thread_arg *targ, struct thr_tx_buf *b);
 
 void *actx_485(void *arg);
 

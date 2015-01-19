@@ -10,6 +10,7 @@
 #include "ofnv1a.h"
 #include "bologging.h"
 #include "serial.h"
+#include "bo_fifo_out.h"
 #include "bo_net_master_core.h"
 
 
@@ -41,7 +42,9 @@ int main(int argc, char *argv[])
 	int rs_parity, rs_databits, rs_stopbit;
 	int rs_speed;
 
-	int tsec, tusec, tscan;
+	unsigned int utxdel;
+	
+	int tscan;
 	int tout, nretries;
 
 	int wdt_en;
@@ -59,7 +62,7 @@ int main(int argc, char *argv[])
 	char logSend_ip[16];
 	unsigned int logSend_port, logMaxLines;
 	
-	int snmp_n;
+	int snmp_n, snmp_uso;
 	char *tempip;
 	
 	char ls_gen[32];
@@ -68,14 +71,11 @@ int main(int argc, char *argv[])
 	char req_gl[32];
 	char req_ms[32];
 
+	int cdDest;
 	int cdaId;
-	int cdaDest;
 	int cdnsId;
-	int cdnsDest;
 	int cdquLogId;
-	int cdquDest;
 	int cdmsId;
-	int cdmsDest;
 	
 	int i;
 	char key[7] = {0};
@@ -102,8 +102,6 @@ int main(int argc, char *argv[])
 	gen_tbl_crc16modbus();
 	
 	/** Установка таймеров */
-	tsec = cfg_getint(cfg, "moxa:Tsec", -1);
-	tusec = cfg_getint(cfg, "moxa:Tusec", -1);
 	tscan = cfg_getint(cfg, "moxa:Tscan", -1);
 	tout = cfg_getint(cfg, "moxa:Tout", -1);
 	nretries = cfg_getint(cfg, "moxa:nRetries", -1);
@@ -140,6 +138,8 @@ int main(int argc, char *argv[])
 	
 	/** SNMP */
 	snmp_n = cfg_getint(cfg, "SNMP:n", -1);
+	/** Адрес УСО */
+	snmp_uso = cfg_getint(cfg, "SNMP:uso", -1);
 	if (snmp_n > 0 && snmp_n <= SNMP_IP_MAX)
 		for (i=0; i<snmp_n; i++) {
 			sprintf(key, "SNMP:%01d", i+1);
@@ -158,28 +158,34 @@ int main(int argc, char *argv[])
 	/** Скорость канала RS485 */
 	rs_speed = cfg_getint(cfg, "RS:speed", -1);
 	
+	/** Длительность одного бита (в микросекундах)
+	    вычисляется по формуле: T= 1000000 / V, где V -
+	    скорость передачи в бодах. Например, для
+	    скорости 19200 бод длительность одного
+	    бита составляет 1000000/19200= 52 мкс.
+	*/
+	/** коэффициент для задержки на время передачи по серийному каналу */
+	utxdel = 1000000 / rs_speed * 10;
+	
 	/** Главная подсистема ЛС 'General' */
 	sprintf(ls_gen, cfg_getstring(cfg, "LS:gen", NULL));
+	cdDest = mfnv1a(ls_gen);
 	
 	/** Разрешение на выдачу данных 'AccessGranted' */
 	sprintf(req_ag, cfg_getstring(cfg, "REQ:ag", NULL));
 	cdaId = mfnv1a(req_ag);
-	cdaDest = mfnv1a(ls_gen);
 	
 	/** Состояние сети RS485 */
 	sprintf(req_ns, cfg_getstring(cfg, "REQ:ns", NULL));
 	cdnsId = mfnv1a(req_ns);
-	cdnsDest = mfnv1a(ls_gen);
 	
 	/** Запрос лога */
 	sprintf(req_gl, cfg_getstring(cfg, "REQ:gl", NULL));
 	cdquLogId = mfnv1a(req_gl);
-	cdquDest = mfnv1a(ls_gen);
 	
 	/** Состояние магистрали */
 	sprintf(req_ms, cfg_getstring(cfg, "REQ:ms", NULL));
 	cdmsId = mfnv1a(req_ms);
-	cdmsDest = mfnv1a(ls_gen);
 	
 	/** Установка параметров и открытие порта 1 RS485 */
 	ch1_targ.port = cfg_getint(cfg, "RS485_1:port", -1) - 1;
@@ -226,6 +232,12 @@ int main(int argc, char *argv[])
 	printf("Init ok\n");
 
 	
+	if (bo_init_fifo_out(10) == -1) {	
+		bo_log("bo_init_fifo_out() ERROR");
+		return 1;
+	}
+	
+	
 	/** Установка атрибутов функционирования нитей PTHREAD:
 	 * - инициализирует структуру, указываемую pattr, значениями
 	     "по умолчанию";
@@ -238,14 +250,15 @@ int main(int argc, char *argv[])
 	pthread_attr_setdetachstate(&pattr, PTHREAD_CREATE_JOINABLE);
 
 	pthread_mutex_init(&mx_psv, NULL);
-	pthread_mutex_init(&mx_dtFIFO, NULL);
+	pthread_mutex_init(&mx_actFIFO, NULL);
 	pthread_mutex_init(&mx_rtl, NULL);
 	pthread_mutex_init(&mx_rtg, NULL);
 
 	pthread_mutex_init(&mx_sendSocket, NULL);
 	
 	init_thrState(&psvdata_ready);
-	init_thrState(&fifodata_ready);
+	init_thrState(&psvAnsdata_ready);
+	init_thrState(&actFIFOdata_ready);
 
 	init_thrRxBuf(&rxBuf);
 	init_thrTxBuf(&txBuf);
@@ -257,7 +270,8 @@ int main(int argc, char *argv[])
 
 	/** Инициализация условных переменных с выделением памяти */
 	pthread_cond_init(&psvdata, NULL);
-	pthread_cond_init(&fifodata, NULL);
+	pthread_cond_init(&psvAnsdata, NULL);
+	pthread_cond_init(&actFIFOdata, NULL);
 
 
 	/** Таблицы маршрутов */
@@ -279,31 +293,6 @@ int main(int argc, char *argv[])
 		return 1;
 		}
 
-#if defined (__MOXA_TARGET__) && defined (__WDT__)
-	if (wdt_en) {
-
-		/* set watch dog timer, must be refreshed in 5ms..60s */
-		wdt_fd = mxwdg_open(wdt_tm);
-		if (wdt_fd < 0)
-		{
-			printf("fail to open the watch dog !: %d [%s]\n",
-			       wdt_fd, strerror(errno));
-			return 1;
-		}
-
-		init_thrWdtlife(&wdt_life);
-		printf("WatchDog enabled ok\n");
-	}
-#endif
-
-	wdt_targ.wdt_en = wdt_en;
-	wdt_targ.lifeFile = lifeFile;
-	result = pthread_create(&thread_wdt, &pattr, &wdt, &wdt_targ);
-	if (result) {
-		printf("th_wdt: result = %d: %s\n", result, strerror(errno));
-		return 1;
-		}
-	
 	rtRecv_targ.ip = rt_ipRecv;
 	rtRecv_targ.port = rt_portRecv;
 	rtRecv_targ.host_ip = ip;
@@ -344,7 +333,7 @@ int main(int argc, char *argv[])
 		}
 
 	write(1, "fifo start ok\n", 14);
-	
+		
 	sendfifo_targ.port = fifo_port;
 	result = pthread_create(&thread_sendfifo, &pattr, &send_fifo, &sendfifo_targ);
 	if (result) {
@@ -356,23 +345,21 @@ int main(int argc, char *argv[])
 	
 	ch1_targ.ch1_enable = ch1_enable;
 	ch1_targ.ch2_enable = ch2_enable;
-	ch1_targ.tsec = tsec;
-	ch1_targ.tusec = tusec;
 	ch1_targ.tscan = tscan;
 	ch1_targ.tout = tout;
+	ch1_targ.utxdel = utxdel;
 	ch1_targ.wdt_en = wdt_en;
 	ch1_targ.nretries = nretries;
 	ch1_targ.ip = ip;
+	ch1_targ.fifo_port = fifo_port;
 	ch1_targ.snmp_n = snmp_n;
+	ch1_targ.snmp_uso = snmp_uso;
 	ch1_targ.logMaxLines = logMaxLines;
+	ch1_targ.cdDest = cdDest;
 	ch1_targ.cdaId = cdaId;
-	ch1_targ.cdaDest = cdaDest;
 	ch1_targ.cdnsId = cdnsId;
-	ch1_targ.cdnsDest = cdnsDest;
 	ch1_targ.cdquLogId = cdquLogId;
-	ch1_targ.cdquDest = cdquDest;
 	ch1_targ.cdmsId = cdmsId;
-	ch1_targ.cdmsDest = cdmsDest;
 	result = pthread_create(&thread_ch1, &pattr, &chan1, &ch1_targ);
 	if (result) {
 		printf("th_ch1: result = %d: %s\n", result, strerror(errno));
@@ -383,23 +370,21 @@ int main(int argc, char *argv[])
 	
 	ch2_targ.ch1_enable = ch1_enable;
 	ch2_targ.ch2_enable = ch2_enable;
-	ch2_targ.tsec = tsec;
-	ch2_targ.tusec = tusec;
 	ch2_targ.tscan = tscan;
 	ch2_targ.tout = tout;
+	ch2_targ.utxdel = utxdel;
 	ch2_targ.wdt_en = wdt_en;
 	ch2_targ.nretries = nretries;
 	ch2_targ.ip = ip;
+	ch2_targ.fifo_port = fifo_port;
 	ch2_targ.snmp_n = snmp_n;
+	ch2_targ.snmp_uso = snmp_uso;
 	ch2_targ.logMaxLines = logMaxLines;
+	ch2_targ.cdDest = cdDest;
 	ch2_targ.cdaId = cdaId;
-	ch2_targ.cdaDest = cdaDest;
 	ch2_targ.cdnsId = cdnsId;
-	ch2_targ.cdnsDest = cdnsDest;
 	ch2_targ.cdquLogId = cdquLogId;
-	ch2_targ.cdquDest = cdquDest;
 	ch2_targ.cdmsId = cdmsId;
-	ch2_targ.cdmsDest = cdmsDest;
 	result = pthread_create(&thread_ch2, &pattr, &chan2, &ch2_targ);
 	if (result) {
 		printf("th_ch2: result = %d: %s\n", result, strerror(errno));
@@ -408,13 +393,35 @@ int main(int argc, char *argv[])
 
 	write(1, "ch2 start ok\n", 13);
 	
+#if defined (__MOXA_TARGET__) && defined (__WDT__)
+	if (wdt_en) {
+
+		/* set watch dog timer, must be refreshed in 5ms..60s */
+		wdt_fd = mxwdg_open(wdt_tm);
+		if (wdt_fd < 0)
+		{
+			printf("fail to open the watch dog !: %d [%s]\n",
+			       wdt_fd, strerror(errno));
+			return 1;
+		}
+
+		init_thrWdtlife(&wdt_life);
+		printf("WatchDog enabled ok\n");
+	}
+#endif
+
+	wdt_targ.wdt_en = wdt_en;
+	wdt_targ.lifeFile = lifeFile;
+	result = pthread_create(&thread_wdt, &pattr, &wdt, &wdt_targ);
+	if (result) {
+		printf("th_wdt: result = %d: %s\n", result, strerror(errno));
+		return 1;
+		}
+	
 	
 	/** Ожидаем завершения потоков */
 	if (!pthread_equal(pthread_self(), thread_log))
 		pthread_join(thread_log, NULL);
-
-	if (!pthread_equal(pthread_self(), thread_wdt))
-		pthread_join(thread_wdt, NULL);
 
 	if (!pthread_equal(pthread_self(), thread_rtRecv))
 		pthread_join(thread_rtRecv, NULL);
@@ -435,11 +442,14 @@ int main(int argc, char *argv[])
 	if (!pthread_equal(pthread_self(), thread_ch2))
 		pthread_join(thread_ch2, NULL);
 
+	if (!pthread_equal(pthread_self(), thread_wdt))
+		pthread_join(thread_wdt, NULL);
+
 	
 	/** Разрушаем блокировки и условные переменные, освобождаем память. */
 
 	pthread_mutex_destroy(&mx_psv);
-	pthread_mutex_destroy(&mx_dtFIFO);
+	pthread_mutex_destroy(&mx_actFIFO);
 	pthread_mutex_destroy(&mx_rtl);
 	pthread_mutex_destroy(&mx_rtg);
 
@@ -454,10 +464,12 @@ int main(int argc, char *argv[])
 	destroy_thrDstBuf(&dst2Buf);
 
 	pthread_cond_destroy(&psvdata);
-	pthread_cond_destroy(&fifodata);
+	pthread_cond_destroy(&psvAnsdata);
+	pthread_cond_destroy(&actFIFOdata);
 	
 	destroy_thrState(&psvdata_ready);
-	destroy_thrState(&fifodata_ready);
+	destroy_thrState(&psvAnsdata_ready);
+	destroy_thrState(&actFIFOdata_ready);
 	
 #if defined (__MOXA_TARGET__) && defined (__WDT__)
 	if (wdt_en) {

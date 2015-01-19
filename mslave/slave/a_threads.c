@@ -18,6 +18,7 @@
 #include "bologging.h"
 #include "bo_net.h"
 #include "bo_fifo.h"
+#include "bo_fifo_out.h"
 #include "bo_net_master_core.h"
 #include "bo_snmp_mng.h"
 
@@ -67,35 +68,56 @@ void *fifo_serv(void *arg)
 void *send_fifo(void *arg)
 {
 	struct sfifo_thread_arg *targ = (struct sfifo_thread_arg *)arg;
+	char id[9];
+	int i;
 	int ans;
 	int np;
 
 	while (1) {
-		pthread_mutex_lock(&mx_dtFIFO);
 
-		put_state(&fifodata_ready, 1);
+		memset(sfifo.ip, 0, 16);
 		
-		/** Ожидаем готовности формирования кадра для отправки
-		 * чужому узлу */
-		while (get_state(&fifodata_ready))
-			pthread_cond_wait(&fifodata, &mx_dtFIFO);
+		/** Формирование индекса для кадра посылаемого на
+		 * чужой узел (защита от дублирования пакетов) */
+		fifo_idx++;
+		if (fifo_idx == FIFO_IDX_MAX) fifo_idx = 1;
+		
+		sprintf(id, "%08d", (fifo_idx & 0xffffffff));
+		
+		/** Подготовка буфера для FIFO */
+		for (i=0; i<8; i++)
+			sfifo.buf[i] = id[i];
 
-		pthread_mutex_unlock(&mx_dtFIFO);
+		sfifo.ln = bo_get_fifo_out(sfifo.buf+8, BUF485_SZ, sfifo.ip);
 		
-		np = 0;
-		ans = 0;
-		while (ans != 1) {
-			ans = bo_sendDataFIFO(sfifo.ip,
-					      targ->port,
-					      sfifo.buf,
-					      sfifo.ln);
+		if (sfifo.ln > 0) {
+			
+			np = 0;
+			ans = 0;
+			
+			sfifo.ln += 8;
+			
+			bo_log("bo_sendDataFIFO ip= [%s] ln= [%d]-->", sfifo.ip, sfifo.ln);
+			
+			while (ans != 1) {
+				ans = bo_sendDataFIFO(sfifo.ip,
+						      targ->port,
+						      (char *)sfifo.buf,
+						      sfifo.ln);
+				if (np >= 10) break;
+				if (ans != 1) {
+					np++;
+					usleep(200000);
+				}
+			}
+			
+			bo_log("bo_sendDataFIFO finish np= [%d]-->", np);
+			
+			if (ans != 1)
+				bo_log("send_fifo(): bo_sendDataFIFO(): ERROR");
+		} else
+			/** Нет данных в очереди */
 			usleep(200000);
-			np++;
-			if (np >= 3) break;
-		}
-		
-		if (np > 1)
-			bo_log("send_fifo(): bo_sendDataFIFO(): np=%d", np);
 	}
 	
 	bo_log("send_fifo: exit");
@@ -119,7 +141,8 @@ void *logSendSock_connect(void *arg)
 		sock_temp = bo_setConnect(targ->logSend_ip,
 					  targ->logSend_port);
 		if (sock_temp < 0) {
-			bo_log("logSendSock_connect(): logSend_sock=bo_setConnect() ERROR");
+			bo_log("logSendSock_connect(): %s",
+				"logSend_sock=bo_setConnect() ERROR");
 			sleep(10);
 			continue;
 		}
@@ -140,7 +163,8 @@ void *logSendSock_connect(void *arg)
 			exec = bo_chkSock(logSend_sock);
 			if (exec == -1) {
 				bo_closeSocket(logSend_sock);
-				bo_log("logSend_sock(): IN socket[%d] close", logSend_sock);
+				bo_log("logSend_sock(): IN socket[%d] close",
+				       logSend_sock);
 				
 				pthread_mutex_unlock(&mx_sendSocket);
 				sleep(10);
@@ -165,13 +189,23 @@ void *rtbl_recv(void *arg)
 {
 	struct rt_thread_arg *targ = (struct rt_thread_arg *)arg;
 	struct paramThr p;
+	struct timeval tval;
+	
 	int ans;
 	fd_set r_set;
 	int exec = -1;
+
+	tval.tv_sec = 0;
+	tval.tv_usec = 100000;
 	
 	while (1) {
-		rtRecv_sock = bo_setConnect(targ->ip, targ->port);		
-		if (rtRecv_sock < 0) {
+		if (rtSend_sock != -1) {
+			rtRecv_sock = bo_setConnect(targ->ip, targ->port);
+			if (rtRecv_sock < 0) {
+				sleep(10);
+				continue;
+			}
+		} else {
 			sleep(10);
 			continue;
 		}
@@ -187,15 +221,19 @@ void *rtbl_recv(void *arg)
 			FD_ZERO(&r_set);
 			FD_SET(rtRecv_sock,  &r_set);
 
-			exec = select(rtRecv_sock+1, &r_set, NULL, NULL, NULL);
+			exec = select(rtRecv_sock+1, &r_set, NULL, NULL, &tval);
 
 			if(exec == -1) {
 				bo_log("rtbl_recv(): select errno[%s]",
 				       strerror(errno));
 				break;
 			} else if(exec == 0) {
-				bo_log("rtbl_recv(): ???");
-				break;
+				if (rtSend_sock == -1) {
+					
+					bo_log("rtbl_recv(): rtSend_sock == -1");
+					break;
+				}
+				
 			} else {
 				/* если событие произошло */
 				pthread_mutex_lock(&mx_rtg);
@@ -204,13 +242,10 @@ void *rtbl_recv(void *arg)
 
 				pthread_mutex_unlock(&mx_rtg);
 				if (ans < 0) {
-					bo_log("rtbl_recv(): bo_master_core ERROR");
+					bo_log("rtbl_recv(): %s",
+					       "bo_master_core ERROR");
 					break;
 				}
-				
-				/** Установить флажки для загрузки новой
-				 * конфигурации сети RS485 */
-				setFlags_bufDst(&dstBuf);
 			}
 		}
 		
@@ -260,17 +295,22 @@ void *rtbl_send(void *arg)
 			pthread_mutex_lock(&mx_rtl);
 			
 			exec = bo_chkSock(rtSend_sock);
+
 			if (exec == -1) {
 				bo_closeSocket(rtSend_sock);
-				bo_log("rtbl_send(): IN socket[%d] close", rtSend_sock);
-				
+				bo_log("rtbl_send(): IN socket[%d] close",
+				       rtSend_sock);
+				rtSend_sock = -1;
 				pthread_mutex_unlock(&mx_rtl);
 				sleep(10);
 				break;
 			}
 
+			/** Отправка локальной таблицы мастеру */
+			send_rtbl(targ->host_ip);
+
 			pthread_mutex_unlock(&mx_rtl);
-			sleep(10);
+			sleep(30);
 		}
 	}
 	
@@ -308,12 +348,12 @@ void *wdt(void *arg)
 				set_wdtlife(&wdt_life, 0);
 				/* refresh the timer */
 #ifdef __PRINT__
-				write (1, "WDT refresh -----------------\n", 30);
+				write (1, "WDT refresh ---------------\n", 28);
 #endif
 				mxwdg_refresh(wdt_fd);
 			} else {
 #ifdef __PRINT__
-				write (1, "------------- WDT not refresh\n", 30);
+				write (1, "----------- WDT not refresh\n", 28);
 #endif
 			}
 		}

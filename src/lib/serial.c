@@ -59,11 +59,11 @@ int	SerialOpen( int port)
 	if( fd_map[ port] != -1)		///< port already opened
 		return SERIAL_ERROR_OPEN;
 
-#ifdef MOXA_TARGET
+#ifdef __MOXA_TARGET__
 	sprintf( device, "/dev/ttyM%d", port);
-#endif
-#ifdef PC_TARGET
-	sprintf( device, "/dev/ttyUSB%d", port);
+#else
+	/* sprintf( device, "/dev/ttyUSB%d", port); */
+	sprintf( device, "/dev/ttyS%d", port);
 #endif
 	fd = open( device, O_RDWR|O_NOCTTY);
 	if( fd <0)
@@ -284,7 +284,7 @@ int	SerialSetSpeed( int port, unsigned int speed)
 	return SERIAL_OK;
 }
 
-#ifdef MOXA_TARGET
+#ifdef __MOXA_TARGET__
 /*---------------------------------------------------------------------------*/
 /**
   @brief	set serial port mode for RS232/RS422/RS485

@@ -8,6 +8,7 @@
  */
 
 #include "ort.h"
+#include "bologging.h"
 
 
 /** Размер буфера для строки таблицы маршрутов */
@@ -195,8 +196,12 @@ void rt_getip(TOHT *ht, const char *key, char *ip)
 {
 	struct rtbl rt;
 	char *sval;
-
+	
 	sval = rt_getstring(ht, key, "NULL:0");
+	if (strstr(sval, "NULL")) {
+		sval = "NULL:0";
+	}
+	
 	str_splitVal(&rt, sval, ":");
 	strcpy(ip, rt.ip);
 }
