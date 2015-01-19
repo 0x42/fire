@@ -126,7 +126,7 @@ int bo_sendDataFIFO(char *ip, unsigned int port,
 	unsigned char len[2] = {0};
 	char buf[4] = {0};
 	char *ok = NULL;
-	bo_log("bo_sendDataFIFO()->bo_setConnect");
+	bo_log("bo_sendDataFIFO()->bo_setConnect[%s][%d]", ip, port);
 	sock = bo_setConnect(ip, port);
 	bo_log("bo_sendDataFIFO()->bo_setConnect end sock[%d]", sock);
 
