@@ -98,12 +98,16 @@ void *send_fifo(void *arg)
 			sfifo.ln += 8;
 			
 			bo_log("bo_sendDataFIFO ip= [%s] ln= [%d]-->", sfifo.ip, sfifo.ln);
+			printf("bo_sendDataFIFO ip= [%s] ln= [%d]-->\n", sfifo.ip, sfifo.ln);
 			
 			while (ans != 1) {
-				ans = bo_sendDataFIFO(sfifo.ip,
-						      targ->port,
-						      (char *)sfifo.buf,
-						      sfifo.ln);
+				bo_log("bo_sendDataFIFO ip= [%s] ln= [%d]-->", sfifo.ip, sfifo.ln);
+				printf("bo_sendDataFIFO ip= [%s] ln= [%d]-->\n", sfifo.ip, sfifo.ln);
+				ans = bo_sendDataFIFO(
+					sfifo.ip,
+					targ->port,
+					(char *)sfifo.buf,
+					sfifo.ln);
 				if (np >= 10) break;
 				if (ans != 1) {
 					np++;
@@ -112,6 +116,7 @@ void *send_fifo(void *arg)
 			}
 			
 			bo_log("bo_sendDataFIFO finish np= [%d]-->", np);
+			printf("bo_sendDataFIFO finish np= [%d]-->\n", np);
 			
 			if (ans != 1)
 				bo_log("send_fifo(): bo_sendDataFIFO(): ERROR");

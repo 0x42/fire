@@ -590,7 +590,7 @@ void *chan1(void *arg)
 	int res;
 	
 	while (1) {
-		usleep(50000);
+		usleep(200000);
 		
 		if (count_scan == targ->tscan) {
 			count_scan = 0;
@@ -638,13 +638,13 @@ void *chan1(void *arg)
 						res = active_snmp(targ, dst);
 					} else {
 						bo_snmp_unlock_mut();
-						/** Разрешение активным устройствам */
-						bo_log("ch1(): activate");
+						/** Разрешение активным устройствам
+						bo_log("ch1(): activate"); */
 						res = active(targ, dst);
 					}
 				} else {
-					/** Разрешение активным устройствам */
-					bo_log("ch1(): activate");
+					/** Разрешение активным устройствам
+					bo_log("ch1(): activate"); */
 					res = active(targ, dst);
 				}
 				

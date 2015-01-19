@@ -597,6 +597,8 @@ void prepareFIFO(struct thr_rx_buf *b, char *key, int dst)
 {
 	unsigned char buf[BUF485_SZ];
 	char ip[16];
+	int ibuf[4];
+	char val[16];
 	int ln;
 	int i;
 	int ans;
@@ -612,11 +614,23 @@ void prepareFIFO(struct thr_rx_buf *b, char *key, int dst)
 		 * индексом и отправить его на сервер FIFO
 		 * соответствующему узлу. */
 		
+		memset(val, 0, 16);
+		str_splitInt(ibuf, ip, ".");
+		sprintf(val,
+			"%d.%d.%d.%d",
+			ibuf[0],
+			ibuf[1],
+			ibuf[2],
+			ibuf[3]);
+		
 		ln = b->wpos;
 		for (i=0; i<ln; i++)
 			buf[i] = b->buf[i];
+
+		bo_log("prepareFIFO: bo_add_fifo_out() before");
+		printf("prepareFIFO: bo_add_fifo_out() before\n");
 		
-		ans = bo_add_fifo_out(buf, ln, ip);
+		ans = bo_add_fifo_out(buf, ln, val);
 		if (ans == 0)
 			bo_log("prepareFIFO: bo_add_fifo_out() == 0");
 		else if (ans == -1)

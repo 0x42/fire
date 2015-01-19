@@ -176,12 +176,12 @@ int data_FIFO(struct chan_thread_arg *targ)
 		       * ряд 1,2,4.. для последующего увеличения
 		       * времени таймаута при приеме данных по каналу RS485 */
 
-	bo_log("data_FIFO before getFifo");
+	/* bo_log("data_FIFO before getFifo"); */
 	
 	getFifo_ans = bo_getFifoVal(getFifo_buf, BO_FIFO_ITEM_VAL);
 	if (getFifo_ans <= 0) {
-		/** Если в FIFO нет данных */
-		bo_log("data_FIFO getFifo(): no data");
+		/** Если в FIFO нет данных
+		bo_log("data_FIFO getFifo(): no data"); */
 		usleep(50000);
 		
 		return 0;
