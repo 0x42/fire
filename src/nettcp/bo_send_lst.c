@@ -160,7 +160,7 @@ static int bo_add(char *ip)
 
 	item = sock_lst.arr + i;
 	item->sock = sock;
-	item->rate = 12000;
+	item->rate = 0;
 	memset(item->ip, 0, 16);
 	memcpy(item->ip, ip, strlen(ip));
 
@@ -255,6 +255,7 @@ int bo_get_sock_by_ip(char *ip)
 		printf("bo_get_sock_by_ip -> ip[%s]", item->ip);
 		if(strstr(ip, item->ip)) {
 			ans = item->sock;
+			item->rate++;
 			goto exit;
 		}
 		i = *(sock_lst.next + i);
@@ -271,12 +272,12 @@ void bo_print_sock_lst()
 	struct BO_ITEM_SOCK_LST *item = NULL;
 	
 	size = sock_lst.size;
-	size = 4;
+	size = 3;
 	printf("size[%d] n[%d]\nind :", size, sock_lst.n);
 	for(i = 0; i < size; i++) {
 		printf("[%d] ", i);
 	}
-	printf("\nval :");
+	printf("\nsock:");
 	for(i = 0; i < size; i++) {
 		item = sock_lst.arr + i;
 		printf("[%d] ", item->sock);

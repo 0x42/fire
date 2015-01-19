@@ -191,7 +191,7 @@ TEST(llist, test_sock_lst_add)
 
 void *startServer2(void *arg)
 {
-//	printf("startServer2 ...\n");
+	printf("startServer2 ...\n");
 	int sock = bo_servStart(8888, 10);
 	int client_sock;
 	int cl_sock[10] = {-1};
@@ -210,12 +210,15 @@ void *startServer2(void *arg)
 		while(stop == 1) {
 			tval.tv_sec = 0; tval.tv_usec = 50000;
 			FD_ZERO(&r_set);
-			FD_SET(sock,& r_set);
+			FD_SET(sock, &r_set);
+			
 			for(i = 0; i < index; i++) {
 				if(cl_sock[i] != -1) FD_SET(cl_sock[i], &r_set);
 			}
+			
 			exec = select(FD_SETSIZE, &r_set, NULL, NULL, &tval);
 			time_out--;
+			
 			if(time_out == 0) { printf("time is out\n"); stop = -1;}
 			
 			if(exec == -1) {
@@ -224,6 +227,8 @@ void *startServer2(void *arg)
 			} else if(exec > 0 ) {
 				if(FD_ISSET(sock, &r_set) == 1) {
 					client_sock = accept(sock, NULL, NULL);
+					if(client_sock == -1) printf("server accept error[%s]\n", 
+						strerror(errno));
 					cl_sock[index] = client_sock;
 					count++;
 					index++;
@@ -241,6 +246,7 @@ void *startServer2(void *arg)
 			}
 			
 		}
+		printf("stopServer2 ... \n");
 	}
 	end:
 	return (void *)-1;
@@ -250,39 +256,27 @@ TEST(llist, test_sock_lst_add2)
 {
 	int ans  = -1;
 	int exec = -1;
-	int size = 4, port = 8888, sock = -1;
+	int size = 3, port = 8888, sock = -1;
 	void *res;
 	pthread_t thr;
 	printf("\n\n test_sock_lst_add run ... \n");
 	exec = bo_init_sock_lst(size, port);
 	if(exec == -1) { printf("bo_init_sock_lst() - ERROR\n"); goto end; }
 	
-	exec = pthread_create(&thr, NULL, &startServer, NULL);
-	
-	printf("==1 ==\n");
-	bo_print_sock_lst();
-	printf("======\n");
-	
-	exec = bo_add_sock_lst("127.0.0.1");
-	if(exec == -1) { printf("bo_add_sock_lst()1 - ERROR\n"); goto end;}
-	
-	printf("==2 ==\n");
-	bo_print_sock_lst();
-	printf("======\n");
+	exec = pthread_create(&thr, NULL, &startServer2, NULL);
+	sleep(3);
 	
 	exec = bo_add_sock_lst("127.0.0.001");
+	if(exec == -1) { printf("bo_add_sock_lst()1 - ERROR\n"); goto end;}
+	
+	exec = bo_add_sock_lst("127.0.0.1");
+	
 	if(exec == -1) { printf("bo_add_sock_lst()2 - ERROR\n"); goto end;}
 	
-	printf("==3 ==\n");
-	bo_print_sock_lst();
-	printf("======\n");
 	
 	sock = bo_get_sock_by_ip("127.0.0.001");
 	if(sock == -1) { printf("bo_get_sock_by_ip - ERROR\n"); goto end;}
 	
-	printf("==4 ==\n");
-	bo_print_sock_lst();
-	printf("======\n");
 	
 	exec = send(sock, "END", 3, MSG_NOSIGNAL);
 	if(exec != 3) { printf("send - ERROR\n"); goto end;}
@@ -291,7 +285,7 @@ TEST(llist, test_sock_lst_add2)
 	if(exec == 0) {
 		exec = (int)res;
 		if(exec == -1) { 
-			printf("startServer ERROR\n");
+			printf("startServer2 return ERROR\n");
 			goto end;
 		}
 	} else {
