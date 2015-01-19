@@ -133,12 +133,19 @@ int bo_sendDataFIFO(char *ip, unsigned int port,
 	if(sock != -1) {
 		boIntToChar(dataSize, len);
 		exec = bo_sendAllData(sock, (unsigned char*)head, 3);
+			bo_log("bo_sendDataFIFO()->sendHead");
 		if(exec == -1) goto error;
 		exec = bo_sendAllData(sock, len, 2);
+		bo_log("bo_sendDataFIFO()->send LEN");
+
 		if(exec == -1) goto error;
 		exec = bo_sendAllData(sock, (unsigned char*)data, dataSize);
+		bo_log("bo_sendDataFIFO()->send DATA");
+
 		if(exec == -1) goto error;
 		exec = bo_recvAllData(sock, (unsigned char*)buf, 3, 3);
+		bo_log("bo_sendDataFIFO()->recv ANS");
+
 		if(exec == -1) {
 error:
 			bo_log("bo_sendDataFIFO() errno[%s]\n ip[%s]\nport[%d]\n", 
@@ -164,6 +171,7 @@ error:
 			port,
 			dataSize);
 	}
+	bo_log("bo_sendDataFIFO()->end ans[%d]", ans);
 	return ans;
 }
 
