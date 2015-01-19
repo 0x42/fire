@@ -126,8 +126,10 @@ int bo_sendDataFIFO(char *ip, unsigned int port,
 	unsigned char len[2] = {0};
 	char buf[4] = {0};
 	char *ok = NULL;
-	
+	bo_log("bo_sendDataFIFO()->bo_setConnect");
 	sock = bo_setConnect(ip, port);
+	bo_log("bo_sendDataFIFO()->bo_setConnect end sock[%d]", sock);
+
 	if(sock != -1) {
 		boIntToChar(dataSize, len);
 		exec = bo_sendAllData(sock, (unsigned char*)head, 3);
@@ -339,7 +341,11 @@ int bo_setConnect(char *ip, int port)
 	int n = 0;
 	int conSet = 0;
 	struct sockaddr_in saddr;
+	
+	bo_log("bo_sendDataFIFO()->bo_setConnect->crtSock");
 	sock = bo_crtSock(ip, port, &saddr);
+	bo_log("bo_sendDataFIFO()->bo_setConnect->crtSock end sock[%d]", sock);
+
 	if(sock > 0) {
 		bo_setTimerRcv(sock);
 		while(n < 10) {
@@ -360,6 +366,7 @@ int bo_setConnect(char *ip, int port)
 			}
 			usleep(100000);
 		}
+		
 		if(conSet != 1) {
 			close(sock);
 			sock = -1;
