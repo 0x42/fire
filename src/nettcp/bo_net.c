@@ -132,8 +132,11 @@ int bo_sendDataFIFO(char *ip, unsigned int port,
 
 	if(sock != -1) {
 		boIntToChar(dataSize, len);
+		
+		bo_log("bo_sendDataFIFO()->sendHead START");
 		exec = bo_sendAllData(sock, (unsigned char*)head, 3);
-			bo_log("bo_sendDataFIFO()->sendHead");
+		bo_log("bo_sendDataFIFO()->sendHead END");
+		
 		if(exec == -1) goto error;
 		exec = bo_sendAllData(sock, len, 2);
 		bo_log("bo_sendDataFIFO()->send LEN");
