@@ -36,9 +36,9 @@ int passive_process(struct chan_thread_arg *targ, int dst)
 	
 	memset(key, 0, 3);
 	/** Адрес активного у-ва */
-	sprintf(key, "%03d", rx2Buf.buf[0]);
+	sprintf(key, "%03d", (unsigned char)rx2Buf.buf[0]);
 	
-	if (test_bufDst(&dstBuf, rx2Buf.buf[0]) != -1) {
+	if (test_bufDst(&dstBuf, (unsigned char)rx2Buf.buf[0]) != -1) {
 		if (targ->ch1_enable) {
 			/** Кадр сети RS485 (local node) */
 			pthread_mutex_lock(&mx_psv);
@@ -57,7 +57,7 @@ int passive_process(struct chan_thread_arg *targ, int dst)
 		
 	} else if (rt_iskey(rtg, key)) {
 		/** Кадр сети RS485 (FIFO) */		
-		prepareFIFO(&rx2Buf, key, rx2Buf.buf[0]);
+		prepareFIFO(&rx2Buf, key, (unsigned char)rx2Buf.buf[0]);
 	} else {
 		bo_log("passive(): key= [%s] ???", key);
 		/** Если пассивное устройство не ответило */
