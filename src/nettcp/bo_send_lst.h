@@ -27,24 +27,23 @@ struct BO_SOCK_LST {
 /* ----------------------------------------------------------------------------
  * @brief   иниц-ет список сокетов
  */
-int bo_init_sock_lst(int size, int port);
-
+struct BO_SOCK_LST * bo_init_sock_lst(int size, int port);
 
 /* ----------------------------------------------------------------------------
  * @brief	добавление элемента в список
  * @ip		must C string with last element '\0'
  * @return	[1] - OK [-1] ERROR
  */
-int bo_add_sock_lst(char *ip);
+int bo_add_sock_lst(struct BO_SOCK_LST *sock_lst, char *ip);
 
-void bo_del_sock_lst();
+void bo_del_sock_lst(struct BO_SOCK_LST *sock_lst);
 
 /* ----------------------------------------------------------------------------
  * @return	[-1] no sock [>0]  sock 
  */
-int bo_get_sock_by_ip(char *ip);
+int bo_get_sock_by_ip(struct BO_SOCK_LST *sock_lst, char *ip);
 
-void bo_print_sock_lst();
+void bo_print_sock_lst(struct BO_SOCK_LST *sock_lst);
 
 #endif	/* BO_SEND_LST_H */
 

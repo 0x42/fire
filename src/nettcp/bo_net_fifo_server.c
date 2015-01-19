@@ -201,8 +201,12 @@ static void fifoServWork()
 	}
 	
 	sockfdMain = -1;
+	sockfdMain = runSockServ();
+	if(sockfdMain == -1) { 
+		bo_log("FIFO ERROR fifoServWork() can't create server socket");
+		goto exit; 
+	}
 	while(stop == 1) {
-		
 		if( sockfdMain  != -1 ) {
 			if(bo_waitConnect(sockfdMain, &clientfd, &errTxt) == 1) {
 				countErr = 0;
@@ -215,8 +219,11 @@ static void fifoServWork()
 					"fifoServWork()", errTxt);
 			}
 		} else {
-			sleep(5);
-			sockfdMain = bo_servStart(fifoconf.port, fifoconf.queue_len);
+			sockfdMain = runSockServ();
+			if(sockfdMain == -1) { 
+				bo_log("FIFO ERROR fifoServWork() can't create server socket");
+				goto exit; 
+			}
 		}
 		if(countErr == 5) {
 			bo_log(" FIFO ERROR fifoServWork() restart server socket");
@@ -231,7 +238,37 @@ static void fifoServWork()
 	if(tab != NULL) ht_free(tab);
 	if(buffer1 != NULL) free(buffer1);
 }
- 
+
+static int runSockServ()
+{
+	int ans = -1 , n = 0, sock = -1;
+	while(n != 5) {
+		sock = bo_servStart(fifoconf.port, fifoconf.queue_len);
+		if(sock != -1) { ans = sock; break; }
+		sleep(1);
+		n++;
+	}
+	return ans;
+}
+
+static int workSockServ(int sock_serv)
+{
+	int ans = -1, stop = 1, exec = -1;
+	fd_set r_set;
+	
+	while(stop == 1) {
+		FD_ZERO(&r_set);
+		FD_SET(sock_serv, &r_set);
+		exec = select(FD_SETSIZE, &r_set, NULL, NULL, NULL);
+		if(exec == -1) {
+			bo_log("bo_net_fifo_server()->workSockServ ERROR select[%s]",
+				strerror(errno));
+			goto exit;
+		}
+	}
+	exit:
+	return ans;
+}
 /* ---------------------------------------------------------------------------
   * @brief		читаем пакет и пишем/забираем/удаляем в/из FIFO
   * @clientSock		дескриптор сокета(клиента) При завершении сокет закр-ся.

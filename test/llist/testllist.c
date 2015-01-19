@@ -162,14 +162,15 @@ TEST(llist, test_sock_lst_add)
 	int exec = -1;
 	int size = 4, port = 8888;
 	void *res;
+	struct BO_SOCK_LST *lst = NULL;
 	pthread_t thr;
 	printf("test_sock_lst_add run ... \n");
-	exec = bo_init_sock_lst(size, port);
-	if(exec == -1) { printf("bo_init_sock_lst() - ERROR\n"); goto end; }
+	lst = bo_init_sock_lst(size, port);
+	if(lst == NULL) { printf("bo_init_sock_lst() - ERROR\n"); goto end; }
 	
 	exec = pthread_create(&thr, NULL, &startServer, NULL);
 	
-	exec = bo_add_sock_lst("127.0.0.1");
+	exec = bo_add_sock_lst(lst, "127.0.0.1");
 	if(exec == -1) { printf("bo_add_sock_lst() - ERROR\n"); goto end;}
 	
 
@@ -184,6 +185,7 @@ TEST(llist, test_sock_lst_add)
 	} else {
 		printf("pthread_join ERROR\n"); goto end;
 	}
+	
 	ans = 1;
 	end:
 	TEST_ASSERT_EQUAL(1, ans);
@@ -259,22 +261,24 @@ TEST(llist, test_sock_lst_add2)
 	int size = 3, port = 8888, sock = -1;
 	void *res;
 	pthread_t thr;
+	struct BO_SOCK_LST *lst = NULL;
+	
 	printf("\n\n test_sock_lst_add run ... \n");
-	exec = bo_init_sock_lst(size, port);
-	if(exec == -1) { printf("bo_init_sock_lst() - ERROR\n"); goto end; }
+	lst = bo_init_sock_lst(size, port);
+	if(lst == NULL) { printf("bo_init_sock_lst() - ERROR\n"); goto end; }
 	
 	exec = pthread_create(&thr, NULL, &startServer2, NULL);
 	sleep(3);
 	
-	exec = bo_add_sock_lst("127.0.0.001");
+	exec = bo_add_sock_lst(lst, "127.0.0.001");
 	if(exec == -1) { printf("bo_add_sock_lst()1 - ERROR\n"); goto end;}
 	
-	exec = bo_add_sock_lst("127.0.0.1");
+	exec = bo_add_sock_lst(lst, "127.0.0.1");
 	
 	if(exec == -1) { printf("bo_add_sock_lst()2 - ERROR\n"); goto end;}
 	
 	
-	sock = bo_get_sock_by_ip("127.0.0.001");
+	sock = bo_get_sock_by_ip(lst, "127.0.0.001");
 	if(sock == -1) { printf("bo_get_sock_by_ip - ERROR\n"); goto end;}
 	
 	
