@@ -416,8 +416,8 @@ int active_process(struct chan_thread_arg *targ, int dst)
 			/** Запрос о состоянии магистрали */
 			res = active_snmp(targ, dst);
 		} else {
-			/** ID ??? */
-			bo_log("active(): ID= [%d]", rxBuf.buf[2]);
+			/** ID ???
+			bo_log("active(): ID= [%d]", rxBuf.buf[2]); */
 		}
 		
 	} else if (test_bufDst(&dst2Buf, (unsigned char)rxBuf.buf[0]) != -1) {

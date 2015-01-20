@@ -211,6 +211,10 @@ int data_FIFO(struct chan_thread_arg *targ)
 	
 	prepare_cadr(&tx2Buf, (char *)getFifo_buf, getFifo_ans);
 
+	/** Запрос для пассивного устройства загрузить в лог.
+	bo_log("data_FIFO after putLog()"); */
+	putLog();
+	
 	bo_log("data_FIFO before TX [%d %d %d %d %d %d %d %d %d %d]",
 	       tx2Buf.buf[0],
 	       tx2Buf.buf[1],
@@ -223,10 +227,6 @@ int data_FIFO(struct chan_thread_arg *targ)
 	       tx2Buf.buf[8],
 	       tx2Buf.buf[9]
 		);
-	
-	/** Запрос для пассивного устройства загрузить в лог.
-	bo_log("data_FIFO after putLog()"); */
-	putLog();
 	
 	/** Данные для передачи подготовлены */
 	
@@ -244,6 +244,19 @@ int data_FIFO(struct chan_thread_arg *targ)
 			switch (get_rxFl(&rx2Buf)) {
 			case RX_DATA_READY:
 				/** Ответ пассивного устройства */
+				bo_log("data_FIFO after RX [%d %d %d %d %d %d %d %d %d %d]",
+				       rx2Buf.buf[0],
+				       rx2Buf.buf[1],
+				       rx2Buf.buf[2],
+				       rx2Buf.buf[3],
+				       rx2Buf.buf[4],
+				       rx2Buf.buf[5],
+				       rx2Buf.buf[6],
+				       rx2Buf.buf[7],
+				       rx2Buf.buf[8],
+				       rx2Buf.buf[9]
+					);
+				
 				return passive_process(targ, dst);
 			case RX_ERROR:
 				/** Ошибка кадра */
