@@ -590,7 +590,7 @@ void *chan1(void *arg)
 	int res;
 	
 	while (1) {
-		usleep(50000);
+		/* usleep(50000); */
 		
 		if (count_scan == targ->tscan) {
 			count_scan = 0;
