@@ -201,6 +201,8 @@ static void fifoServWork()
 	}
 	
 	sockfdMain = -1;
+	sockfdMain = bo_servStart(fifoconf.port, fifoconf.queue_len);
+	
 	while(stop == 1) {
 		
 		if( sockfdMain  != -1 ) {
@@ -215,7 +217,7 @@ static void fifoServWork()
 					"fifoServWork()", errTxt);
 			}
 		} else {
-			sleep(5);
+			sleep(1);
 			sockfdMain = bo_servStart(fifoconf.port, fifoconf.queue_len);
 		}
 		if(countErr == 5) {
