@@ -246,17 +246,22 @@ static int bo_get_fifo(unsigned char *buf, int bufSize)
 int bo_getFifoVal(unsigned char *buf, int bufSize) /*THREAD SAFE */
 {
 	int ans = -1;
+	int timeLen = 50;
+	char timeStr[timeLen] = {0};
 	
 	pthread_mutex_lock(&fifo_mut);
 	if(fifo.mem != NULL) {
 		ans = bo_get_fifo(buf, bufSize);
 		if(ans != -1) bo_del_head();
-		fifo_log(">>>");
+		
+		bo_getTimeNow(timeStr, timeLen);
+		timeStr[timeLen-1] = 0;
+		fifo_log("\n[%s]>>>", timeStr);
 		if(ans == -1) fifo_log("FIFO IS EMPTY\n");
 		else {
 			fifo_log("[");
 			fifo_log10(buf, bufSize);
-			fifo_log("]");
+			fifo_log("]\n");
 		}
 	}
 	pthread_mutex_unlock(&fifo_mut);

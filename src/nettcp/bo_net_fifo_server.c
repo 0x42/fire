@@ -477,6 +477,8 @@ static void fifoAddToFIFO(struct ParamSt *param)
 	int exec = -1;
 	const int err = -1;
 	int i = 0;
+	int timeLen = 50;
+	char timeStr[timeLen] = {0};
 	bo_printFIFO();
 	
 	if( param->packetLen > 9 ) {
@@ -494,7 +496,10 @@ static void fifoAddToFIFO(struct ParamSt *param)
 		dbgout("From ip[%s]\n", param->ip);
 		exec = bo_checkDblMsg(param);
 		if(exec == 1) {
-			fifo_log("<<<fifo[free=%d, count=%d]ip[%s]\n", 
+			bo_getTimeNow(timeStr, timeLen);
+			timeStr[timeLen - 1] = 0;
+			fifo_log("[%s]<<<fifo[free=%d, count=%d]ip[%s]\n",
+				timeStr,
 				bo_getFree(), 
 				bo_getCount(), 
 				param->ip);

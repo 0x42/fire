@@ -325,7 +325,7 @@ int bo_crtSock(char *ip, unsigned int port, struct sockaddr_in *saddr)
 		i = 1;
 		setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &i, sizeof(i));
 	} else {
-		bo_log("bo_crtSock() socket() errno[%s]", strerror(errno));
+		bo_log("bo_crtSock() socket() ERROR errno[%s]", strerror(errno));
 	};
 	return sock;
 }
@@ -342,9 +342,7 @@ int bo_setConnect(char *ip, int port)
 	int conSet = 0;
 	struct sockaddr_in saddr;
 	
-	bo_log("bo_sendDataFIFO()->bo_setConnect->crtSock");
 	sock = bo_crtSock(ip, port, &saddr);
-	bo_log("bo_sendDataFIFO()->bo_setConnect->crtSock end sock[%d]", sock);
 
 	if(sock > 0) {
 		bo_setTimerRcv(sock);
