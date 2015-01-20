@@ -627,7 +627,7 @@ void prepareFIFO(struct thr_rx_buf *b, char *key, int dst)
 		for (i=0; i<ln; i++)
 			buf[i] = b->buf[i];
 
-		bo_log("prepareFIFO: bo_add_fifo_out() before");
+		bo_log("prepareFIFO: bo_add_fifo_out() before ln=[%d]", ln);
 		
 		ans = bo_add_fifo_out(buf, ln, val);
 		if (ans == 0)

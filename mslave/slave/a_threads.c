@@ -98,11 +98,8 @@ void *send_fifo(void *arg)
 			sfifo.ln += 8;
 			
 			bo_log("bo_sendDataFIFO ip= [%s] ln= [%d]-->", sfifo.ip, sfifo.ln);
-			printf("bo_sendDataFIFO ip= [%s] ln= [%d]-->\n", sfifo.ip, sfifo.ln);
 			
 			while (ans != 1) {
-				bo_log("bo_sendDataFIFO ip= [%s] ln= [%d]-->", sfifo.ip, sfifo.ln);
-				printf("bo_sendDataFIFO ip= [%s] ln= [%d]-->\n", sfifo.ip, sfifo.ln);
 				ans = bo_sendDataFIFO(
 					sfifo.ip,
 					targ->port,
@@ -116,13 +113,12 @@ void *send_fifo(void *arg)
 			}
 			
 			bo_log("bo_sendDataFIFO finish np= [%d]-->", np);
-			printf("bo_sendDataFIFO finish np= [%d]-->\n", np);
 			
 			if (ans != 1)
 				bo_log("send_fifo(): bo_sendDataFIFO(): ERROR");
 		} else
 			/** Нет данных в очереди */
-			usleep(200000);
+			usleep(10000);
 	}
 	
 	bo_log("send_fifo: exit");
