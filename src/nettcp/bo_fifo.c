@@ -247,7 +247,7 @@ int bo_getFifoVal(unsigned char *buf, int bufSize) /*THREAD SAFE */
 {
 	int ans = -1;
 	int timeLen = 50;
-	char timeStr[timeLen] = {0};
+	char timeStr[50] = {0};
 	
 	pthread_mutex_lock(&fifo_mut);
 	if(fifo.mem != NULL) {

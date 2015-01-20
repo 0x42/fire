@@ -478,7 +478,7 @@ static void fifoAddToFIFO(struct ParamSt *param)
 	const int err = -1;
 	int i = 0;
 	int timeLen = 50;
-	char timeStr[timeLen] = {0};
+	char timeStr[50] = {0};
 	bo_printFIFO();
 	
 	if( param->packetLen > 9 ) {
