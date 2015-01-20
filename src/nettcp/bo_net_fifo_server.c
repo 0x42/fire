@@ -505,13 +505,13 @@ static void fifoAddToFIFO(struct ParamSt *param)
 			if(flag == -1) {
 				dbgout(" ERR WHEN ADD\n");
 				fifo_log(" ERROR");
-				bo_log(" %s fifoAddToFIFO() bo_addFIFO can't add data to FIFO length[%d]",
+				bo_log("bo_net_fifo_server %s fifoAddToFIFO() bo_addFIFO can't add data to FIFO length[%d]",
 					"FIFO", param->packetLen);
 				goto error;
 			} else if(flag == 0) {
 				fifo_log("FIFO FULL");
 				dbgout(" NO ADD. FIFO FULL\n");
-				bo_log(" FIFO fifoAddToFIFO() can't add data FIFO is full ");
+				bo_log("bo_net_fifo_server FIFO fifoAddToFIFO() can't add data FIFO is full ");
 				goto error;
 			}
 			
@@ -524,11 +524,11 @@ static void fifoAddToFIFO(struct ParamSt *param)
 			}
 		} else if(exec == 0) {
 			dbgout("\n DOUBLE MESSAGE DOUBLE MESSAGE DOUBLE MESSAGE \n");
-			bo_log("FIFO fifoAddToFIFO() value don't push to FIFO");
+			bo_log("bo_net_fifo_server FIFO fifoAddToFIFO() value don't push to FIFO");
 		} else goto error;
 		
 	} else {
-		bo_log(" %s fifoAddToFIFO() bo_addFIFO can't add data to FIFO bad Length value[%d]",
+		bo_log("bo_net_fifo_server %s fifoAddToFIFO() bo_addFIFO can't add data to FIFO bad Length value[%d]",
 			"FIFO", param->packetLen);
 		goto error;
 	}

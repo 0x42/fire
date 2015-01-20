@@ -9,6 +9,8 @@ CC = gcc
 #CFLAGS = -Wall -g -fPIC -ansi -pedantic
 CFLAGS = -Wall -g -fPIC
 CFLAGS += -D __PC_TARGET__
+CFLAGS += -D __PRINT__
+CFLAGS += -D __PRINT_FIFO__
 LDFLAGS = 
 INC_DIRS = -I/usr/include -I/usr/local/include -I../ -I../../src/log \
 	-I../../src/lib -I../../src/tools -I../../src/nettcp \
