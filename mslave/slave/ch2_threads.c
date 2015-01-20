@@ -98,9 +98,7 @@ int passiveFromActive(struct chan_thread_arg *targ)
 	int n = 1;    /** При использовании n<<i в цикле for имеем
 		       * ряд 1,2,4.. для последующего увеличения
 		       * времени таймаута при приеме данных по каналу RS485 */
-	
-	bo_log("passiveFromActive() in");
-	
+		
 	if (get_state(&psvdata_ready) == 0)
 		return 0;
 	
@@ -226,9 +224,9 @@ int data_FIFO(struct chan_thread_arg *targ)
 	       tx2Buf.buf[9]
 		);
 	
-	/** Запрос для пассивного устройства загрузить в лог. */
+	/** Запрос для пассивного устройства загрузить в лог.
+	bo_log("data_FIFO after putLog()"); */
 	putLog();
-	bo_log("data_FIFO after putLog()");
 	
 	/** Данные для передачи подготовлены */
 	
@@ -320,7 +318,6 @@ void *chan2(void *arg)
 		if (targ->ch2_enable) {
 			/** Запросы из FIFO пассивным устройствам на порту 2
 			 *  (1 раз в 50 мсек) */
-			bo_log("ch2(): pass");
 
 			if (dst2Buf.wpos > 0) {
 				/** Если пассивные устройства имеются
