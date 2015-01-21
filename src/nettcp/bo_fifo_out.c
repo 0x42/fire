@@ -62,7 +62,7 @@ int bo_init_fifo_out(int itemN)	/*THREAD SAFE */
  */
 int bo_add_fifo_out(unsigned char *val, int size, char *ip) /* THREAD SAFE */
 {
-	int ans = -1, pos = -1, temp = 0;
+	int ans = -1, pos = -1, temp = 0, i = 0;
 	unsigned char len[2] = {0};
 	struct BO_ITEM_FIFO_OUT *ptr = NULL;	
 
@@ -89,6 +89,17 @@ int bo_add_fifo_out(unsigned char *val, int size, char *ip) /* THREAD SAFE */
 		ans = 1;
 	} else {
 		if(fifo.free == 0) { 
+			bo_log("FIFO OUT fifo.free = 0 fifo.count[%d]", fifo.count);
+			if(fifo.count > 0) {
+				i = fifo.head;
+				while(i != fifo.tail ) {
+					ptr = fifo.mem + i;
+					bo_log("FIFO OUT IP[%s] SIZE[%d]", 
+						ptr->ip, ptr->size);
+					if(i == fifo.last) i = 0;
+					else i++;
+				}
+			}
 			ans = 0;
 			goto exit;
 		}
