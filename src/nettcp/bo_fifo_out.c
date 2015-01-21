@@ -76,6 +76,18 @@ int bo_add_fifo_out(unsigned char *val, int size, char *ip) /* THREAD SAFE */
 		ptr = fifo.mem + pos;
 		temp = ptr->size + size + 4;
 		if(temp > BO_FIFO_ITEM_VAL) {
+			bo_log("FIFO OUT fifo.free[%d] fifo.count[%d]",
+				fifo.free, fifo.count);
+			if(fifo.count > 0) {
+				i = fifo.head;
+				while(i != fifo.tail ) {
+					ptr = fifo.mem + i;
+					bo_log("FIFO OUT IP[%s] SIZE[%d]", 
+						ptr->ip, ptr->size);
+					if(i == fifo.last) i = 0;
+					else i++;
+				}
+			}
 			ans = 0;
 			goto exit;
 		}

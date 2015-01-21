@@ -269,8 +269,8 @@ static void fifoReadPacket(int clientSock, unsigned char *buffer, int bufSize,
 	exec = bo_getIp(clientSock, param.ip);
 	if(exec == -1) memset(param.ip, '-', 15);
 	while(stop == -1) {
-		/*dbgout("\nFIFO = %s\n", PacketStatusTxt[packetStatus]);
-		*/
+		bo_log("\nFIFO = %s\n", PacketStatusTxt[packetStatus]);
+		
 		if(packetStatus == QUIT) break;
 		if(packetStatus == END) {
 			*endPr = -1;
