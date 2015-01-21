@@ -323,7 +323,7 @@ static void fifoReadPacket(int clientSock, unsigned char *buffer, int bufSize,
 	unsigned int length = 0;
 	int flag = -1;
 	int count = 0;
-	dbgout("SET ->");
+
 	length = readPacketLength(param);
 	if((length > 0) & (length <= param->bufSize)) {
 		count = bo_recvAllData(param->clientfd, 
@@ -356,7 +356,7 @@ static void fifoReadPacket(int clientSock, unsigned char *buffer, int bufSize,
   */
  static void fifoGetData(struct ParamSt *param)
  {
-	int exec = -1, i;
+	int exec = -1;
 	unsigned char len[2] = {0};
 	unsigned char head[3] = "VAL";
 	unsigned char headNO[3] = " NO"; 
@@ -364,13 +364,6 @@ static void fifoReadPacket(int clientSock, unsigned char *buffer, int bufSize,
 	
 	param->packetLen = bo_getFIFO(param->buffer, param->bufSize);
 	boIntToChar(param->packetLen, len);
-	
-	dbgout("param->packetLen=%d\n", param->packetLen);
-	dbgout("FIFO GET buf:");
-	for(i = 0; i < param->packetLen; i++) {
-		dbgout("%c ", *(param->buffer + i) );
-	}
-	dbgout("\n");
 	 
 	if(param->packetLen > 0) {
 		exec = bo_sendAllData(param->clientfd, head, 3);
@@ -476,7 +469,6 @@ static void fifoAddToFIFO(struct ParamSt *param)
 	int flag = -1;
 	int exec = -1;
 	const int err = -1;
-	int i = 0;
 	int timeLen = 50;
 	char timeStr[50] = {0};
 	bo_printFIFO();
@@ -484,16 +476,16 @@ static void fifoAddToFIFO(struct ParamSt *param)
 	if( param->packetLen > 9 ) {
 		memset(param->id, 0, 9);
 		memcpy(param->id, param->buffer, 8);
+		/*
 		dbgout("FIFO RECV id = [");
 		for(i = 0; i < 8; i++) {
 			dbgout("%c", *(param->buffer + i) );
 		}
 		dbgout("] ");
-		
+		*/
 		param->buffer += 8;
 		param->packetLen -=8;
 		
-		dbgout("From ip[%s]\n", param->ip);
 		exec = bo_checkDblMsg(param);
 		if(exec == 1) {
 			bo_getTimeNow(timeStr, timeLen);

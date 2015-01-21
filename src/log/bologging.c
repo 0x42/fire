@@ -88,8 +88,8 @@ void loggingINIT()
  * @param msg		инфор которая вывод в лог	
  * @return		возвр -1 в случае ошибки, >0 вслучае успешной записи
  */
-int bo_log(char *msg, ...) { return 1;}
-int bo_log_(char *msg, ...)
+/* int bo_log(char *msg, ...) { return 1;} */
+int bo_log(char *msg, ...)
 {
 	char *errTxt = NULL;
 	int err = 0, ans = 0;

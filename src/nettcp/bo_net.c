@@ -131,13 +131,13 @@ int bo_sendDataFIFO(char *ip, unsigned int port,
 
 	if(sock != -1) {
 		boIntToChar(dataSize, len);
-		bo_log("TCP HEAD ");
+	/*	bo_log("TCP HEAD "); */
 		exec = bo_sendAllData(sock, (unsigned char*)head, 3);
-		bo_log("TCP LEN");
+	/*	bo_log("TCP LEN"); */
 		if(exec == -1) goto error;
 		exec = bo_sendAllData(sock, len, 2);
 		if(exec == -1) goto error;
-		bo_log("TCP DATA");
+	/*	bo_log("TCP DATA"); */
 		exec = bo_sendAllData(sock, (unsigned char*)data, dataSize);
 		if(exec == -1) goto error;
 		bo_log("TCP RECV OK");
