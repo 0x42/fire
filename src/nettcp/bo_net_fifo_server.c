@@ -324,9 +324,11 @@ static void fifoReadPacket(int clientSock, unsigned char *buffer, int bufSize,
 	unsigned int length = 0;
 	int flag = -1;
 	int count = 0;
+	int totalSize = 0;
 	bo_log("fifoSetData SET");
 	length = readPacketLength(param);
-	if((length > 0) & (length <= param->bufSize)) {
+	totalSize = param->bufSize + 8; /* 8 = id msg length */ 
+	if((length > 0) & (length <= totalSize)) {
 		count = bo_recvAllData(param->clientfd, 
 				       param->buffer,
 			               param->bufSize,
