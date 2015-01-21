@@ -269,8 +269,9 @@ static void fifoReadPacket(int clientSock, unsigned char *buffer, int bufSize,
 	exec = bo_getIp(clientSock, param.ip);
 	if(exec == -1) memset(param.ip, '-', 15);
 	while(stop == -1) {
-		bo_log("\nFIFO = %s\n", PacketStatusTxt[packetStatus]);
-		
+	/*
+	 * 	bo_log("\nFIFO = %s\n", PacketStatusTxt[packetStatus]);
+	*/	
 		if(packetStatus == QUIT) break;
 		if(packetStatus == END) {
 			*endPr = -1;
@@ -323,7 +324,7 @@ static void fifoReadPacket(int clientSock, unsigned char *buffer, int bufSize,
 	unsigned int length = 0;
 	int flag = -1;
 	int count = 0;
-
+	bo_log("fifoSetData SET");
 	length = readPacketLength(param);
 	if((length > 0) & (length <= param->bufSize)) {
 		count = bo_recvAllData(param->clientfd, 
@@ -421,7 +422,7 @@ static void fifoAnsOk(struct ParamSt *param)
 	int sock = param->clientfd;
 	unsigned char msg[] = " OK";
 	packetStatus = QUIT;
-
+	bo_log("fifoAnsOk");
 	exec = bo_sendAllData(sock, msg, 3);
 	if(exec == -1) bo_log(" %s fifoAnsOk() errno[%s]", 
 				"FIFO", 
@@ -471,8 +472,9 @@ static void fifoAddToFIFO(struct ParamSt *param)
 	const int err = -1;
 	int timeLen = 50;
 	char timeStr[50] = {0};
-	bo_printFIFO();
-	
+	/*
+	 * bo_printFIFO();
+	*/
 	if( param->packetLen > 9 ) {
 		memset(param->id, 0, 9);
 		memcpy(param->id, param->buffer, 8);
@@ -554,7 +556,6 @@ static int bo_parseOnCommands(unsigned char *buf, int bufSize)
 	}
 	
 	ptr = buf;
-	bo_log("FIFO bo_parseOnCommands PARSE");
 	while(temp < bufSize) {
 		len = boCharToInt(ptr);
 		temp += 2;
@@ -572,7 +573,6 @@ static int bo_parseOnCommands(unsigned char *buf, int bufSize)
 		ptr  += len;
 		temp += len;
 	}
-	bo_log("FIFO bo_parseOnCommands PARSE END");
 	fifo_log("]packN = [%d]\n", packN);
 	bo_commitFIFO();
 	ans = 1;

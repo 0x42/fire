@@ -142,7 +142,6 @@ int bo_sendDataFIFO(char *ip, unsigned int port,
 		if(exec == -1) goto error;
 		bo_log("TCP RECV OK");
 		exec = bo_recvAllData(sock, (unsigned char*)buf, 3, 3);
-		bo_log("TCP END");
 		if(exec == -1) {
 error:
 			bo_log("bo_sendDataFIFO() errno[%s]\n ip[%s]\nport[%d]\n", 
@@ -168,6 +167,7 @@ error:
 			port,
 			dataSize);
 	}
+	bo_log("bo_sendDataFIFO()-> END ans[%d]", ans);
 	return ans;
 }
 
