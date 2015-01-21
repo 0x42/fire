@@ -562,6 +562,7 @@ static int bo_parseOnCommands(unsigned char *buf, int bufSize)
 	}
 	
 	ptr = buf;
+	bo_log("FIFO bo_parseOnCommands PARSE");
 	while(temp < bufSize) {
 		len = boCharToInt(ptr);
 		temp += 2;
@@ -579,6 +580,7 @@ static int bo_parseOnCommands(unsigned char *buf, int bufSize)
 		ptr  += len;
 		temp += len;
 	}
+	bo_log("FIFO bo_parseOnCommands PARSE END");
 	fifo_log("]packN = [%d]\n", packN);
 	bo_commitFIFO();
 	ans = 1;
