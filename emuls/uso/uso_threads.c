@@ -99,6 +99,8 @@ void uso_print_ms()
 int uso_tx(struct actx_thread_arg *targ, unsigned int sch)
 {
 	int res;
+	char tmstr[50] = {0};
+	
 	/**
 	int i, j;
 	char data[1200];
@@ -108,7 +110,9 @@ int uso_tx(struct actx_thread_arg *targ, unsigned int sch)
 	res = uso(targ, &txBuf, sch, targ->pr);
 	if (res == -1) return -1;
 
-	printf("USO: to   passive [%d]      ------>>-->>-----\n", sch);
+	bo_getTimeNow(tmstr, 50);
+	
+	printf("USO[%s]: to   passive [%d]      ------>>-->>-----\n", tmstr, sch);
 	
 	/**
 	memset(data, 0, 1200);
@@ -144,6 +148,7 @@ int uso_print_sq(struct actx_thread_arg *targ, unsigned int sch)
 	int i, j;
 	char data[1200];
 	int res = 0;
+	char tmstr[50] = {0};
 
 	memset(csch, 0, 10);
 
@@ -164,7 +169,9 @@ int uso_print_sq(struct actx_thread_arg *targ, unsigned int sch)
 		data[ln+j] = (unsigned char)rxBuf.buf[6+ln+j];
 	}
 
-	printf("USO: from passive      [%d] ------<<--<<-----\n", rxsch);
+	bo_getTimeNow(tmstr, 50);
+
+	printf("USO[%s]: from passive      [%d] ------<<--<<-----\n", tmstr, rxsch);
 	
 	/**
 	printf("sch=%d dst=[%d] <- src=[%d] [%02x %02x %02x %02x] [%s]\n",

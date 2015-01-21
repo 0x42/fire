@@ -174,17 +174,21 @@ int data_FIFO(struct chan_thread_arg *targ)
 		       * ряд 1,2,4.. для последующего увеличения
 		       * времени таймаута при приеме данных по каналу RS485 */
 
-	/* bo_log("data_FIFO before getFifo"); */
-	
+	/**
+	   bo_log("data_FIFO  bo_getFifoVal(): before");
+	*/
 	getFifo_ans = bo_getFifoVal(getFifo_buf, BO_FIFO_ITEM_VAL);
 	if (getFifo_ans <= 0) {
 		/** Если в FIFO нет данных
-		bo_log("data_FIFO getFifo(): no data"); */
-		usleep(50000);
+		bo_log("data_FIFO bo_getFifoVal(): no data");
+		usleep(50000); */
+		printf("bo_getFifoVal(): NO DATA / getFifo_ans= [%d]\n", getFifo_ans);
 		
 		return 0;
 	}
-
+	/**
+	   bo_log("data_FIFO bo_getFifoVal(): after");
+	*/
 	/** В FIFO есть данные для передачи пассивному устройству */
 	dst = (unsigned int)getFifo_buf[0];
 
@@ -214,7 +218,8 @@ int data_FIFO(struct chan_thread_arg *targ)
 	/** Запрос для пассивного устройства загрузить в лог.
 	bo_log("data_FIFO after putLog()"); */
 	putLog();
-	
+
+	/**
 	bo_log("data_FIFO before TX [%d %d %d %d %d %d %d %d %d %d]",
 	       tx2Buf.buf[0],
 	       tx2Buf.buf[1],
@@ -227,7 +232,7 @@ int data_FIFO(struct chan_thread_arg *targ)
 	       tx2Buf.buf[8],
 	       tx2Buf.buf[9]
 		);
-	
+	*/
 	/** Данные для передачи подготовлены */
 	
 	for (i=0; i<targ->nretries; i++) {
@@ -243,7 +248,7 @@ int data_FIFO(struct chan_thread_arg *targ)
 		    ((rx2Buf.buf[1] & 0xFF) == dst)) {
 			switch (get_rxFl(&rx2Buf)) {
 			case RX_DATA_READY:
-				/** Ответ пассивного устройства */
+				/** Ответ пассивного устройства
 				bo_log("data_FIFO after RX [%d %d %d %d %d %d %d %d %d %d]",
 				       rx2Buf.buf[0],
 				       rx2Buf.buf[1],
@@ -255,7 +260,7 @@ int data_FIFO(struct chan_thread_arg *targ)
 				       rx2Buf.buf[7],
 				       rx2Buf.buf[8],
 				       rx2Buf.buf[9]
-					);
+					); */
 				
 				return passive_process(targ, dst);
 			case RX_ERROR:
@@ -305,8 +310,9 @@ void *chan2(void *arg)
 #ifdef __PRINT__
 				write (1, "chan2: 1000ms\n", 14);
 #endif
+				/**
 				bo_log("ch2(): scan");
-
+				*/
 				dst = targ->dst_beg;
 				while (dst <= targ->dst_end) {
 					res = scan(targ,

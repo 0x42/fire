@@ -475,7 +475,6 @@ int active_process(struct chan_thread_arg *targ, int dst)
  */
 int activeFromFIFO(struct chan_thread_arg *targ)
 {
-	/* int testDst; */
 	int res;
 	
 	if (get_state(&actFIFOdata_ready) == 1) {
@@ -494,6 +493,7 @@ int activeFromFIFO(struct chan_thread_arg *targ)
 		res = tx(targ, &txBuf, "1fifo");
 		if (res < 0) return -1;
 
+		/**
 		bo_log("activeFromFIFO after TX [%d %d %d %d %d %d %d %d %d %d]",
 		       txBuf.buf[0],
 		       txBuf.buf[1],
@@ -506,7 +506,7 @@ int activeFromFIFO(struct chan_thread_arg *targ)
 		       txBuf.buf[8],
 		       txBuf.buf[9]
 			);
-	
+		*/
 		usleep(targ->utxdel * txBuf.wpos);
 	}
 

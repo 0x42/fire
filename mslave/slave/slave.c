@@ -627,7 +627,8 @@ void prepareFIFO(struct thr_rx_buf *b, char *key, int dst)
 		for (i=0; i<ln; i++)
 			buf[i] = b->buf[i];
 
-		bo_log("prepareFIFO: bo_add_fifo_out() before ln=[%d]", ln);
+		/** bo_log("prepareFIFO: bo_add_fifo_out() before
+		 * ln=[%d]", ln); */
 		
 		ans = bo_add_fifo_out(buf, ln, val);
 		if (ans == 0)
@@ -635,6 +636,8 @@ void prepareFIFO(struct thr_rx_buf *b, char *key, int dst)
 		else if (ans == -1)
 			bo_log("prepareFIFO: bo_add_fifo_out() == -1");
 		
+		/** bo_log("prepareFIFO: bo_add_fifo_out() after",
+		    ln); */
 	} else {
 		bo_log("prepareFIFO(): fifo_ipSend= NULL");
 	}
