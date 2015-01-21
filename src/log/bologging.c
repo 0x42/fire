@@ -88,7 +88,8 @@ void loggingINIT()
  * @param msg		инфор которая вывод в лог	
  * @return		возвр -1 в случае ошибки, >0 вслучае успешной записи
  */
-int bo_log(char *msg, ...)
+int bo_log(char *msg, ...) { return 1;}
+int bo_log_(char *msg, ...)
 {
 	char *errTxt = NULL;
 	int err = 0, ans = 0;
@@ -360,8 +361,8 @@ void bo_getTimeNow(char *timeStr, int sizeBuf)
 		printf("bo_getTimeNow() - ERROR - массив не достаточного размера\n");
 	sprintf(timeStr, "%s%d ", buffer, micro);
 }
-
-void fifo_log(char *msg, ...)
+void fifo_log(char *msg, ...) {}
+void fifo_log_(char *msg, ...)
 {
 	FILE *file = NULL;
 	int print_in_file = -1;
@@ -417,8 +418,8 @@ void fifo_log(char *msg, ...)
 	}
 	va_end(ap);
 }
-
-void fifo_log10(unsigned char *buf, int size)
+void fifo_log10(unsigned char *buf, int size) {}
+void fifo_log10_(unsigned char *buf, int size)
 {
 	FILE *file = NULL;
 	int print_in_file = -1;
