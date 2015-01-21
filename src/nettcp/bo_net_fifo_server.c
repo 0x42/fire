@@ -552,7 +552,7 @@ static int bo_parseOnCommands(unsigned char *buf, int bufSize)
 	int packN = 0;
 	int len = 0, exec = 0, temp = 0;
 	unsigned char *ptr = NULL;
-	bo_log("FIFO bo_parseOnCommands START");
+	bo_log("FIFO bo_parseOnCommands START[%d]", bufSize);
 	exec = bo_insertFIFO();
 	if(exec == -1) {
 		bo_log("bo_parseOnCommands() -> bo_insertFIFO() return ERROR");
