@@ -126,8 +126,10 @@ int bo_sendDataFIFO(char *ip, unsigned int port,
 	unsigned char len[2] = {0};
 	char buf[4] = {0};
 	char *ok = NULL;
+	/*
 	bo_log("bo_sendDataFIFO()->bo_setConnect[%s][%d] size[%d]", ip, port, dataSize);
-	sock = bo_setConnect(ip, port);
+	*/
+	 sock = bo_setConnect(ip, port);
 
 	if(sock != -1) {
 		boIntToChar(dataSize, len);
@@ -140,7 +142,6 @@ int bo_sendDataFIFO(char *ip, unsigned int port,
 	/*	bo_log("TCP DATA"); */
 		exec = bo_sendAllData(sock, (unsigned char*)data, dataSize);
 		if(exec == -1) goto error;
-		bo_log("TCP RECV OK");
 		exec = bo_recvAllData(sock, (unsigned char*)buf, 3, 3);
 		if(exec == -1) {
 error:
@@ -167,7 +168,6 @@ error:
 			port,
 			dataSize);
 	}
-	bo_log("bo_sendDataFIFO()-> END ans[%d]", ans);
 	return ans;
 }
 

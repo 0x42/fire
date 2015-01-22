@@ -325,7 +325,6 @@ static void fifoReadPacket(int clientSock, unsigned char *buffer, int bufSize,
 	int flag = -1;
 	int count = 0;
 	int totalSize = 0;
-	bo_log("fifoSetData SET");
 	length = readPacketLength(param);
 	totalSize = param->bufSize + 8; /* 8 = id msg length */ 
 	if((length > 0) & (length <= totalSize)) {
@@ -424,7 +423,6 @@ static void fifoAnsOk(struct ParamSt *param)
 	int sock = param->clientfd;
 	unsigned char msg[] = " OK";
 	packetStatus = QUIT;
-	bo_log("fifoAnsOk");
 	exec = bo_sendAllData(sock, msg, 3);
 	if(exec == -1) bo_log(" %s fifoAnsOk() errno[%s]", 
 				"FIFO", 
@@ -548,7 +546,6 @@ static int bo_parseOnCommands(unsigned char *buf, int bufSize)
 	int packN = 0;
 	int len = 0, exec = 0, temp = 0;
 	unsigned char *ptr = NULL;
-	bo_log("FIFO bo_parseOnCommands START[%d]", bufSize);
 	exec = bo_insertFIFO();
 	if(exec == -1) {
 		bo_log("bo_parseOnCommands() -> bo_insertFIFO() return ERROR");
@@ -558,7 +555,6 @@ static int bo_parseOnCommands(unsigned char *buf, int bufSize)
 	}
 	
 	ptr = buf;
-	bo_log("FIFO bo_parseOnCommands PARSE");
 	while(temp < bufSize) {
 		len = boCharToInt(ptr);
 		temp += 2;
@@ -576,12 +572,10 @@ static int bo_parseOnCommands(unsigned char *buf, int bufSize)
 		ptr  += len;
 		temp += len;
 	}
-	bo_log("FIFO bo_parseOnCommands PARSE END");
 
 	fifo_log("]packN = [%d]\n", packN);
 	bo_commitFIFO();
 	ans = 1;
-	bo_log("FIFO bo_parseOnCommands END");
 	exit:
 	return ans;
 }
