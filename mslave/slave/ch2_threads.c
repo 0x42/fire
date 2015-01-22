@@ -182,7 +182,6 @@ int data_FIFO(struct chan_thread_arg *targ)
 		/** Если в FIFO нет данных
 		bo_log("data_FIFO bo_getFifoVal(): no data");
 		usleep(50000); */
-		printf("bo_getFifoVal(): NO DATA / getFifo_ans= [%d]\n", getFifo_ans);
 		
 		return 0;
 	}
