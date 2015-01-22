@@ -260,6 +260,7 @@ static int workSockServ(int sock_serv)
 		FD_ZERO(&r_set);
 		FD_SET(sock_serv, &r_set);
 		exec = select(FD_SETSIZE, &r_set, NULL, NULL, NULL);
+		
 		if(exec == -1) {
 			bo_log("bo_net_fifo_server()->workSockServ ERROR select[%s]",
 				strerror(errno));
@@ -358,7 +359,6 @@ static void fifoReadPacket(int clientSock, unsigned char *buffer, int bufSize,
 	unsigned int length = 0;
 	int flag = -1;
 	int count = 0;
-	dbgout("SET ->");
 	length = readPacketLength(param);
 	if((length > 0) & (length <= param->bufSize)) {
 		count = bo_recvAllData(param->clientfd, 
@@ -400,12 +400,6 @@ static void fifoReadPacket(int clientSock, unsigned char *buffer, int bufSize,
 	param->packetLen = bo_getFIFO(param->buffer, param->bufSize);
 	boIntToChar(param->packetLen, len);
 	
-	dbgout("param->packetLen=%d\n", param->packetLen);
-	dbgout("FIFO GET buf:");
-	for(i = 0; i < param->packetLen; i++) {
-		dbgout("%c ", *(param->buffer + i) );
-	}
-	dbgout("\n");
 	 
 	if(param->packetLen > 0) {
 		exec = bo_sendAllData(param->clientfd, head, 3);
