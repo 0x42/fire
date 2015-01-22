@@ -180,8 +180,8 @@ int data_FIFO(struct chan_thread_arg *targ)
 	getFifo_ans = bo_getFifoVal(getFifo_buf, BO_FIFO_ITEM_VAL);
 	if (getFifo_ans <= 0) {
 		/** Если в FIFO нет данных
-		bo_log("data_FIFO bo_getFifoVal(): no data");
-		usleep(50000); */
+		bo_log("data_FIFO bo_getFifoVal(): no data"); */
+		usleep(50000);
 		
 		return 0;
 	}
