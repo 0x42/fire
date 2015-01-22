@@ -195,11 +195,9 @@ void *rtbl_recv(void *arg)
 	int ans;
 	fd_set r_set;
 	int exec = -1;
-
-	tval.tv_sec = 0;
-	tval.tv_usec = 100000;
 	
 	while (1) {
+		
 		if (rtSend_sock != -1) {
 			rtRecv_sock = bo_setConnect(targ->ip, targ->port);
 			if (rtRecv_sock < 0) {
@@ -222,6 +220,9 @@ void *rtbl_recv(void *arg)
 			FD_ZERO(&r_set);
 			FD_SET(rtRecv_sock,  &r_set);
 
+			tval.tv_sec = 0;
+			tval.tv_usec = 100000;
+	
 			exec = select(rtRecv_sock+1, &r_set, NULL, NULL, &tval);
 
 			if(exec == -1) {
