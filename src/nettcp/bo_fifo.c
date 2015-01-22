@@ -264,6 +264,8 @@ int bo_getFifoVal(unsigned char *buf, int bufSize) /*THREAD SAFE */
 			}
 		}
 		pthread_mutex_unlock(&fifo_mut);
+	} else {
+		usleep(50000);
 	}
 	return ans;
 }
