@@ -36,8 +36,11 @@ struct BO_SOCK_LST * bo_init_sock_lst(int size, int port);
  */
 int bo_add_sock_lst(struct BO_SOCK_LST *sock_lst, char *ip);
 
+int bo_add_sock_lst2(struct BO_SOCK_LST *sock_lst, int sock);
+
 void bo_del_sock_lst(struct BO_SOCK_LST *sock_lst);
 
+int bo_add_sock_lst2(struct BO_SOCK_LST *sock_lst, int sock);
 /* ----------------------------------------------------------------------------
  * @return	[-1] no sock [>0]  sock 
  */
@@ -45,5 +48,10 @@ int bo_get_sock_by_ip(struct BO_SOCK_LST *sock_lst, char *ip);
 
 void bo_print_sock_lst(struct BO_SOCK_LST *sock_lst);
 
+void bo_del_item_sock_lst(struct BO_SOCK_LST *sock_lst, int i);
+
+void bo_del_sock_lst(struct BO_SOCK_LST *sock_lst);
+
+void bo_del_by_sck_sock_lst(struct BO_SOCK_LST *sock_lst, int sock);
 #endif	/* BO_SEND_LST_H */
 

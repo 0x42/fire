@@ -2,8 +2,8 @@
 
 static int bo_add(struct BO_SOCK_LST *sock_lst, char *ip);
 static int get_lazy_sock(struct BO_SOCK_LST *sock_lst);
-static void bo_del_item_sock_lst(struct BO_SOCK_LST *sock_lst, int i);
 static int getFreeInd(struct BO_SOCK_LST *sock_lst);
+static int bo_add2(struct BO_SOCK_LST *sock_lst, int sock);
 static int port_serv;
 
 /* ----------------------------------------------------------------------------
@@ -11,7 +11,7 @@ static int port_serv;
  * @size	размер списка
  * @return	[NULL] ERROR [sock_lst *] OK
 */
-struct BO_SOCK_LST * bo_init_sock_lst(int size, int port)
+struct BO_SOCK_LST *bo_init_sock_lst(int size, int port)
 {
 	int i = -1;
 	int error = -1;
@@ -65,7 +65,6 @@ struct BO_SOCK_LST * bo_init_sock_lst(int size, int port)
 	return sock_lst;
 }
 
-
 void bo_del_sock_lst(struct BO_SOCK_LST *sock_lst)
 {
 	if(sock_lst != NULL) {
@@ -84,6 +83,56 @@ void bo_del_sock_lst(struct BO_SOCK_LST *sock_lst)
 	}		
 }
 
+/* ----------------------------------------------------------------------------
+ * @brief	закрытие сокета -> удаление злемента
+ * @i		индекс в массиве
+ */
+void bo_del_item_sock_lst(struct BO_SOCK_LST *sock_lst, int i)
+{
+	int buf = -1;
+	int pr = -1, nx = -1; 
+	struct BO_ITEM_SOCK_LST *item = NULL;
+	
+	item = sock_lst->arr + i;
+	close(item->sock);
+	item->sock = 0;
+	
+	item->rate = -1;
+	memset(item->ip, 0, 16);
+	
+	/* добавлеям индекс в стек свободных ячеек */
+	buf = *sock_lst->free;
+	*sock_lst->free = i;
+	*(sock_lst->free + i) = buf;
+	
+	/* удаляем элемент из связ списка */
+	pr = *(sock_lst->prev + i);
+	*(sock_lst->prev + i) = -1;
+	nx = *(sock_lst->next + i);
+	*(sock_lst->next + i) = -1;
+	
+	if(pr != -1) *(sock_lst->next + pr) = nx;
+	else sock_lst->head = nx;
+	if(nx != -1) *(sock_lst->prev + nx) = pr;
+	else sock_lst->tail = pr;
+	sock_lst->n--;
+}
+
+void bo_del_by_sck_sock_lst(struct BO_SOCK_LST *sock_lst, int sock)
+{
+	struct BO_ITEM_SOCK_LST *item = NULL;
+	int i = -1;
+	
+	i = sock_lst->head;
+	while(i != -1) {
+		item = sock_lst->arr + i;
+		if(item->sock == sock) {
+			bo_del_item_sock_lst(sock_lst, i);
+			break;
+		}
+		i = *(sock_lst->next + i);
+	}
+}
 /* ----------------------------------------------------------------------------
  * @brief	возвращает индекс своб позиции в списке
  *		Стек строится на массиве. В ячейке хран-ся индекс след своб 
@@ -142,6 +191,41 @@ int bo_add_sock_lst(struct BO_SOCK_LST *sock_lst, char *ip)
 	return ans;
 }
 
+int bo_add_sock_lst2(struct BO_SOCK_LST *sock_lst, int sock)
+{
+	int i		= -1;
+	int ans		= -1;
+	int exec	= -1;
+	char ip[16]	= {0};
+	i = *(sock_lst->free);
+
+	if(i != -1) {
+		exec = bo_add2(sock_lst, sock);
+		if(exec == -1) {
+			exec = bo_getIp(sock, ip);
+			if(exec == -1) memcpy(ip, " ----- ", 7);
+			bo_log("bo_add_sock_lst2() ip[%s] ERROR", ip);
+			ans = -1;
+			goto exit;
+		}
+		ans = 1;
+	} else {
+		/* find lazy sock del it and add new */
+		i = get_lazy_sock(sock_lst);
+		bo_del_item_sock_lst(sock_lst, i);
+		exec = bo_add2(sock_lst, sock);
+		if(exec == -1) {
+			exec = bo_getIp(sock, ip);
+			if(exec == -1) memcpy(ip, " ----- ", 7);
+			bo_log("bo_add_sock_lst2() ip[%s] ERROR", ip);
+			ans = -1;
+			goto exit;
+		} 
+		ans = 1;
+	}
+	exit:
+	return ans;
+}
 /* [-1] ERROR [1] OK */
 static int bo_add(struct BO_SOCK_LST *sock_lst, char *ip)
 {
@@ -187,39 +271,42 @@ static int bo_add(struct BO_SOCK_LST *sock_lst, char *ip)
 	return ans;
 }
 
-/* ----------------------------------------------------------------------------
- * @brief	закрытие сокета -> удаление злемента
- * @i		индекс в массиве
- */
-static void bo_del_item_sock_lst(struct BO_SOCK_LST *sock_lst, int i)
+static int bo_add2(struct BO_SOCK_LST *sock_lst, int sock) 
 {
-	int buf = -1;
-	int pr = -1, nx = -1; 
+	int i		= -1;
+	int exec	= -1;
+	int temp	= -1;
+	int ans		= -1;
+	char ip[16] = {0};
 	struct BO_ITEM_SOCK_LST *item = NULL;
-	
+
+	exec = bo_getIp(sock, ip);
+	if(exec == -1) memcpy(ip, " ----- ", 7);
+		
+	i = getFreeInd(sock_lst);
+
 	item = sock_lst->arr + i;
-	close(item->sock);
-	item->sock = 0;
-	
-	item->rate = -1;
+	item->sock = sock;
+	item->rate = 0;
 	memset(item->ip, 0, 16);
+	memcpy(item->ip, ip, strlen(ip));
+
+	if(sock_lst->n == 0) {
+		/* добавление первого элемента */
+		*(sock_lst->prev + i) = -1;
+		*(sock_lst->next + i) = -1;
+		sock_lst->head = i;
+	} else {
+		temp = sock_lst->tail; 
+		*(sock_lst->prev + i)	 = temp;
+		*(sock_lst->next + i)	 = -1;
+		*(sock_lst->next + temp) = i;
+	}
+	sock_lst->tail = i;
+	sock_lst->n++;
+	ans = 1;
 	
-	/* добавлеям индекс в стек свободных ячеек */
-	buf = *sock_lst->free;
-	*sock_lst->free = i;
-	*(sock_lst->free + i) = buf;
-	
-	/* удаляем элемент из связ списка */
-	pr = *(sock_lst->prev + i);
-	*(sock_lst->prev + i) = -1;
-	nx = *(sock_lst->next + i);
-	*(sock_lst->next + i) = -1;
-	
-	if(pr != -1) *(sock_lst->next + pr) = nx;
-	else sock_lst->head = nx;
-	if(nx != -1) *(sock_lst->prev + nx) = pr;
-	else sock_lst->tail = pr;
-	sock_lst->n--;
+	return ans;
 }
 
 /* ----------------------------------------------------------------------------
@@ -303,3 +390,5 @@ void bo_print_sock_lst(struct BO_SOCK_LST *sock_lst)
 	}
 	printf("\n");
 }
+
+/* 0x42 */

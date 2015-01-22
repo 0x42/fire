@@ -7,11 +7,22 @@
 #include "bo_fifo.h"
 #include "../tools/ocfg.h"
 #include "../tools/oht.h"
+#include "bo_send_lst.h"
 
 extern unsigned int boCharToInt	(unsigned char *buf);
 
 struct ParamSt;
 static void readConfig		(TOHT *cfg, int n, char **argv);
+static int runSockServ		();
+static void workSockServ		(int sock_serv, unsigned char *buf, 
+				int bufSize, TOHT *tab);
+
+static void clientEvent		(struct BO_SOCK_LST *sock_lst, 
+				fd_set *set,
+				unsigned char *buf,
+				int bufSize,
+				int *end, 
+				TOHT *tab);
 
 static void fifoServWork	();
 static void fifoReadPacket	(int clientSock, unsigned char *buffer, 
@@ -106,6 +117,7 @@ struct ParamSt {
  */
 void bo_fifo_thrmode(int port, int queue_len, int fifo_len)
 {
+	
 	bo_log(" %s %s %s", "FIFO", "INFO", "START(THR mode) moxa_serv");
 	fifoconf.port      = port;
 	fifoconf.queue_len = queue_len;
@@ -177,14 +189,11 @@ static void readConfig(TOHT *cfg, int n, char **argv)
 static void fifoServWork()
 {
 	int sockfdMain = -1;
-	int stop = 1;
-	int countErr  = 0;
-	char *errTxt = NULL;
-	int clientfd = 0;
 	/* размер ячейки в FIFO */
 	int bufferSize = BO_FIFO_ITEM_VAL;
 	unsigned char *buffer1 = NULL;
 	TOHT *tab = NULL;
+
 	bo_log(" %s %s %s", "FIFO", "INFO", " RUN ");
 	
 	/* создаем буфер */
@@ -202,38 +211,16 @@ static void fifoServWork()
 	
 	sockfdMain = -1;
 	sockfdMain = runSockServ();
+	
 	if(sockfdMain == -1) { 
 		bo_log("FIFO ERROR fifoServWork() can't create server socket");
 		goto exit; 
-	}
-	while(stop == 1) {
-		if( sockfdMain  != -1 ) {
-			if(bo_waitConnect(sockfdMain, &clientfd, &errTxt) == 1) {
-				countErr = 0;
-				/* передаем флаг stop. Ф-ия может поменять его на -1
-				   если придет пакет END */
-				fifoReadPacket(clientfd, buffer1, bufferSize, &stop, tab);
-			} else {
-				countErr++;
-				bo_log(" %s %s %s errno[%s]", "FIFO", "ERROR", 
-					"fifoServWork()", errTxt);
-			}
-		} else {
-			sockfdMain = runSockServ();
-			if(sockfdMain == -1) { 
-				bo_log("FIFO ERROR fifoServWork() can't create server socket");
-				goto exit; 
-			}
-		}
-		if(countErr == 5) {
-			bo_log(" FIFO ERROR fifoServWork() restart server socket");
-			countErr = 0;
-			bo_closeSocket(sockfdMain);
-			sockfdMain = -1;
-		}
+	} else {
+		workSockServ(sockfdMain, buffer1, bufferSize, tab);
 	}
 	
-	bo_closeSocket(sockfdMain);
+	if(sockfdMain != -1) bo_closeSocket(sockfdMain);
+	
 	exit:
 	if(tab != NULL) ht_free(tab);
 	if(buffer1 != NULL) free(buffer1);
@@ -251,12 +238,25 @@ static int runSockServ()
 	return ans;
 }
 
-static int workSockServ(int sock_serv)
+static void workSockServ(int sock_serv, unsigned char *buf, int bufSize, TOHT *tab)
 {
-	int ans = -1, stop = 1, exec = -1;
+	int stop = 1, exec = -1, sock_cl = -1;
+	int option;
+	int err_count = 0;
 	fd_set r_set;
+	struct BO_SOCK_LST *sock_lst = NULL;
+	
+	/* создаем список подкл клиентов */
+	sock_lst = bo_init_sock_lst(255, 0);
+	if(sock_lst == NULL) {
+		bo_log("fifoServWork->bo_init_sock_lst ERROR can't crt sock_lst");
+		goto exit;
+	}
+	
+	
 	
 	while(stop == 1) {
+		sock_cl = -1;
 		FD_ZERO(&r_set);
 		FD_SET(sock_serv, &r_set);
 		exec = select(FD_SETSIZE, &r_set, NULL, NULL, NULL);
@@ -265,10 +265,67 @@ static int workSockServ(int sock_serv)
 			bo_log("bo_net_fifo_server()->workSockServ ERROR select[%s]",
 				strerror(errno));
 			goto exit;
+		} else {
+			if(FD_ISSET(sock_serv, &r_set)) {
+				sock_cl = accept(sock_serv, NULL, NULL);
+				if(sock_cl == -1) {
+					bo_log("bo_net_fifo_server->[%s] ERROR accept[%s]",
+						"workSockServ",
+						strerror(errno));
+					err_count++;
+				} else {
+					bo_setTimerRcv2(sock_cl, 0, 200);
+					/* при перезапуске программы позволяет повторно использовать адрес 
+					 * порт, иначе придется ждать 2MSL */
+					option = 1;
+					setsockopt(sock_cl, SOL_SOCKET, SO_REUSEADDR, 
+						&option, sizeof(option));
+
+					exec = bo_add_sock_lst2(sock_lst, sock_cl);
+					if(exec == -1) {
+						bo_log("workSockServ can't add sock_cl");
+						err_count++;
+						bo_closeSocket(sock_cl);
+					}
+				}
+			}
+			clientEvent(sock_lst, &r_set, buf, bufSize, &stop, tab);
+		
+		}
+		if(err_count == 5) {
+			bo_log("workSockServ a lot of error count == 5 STOP FIFO");
+			goto exit;
 		}
 	}
 	exit:
-	return ans;
+	if(sock_lst != NULL) { bo_log("workSockServ->delete sock_lst"); }
+}
+
+static void clientEvent(struct BO_SOCK_LST *sock_lst, 
+			fd_set *set,
+			unsigned char *buf,
+			int bufSize,
+			int *end, 
+			TOHT *tab)
+{
+	struct BO_ITEM_SOCK_LST *item = NULL;
+	int i = -1;
+	
+	if(sock_lst->n > 0) {
+		i = sock_lst->head;
+		while(i != -1) {
+			item = sock_lst->arr + i;
+			if(FD_ISSET(item->sock, set) == 1) {
+				fifoReadPacket(
+					item->sock,
+					buf, 
+					bufSize, 
+					end, 
+					tab);
+			}
+			i = *sock_lst->next;
+		}
+	}
 }
 /* ---------------------------------------------------------------------------
   * @brief		читаем пакет и пишем/забираем/удаляем в/из FIFO
@@ -282,7 +339,6 @@ static void fifoReadPacket(int clientSock, unsigned char *buffer, int bufSize,
 			int *endPr, TOHT *tab)
 {
 	int stop = -1;
-	int i = 1;
 	struct ParamSt param;
 	char idBuf[9] = {0};
 	int exec = -1;
@@ -294,13 +350,6 @@ static void fifoReadPacket(int clientSock, unsigned char *buffer, int bufSize,
 	param.id_msg   = tab;
 	param.id       = idBuf;
 	packetStatus   = READHEAD;
-	
-	/* устан максимальное время ожидания одного пакета */
-	bo_setTimerRcv(clientSock);
-	
-	/* при перезапуске программы позволяет повторно использовать адрес 
-	 * порт, иначе придется ждать 2MSL */
-	setsockopt(clientSock, SOL_SOCKET, SO_REUSEADDR, &i, sizeof(i));
 	
 	exec = bo_getIp(clientSock, param.ip);
 	if(exec == -1) memset(param.ip, '-', 15);
@@ -315,7 +364,6 @@ static void fifoReadPacket(int clientSock, unsigned char *buffer, int bufSize,
 		statusTable[packetStatus](&param);
 	}
 	
-	bo_closeSocket(clientSock);	
 }
 
  /* ---------------------------------------------------------------------------
@@ -391,7 +439,7 @@ static void fifoReadPacket(int clientSock, unsigned char *buffer, int bufSize,
   */
  static void fifoGetData(struct ParamSt *param)
  {
-	int exec = -1, i;
+	int exec = -1;
 	unsigned char len[2] = {0};
 	unsigned char head[3] = "VAL";
 	unsigned char headNO[3] = " NO"; 

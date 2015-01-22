@@ -1,7 +1,9 @@
 #include "bo_net.h"
+#include "bo_send_lst.h"
 
 static int bo_sendData(int sock, char *data, unsigned int dataSize);
-
+static void delSockLst(struct BO_SOCK_LST *lst);
+static int bo_addToSockLst(struct BO_SOCK_LST *lst, char *ip);
 /*
  * @brief		откр сокет
  * @return		возвращает socket или -1 вслучае ошибки 
@@ -120,8 +122,85 @@ int bo_waitConnect(int sock, int *clientfd, char **errTxt)
 int bo_sendDataFIFO(char *ip, unsigned int port, 
 	char *data, unsigned int dataSize)
 {
-	int ans = -1;
+	static struct BO_SOCK_LST *lst = NULL;
+	static int err_count = 0;
+	int ans = -1, sock = 0, exec = -1;
 	
+	if(lst == NULL) lst = bo_init_sock_lst(10, port);
+	if(lst == NULL) goto exit;
+	/**/
+	sock = bo_get_sock_by_ip(lst, ip);
+	if(sock  == -1) {
+		sock = bo_addToSockLst(lst, ip);
+		if(sock == -1) {
+			err_count++;
+			bo_log("bo_sendDataFIFO[%s] can't add to lst", ip);
+			goto exit;
+		}
+	}
+	/* Отправка данных */
+	exec = bo_sendData(sock, data, dataSize);
+	if(exec == -1) {
+		bo_log("bo_sendData[%s] can't send. Reconnect", ip);
+		bo_del_by_sck_sock_lst(lst, sock);
+		sock = bo_addToSockLst(lst, ip);
+		if(sock == -1) {
+			bo_log("bo_sendDataFIFO[%s] can't add to lst", ip);
+			err_count++;
+			goto exit;
+		}
+		exec = bo_sendData(sock, data, dataSize);
+		if(exec == -1) {
+			bo_log("bo_sendDataFIFO[%s] can't send", ip);
+			bo_del_by_sck_sock_lst(lst, sock);
+		}
+		
+	}
+	ans = exec;
+	
+	if(err_count == 10) {
+		err_count = 0;
+		bo_log("bo_sendDataFIFO ERROR err_count = 10 delete lst");
+		delSockLst(lst);
+		lst = NULL;
+	}
+	
+	exit:
+	return ans;
+}
+
+static void delSockLst(struct BO_SOCK_LST *lst)
+{
+	int i = -1;
+
+	i = lst->head;
+	while(i != -1) {
+		bo_del_item_sock_lst(lst, i);
+		i = *(lst->next + i);
+	}
+	bo_del_sock_lst(lst);
+}
+/*
+ * @return [sock] OK [-1] ERROR
+ */
+static int bo_addToSockLst(struct BO_SOCK_LST *lst, char *ip)
+{
+	int ans = -1, exec = -1;
+	
+	exec = bo_add_sock_lst(lst, ip);
+	if(exec == -1) {
+		bo_log("bo_addToSockLst ip[%s] ERROR can't add to lst", ip);
+		goto exit;
+	}
+	
+	exec = bo_get_sock_by_ip(lst, ip);
+	if(exec == -1) {
+		bo_log("bo_addToSockLst ip[%s] ERROR can't get sock after add", ip);
+		goto exit;
+	}
+	
+	ans = exec;
+	exit:
 	return ans;
 }
 /* ----------------------------------------------------------------------------
@@ -150,7 +229,10 @@ static int bo_sendData(int sock, char *data, unsigned int dataSize)
 		if(exec == -1) goto exit;
 		
 		if(strstr(buf, "OK")) ans = 1;
-		else goto exit;
+		else {
+			bo_log("bo_sendData wait OK recv[%s]", buf);
+			goto exit;
+		}
 	} 
 	exit:
 	return ans;
@@ -550,7 +632,7 @@ void bo_closeSocket(int sock)
 	int exec = 0;
 	exec = close(sock);
 	if(exec == -1) {
-		bo_log("bo_loseSock() errno[%s]", strerror(errno));
+		bo_log("bo_closeSock() errno[%s]", strerror(errno));
 	}
 }
 
