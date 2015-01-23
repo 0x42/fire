@@ -407,6 +407,7 @@ void *testThr(void *arg)
 	srand( (unsigned) time(NULL));
 	sleep(5);
 	int n = 0;
+	bo_log("TEST RUN ======> START ");
 	for(i = 0; i < 2000; i++) {
 		n++;
 		if(n == 999) {
@@ -422,10 +423,8 @@ void *testThr(void *arg)
 		
 		sprintf(msg, "%18d", i);
 		memcpy( (packet + 10) , msg, 18);
-		bo_log("send ->");
 		exec = bo_sendDataFIFO("127.0.0.1", 8888, packet, 28);
 		if(exec == -1) { printf("testThr send %s\n", strerror(errno)); goto error; }
-		bo_log("send end");
 		if(st_thr == -1) {
 			exec = pthread_create(&thr3, NULL, &get10thr, NULL);
 			if(exec == -1) { printf("create thr3 get10thr ... "); goto error;}
