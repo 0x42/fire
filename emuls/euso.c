@@ -27,15 +27,10 @@ int main(int argc, char *argv[])
 	char req_sq[32];
 
 	int cdaId;
-	int cdaDest;
 	int cdnsId;
-	int cdnsDest;
 	int cdquLogId;
-	int cdquDest;
 	int cdmsId;
-	int cdmsDest;
 	int cdsqId;
-	int cdsqDest;
 
 	char test_msg[32];
 	char snmp_ip[16];
@@ -89,39 +84,36 @@ int main(int argc, char *argv[])
 
 	/** Главная подсистема ЛС 'General' */
 	sprintf(ls_gen, cfg_getstring(cfg, "LS:gen", NULL));
+	actx_targ.cdDest = mfnv1a(ls_gen);
 	
 	/** Разрешение на выдачу данных 'AccessGranted' */
 	sprintf(req_ag, cfg_getstring(cfg, "REQ:ag", NULL));
 	cdaId = mfnv1a(req_ag);
-	cdaDest = mfnv1a(ls_gen);
 	
 	/** Состояние сети RS485 */
 	sprintf(req_ns, cfg_getstring(cfg, "REQ:ns", NULL));
 	cdnsId = mfnv1a(req_ns);
-	cdnsDest = mfnv1a(ls_gen);
 	
 	/** Запрос лога */
 	sprintf(req_gl, cfg_getstring(cfg, "REQ:gl", NULL));
 	cdquLogId = mfnv1a(req_gl);
-	cdquDest = mfnv1a(ls_gen);
 	
 	/** StartQuench */
 	sprintf(req_sq, cfg_getstring(cfg, "REQ:sq", NULL));
 	cdsqId = mfnv1a(req_sq);
-	cdsqDest = mfnv1a(ls_gen);
 	
 	/** Состояние магистрали */
 	sprintf(req_ms, cfg_getstring(cfg, "REQ:ms", NULL));
 	cdmsId = mfnv1a(req_ms);
-	cdmsDest = mfnv1a(ls_gen);
 
-	actx_targ.pr1 = cfg_getint(cfg, "PR:adr1", -1);
-	actx_targ.pr2 = cfg_getint(cfg, "PR:adr2", -1);
+	actx_targ.pr = cfg_getint(cfg, "PR:adr", -1);
 	
-	/** Длина данных кадра */
+	/** Длина данных сообщения (начальная) */
 	actx_targ.test_ln = cfg_getint(cfg, "TEST:ln", -1);
 	/** Количество сообщений */
 	actx_targ.test_m = cfg_getint(cfg, "TEST:m", -1);
+	/** Количество блоков сообщений, если 0- бесконечно долго */
+	actx_targ.test_nm = cfg_getint(cfg, "TEST:nm", -1);
 	/** Длина сообщения */
 	actx_targ.test_msgln = cfg_getint(cfg, "TEST:msg_ln", -1);
 	/** Сообщение */
@@ -156,15 +148,10 @@ int main(int argc, char *argv[])
 	actx_targ.port = rs_port;
 	actx_targ.tout = tout;
 	actx_targ.cdaId = cdaId;
-	actx_targ.cdaDest = cdaDest;
 	actx_targ.cdnsId = cdnsId;
-	actx_targ.cdnsDest = cdnsDest;
 	actx_targ.cdquLogId = cdquLogId;
-	actx_targ.cdquDest = cdquDest;
 	actx_targ.cdmsId = cdmsId;
-	actx_targ.cdmsDest = cdmsDest;
 	actx_targ.cdsqId = cdsqId;
-	actx_targ.cdsqDest = cdsqDest;
 	actx_targ.test_msg = test_msg;
 	actx_targ.snmp_ip = snmp_ip;
 	result = pthread_create(&thread_actx, &pattr, &actx_485, &actx_targ);

@@ -268,14 +268,20 @@ int bo_sendDataFIFO_depricated(char *ip, unsigned int port,
 	unsigned char len[2] = {0};
 	char buf[4] = {0};
 	char *ok = NULL;
-	
-	sock = bo_setConnect(ip, port);
+	/*
+	bo_log("bo_sendDataFIFO()->bo_setConnect[%s][%d] size[%d]", ip, port, dataSize);
+	*/
+	 sock = bo_setConnect(ip, port);
+
 	if(sock != -1) {
 		boIntToChar(dataSize, len);
+	/*	bo_log("TCP HEAD "); */
 		exec = bo_sendAllData(sock, (unsigned char*)head, 3);
+	/*	bo_log("TCP LEN"); */
 		if(exec == -1) goto error;
 		exec = bo_sendAllData(sock, len, 2);
 		if(exec == -1) goto error;
+	/*	bo_log("TCP DATA"); */
 		exec = bo_sendAllData(sock, (unsigned char*)data, dataSize);
 		if(exec == -1) goto error;
 		exec = bo_recvAllData(sock, (unsigned char*)buf, 3, 3);
@@ -465,7 +471,7 @@ int bo_crtSock(char *ip, unsigned int port, struct sockaddr_in *saddr)
 		i = 1;
 		setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &i, sizeof(i));
 	} else {
-		bo_log("bo_crtSock() socket() errno[%s]", strerror(errno));
+		bo_log("bo_crtSock() socket() ERROR errno[%s]", strerror(errno));
 	};
 	return sock;
 }
@@ -481,7 +487,9 @@ int bo_setConnect(char *ip, int port)
 	int n = 0;
 	int conSet = 0;
 	struct sockaddr_in saddr;
+	
 	sock = bo_crtSock(ip, port, &saddr);
+
 	if(sock > 0) {
 		bo_setTimerRcv(sock);
 		while(n < 10) {
@@ -490,18 +498,19 @@ int bo_setConnect(char *ip, int port)
 				conSet = 1; 
 				break;
 			} else {
-				/*
+				
 				bo_log("bo_setConnect() n[%d] \nerrno[%s] ip[%s] \
 					port[%d] ",
 					n,
 					strerror(errno),
 					ip,
 					port);
-				*/
+				
 				n++;
 			}
 			usleep(100000);
 		}
+		
 		if(conSet != 1) {
 			close(sock);
 			sock = -1;

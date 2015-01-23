@@ -158,8 +158,7 @@ int bo_insertFIFO()
 	pthread_mutex_lock(&fifo_mut);
 	/* проверка пред-ая транзакция закончилась корректно */
 	if(trans.insert_status == 0) {
-		trans.insert_status	= 1;
-		
+		trans.insert_status	= 1;		
 		trans.tail		= fifo.tail;
 		trans.count		= fifo.count;
 		trans.free		= fifo.free;
@@ -246,21 +245,28 @@ static int bo_get_fifo(unsigned char *buf, int bufSize)
 int bo_getFifoVal(unsigned char *buf, int bufSize) /*THREAD SAFE */
 {
 	int ans = -1;
-	
-	pthread_mutex_lock(&fifo_mut);
-	if(fifo.mem != NULL) {
-		ans = bo_get_fifo(buf, bufSize);
-		if(ans != -1) bo_del_head();
-		fifo_log(">>>");
-		if(ans == -1) fifo_log("FIFO IS EMPTY\n");
-		else {
-			fifo_log("[");
-			fifo_log10(buf, bufSize);
-			fifo_log("]");
-		}
-	}
-	pthread_mutex_unlock(&fifo_mut);
+	int timeLen = 50;
+	char timeStr[50] = {0};
+	if(fifo.count > 0) {
+		pthread_mutex_lock(&fifo_mut);
+		if(fifo.mem != NULL) {
+			ans = bo_get_fifo(buf, bufSize);
+			if(ans != -1) bo_del_head();
 
+			bo_getTimeNow(timeStr, timeLen);
+			timeStr[timeLen-1] = 0;
+			fifo_log("\n[%s]>>>", timeStr);
+			if(ans == -1) fifo_log("FIFO IS EMPTY\n");
+			else {
+				fifo_log("[");
+				fifo_log10(buf, bufSize);
+				fifo_log("]\n");
+			}
+		}
+		pthread_mutex_unlock(&fifo_mut);
+	} else {
+		usleep(10000);
+	}
 	return ans;
 }
 

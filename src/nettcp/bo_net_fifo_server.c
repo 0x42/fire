@@ -433,8 +433,11 @@ static int fifoReadPacket(int clientSock, unsigned char *buffer, int bufSize,
 	unsigned int length = 0;
 	int flag = -1;
 	int count = 0;
+	int totalSize = 0;
+	
 	length = readPacketLength(param);
-	if((length > 0) & (length <= param->bufSize)) {
+	totalSize = param->bufSize + 8; /* 8 = id msg length */ 
+	if((length > 0) & (length <= totalSize)) {
 		count = bo_recvAllData(param->clientfd, 
 				       param->buffer,
 			               param->bufSize,
@@ -473,7 +476,6 @@ static int fifoReadPacket(int clientSock, unsigned char *buffer, int bufSize,
 	
 	param->packetLen = bo_getFIFO(param->buffer, param->bufSize);
 	boIntToChar(param->packetLen, len);
-	
 	 
 	if(param->packetLen > 0) {
 		exec = bo_sendAllData(param->clientfd, head, 3);
@@ -531,7 +533,6 @@ static void fifoAnsOk(struct ParamSt *param)
 	int sock = param->clientfd;
 	unsigned char msg[] = " OK";
 	packetStatus = QUIT;
-
 	exec = bo_sendAllData(sock, msg, 3);
 	if(exec == -1) { 
 		bo_log(" %s fifoAnsOk() errno[%s]", "FIFO", strerror(errno));
@@ -579,25 +580,30 @@ static void fifoAddToFIFO(struct ParamSt *param)
 	int flag = -1;
 	int exec = -1;
 	const int err = -1;
-	int i = 0;
-	bo_printFIFO();
-	
+	int timeLen = 50;
+	char timeStr[50] = {0};
+	/*
+	 * bo_printFIFO();
+	*/
 	if( param->packetLen > 9 ) {
 		memset(param->id, 0, 9);
 		memcpy(param->id, param->buffer, 8);
+		/*
 		dbgout("FIFO RECV id = [");
 		for(i = 0; i < 8; i++) {
 			dbgout("%c", *(param->buffer + i) );
 		}
 		dbgout("] ");
-		
+		*/
 		param->buffer += 8;
 		param->packetLen -=8;
 		
-		dbgout("From ip[%s]\n", param->ip);
 		exec = bo_checkDblMsg(param);
 		if(exec == 1) {
-			fifo_log("<<<fifo[free=%d, count=%d]ip[%s]\n", 
+			bo_getTimeNow(timeStr, timeLen);
+			timeStr[timeLen - 1] = 0;
+			fifo_log("[%s]<<<fifo[free=%d, count=%d]ip[%s]\n",
+				timeStr,
 				bo_getFree(), 
 				bo_getCount(), 
 				param->ip);
@@ -608,13 +614,13 @@ static void fifoAddToFIFO(struct ParamSt *param)
 			if(flag == -1) {
 				dbgout(" ERR WHEN ADD\n");
 				fifo_log(" ERROR");
-				bo_log(" %s fifoAddToFIFO() bo_addFIFO can't add data to FIFO length[%d]",
+				bo_log("bo_net_fifo_server %s fifoAddToFIFO() bo_addFIFO can't add data to FIFO length[%d]",
 					"FIFO", param->packetLen);
 				goto error;
 			} else if(flag == 0) {
 				fifo_log("FIFO FULL");
 				dbgout(" NO ADD. FIFO FULL\n");
-				bo_log(" FIFO fifoAddToFIFO() can't add data FIFO is full ");
+				bo_log("bo_net_fifo_server FIFO fifoAddToFIFO() can't add data FIFO is full ");
 				goto error;
 			}
 			
@@ -627,11 +633,11 @@ static void fifoAddToFIFO(struct ParamSt *param)
 			}
 		} else if(exec == 0) {
 			dbgout("\n DOUBLE MESSAGE DOUBLE MESSAGE DOUBLE MESSAGE \n");
-			bo_log("FIFO fifoAddToFIFO() value don't push to FIFO");
+			bo_log("bo_net_fifo_server FIFO fifoAddToFIFO() value don't push to FIFO");
 		} else goto error;
 		
 	} else {
-		bo_log(" %s fifoAddToFIFO() bo_addFIFO can't add data to FIFO bad Length value[%d]",
+		bo_log("bo_net_fifo_server %s fifoAddToFIFO() bo_addFIFO can't add data to FIFO bad Length value[%d]",
 			"FIFO", param->packetLen);
 		goto error;
 	}
@@ -650,7 +656,6 @@ static int bo_parseOnCommands(unsigned char *buf, int bufSize)
 	int packN = 0;
 	int len = 0, exec = 0, temp = 0;
 	unsigned char *ptr = NULL;
-	
 	exec = bo_insertFIFO();
 	if(exec == -1) {
 		bo_log("bo_parseOnCommands() -> bo_insertFIFO() return ERROR");
@@ -677,10 +682,10 @@ static int bo_parseOnCommands(unsigned char *buf, int bufSize)
 		ptr  += len;
 		temp += len;
 	}
+
 	fifo_log("]packN = [%d]\n", packN);
 	bo_commitFIFO();
 	ans = 1;
-
 	exit:
 	return ans;
 }

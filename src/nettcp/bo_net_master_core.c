@@ -63,7 +63,7 @@ int bo_master_core(struct paramThr *p)
 	p->status = READHEAD;
 	
 	while(stop) {
-		dbgout("KA[%s]\n", coreStatusTxt[p->status]); 
+		/* dbgout("KA[%s]\n", coreStatusTxt[p->status]); */ 
 		if(p->status == SET) typeMSG = 1; 
 		if(p->status == TAB) typeMSG = 1;
 		if(p->status == LOG) typeMSG = 2;

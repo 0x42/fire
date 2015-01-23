@@ -11,10 +11,8 @@
 #include "ocrc.h"
 #include "ort.h"
 #include "bo_net.h"
-#include "bo_net_master_core_log.h"
 #include "bo_cycle_arr.h"
-#include "bo_parse.h"
-#include "bo_snmp_mng.h"
+#include "bo_fifo_out.h"
 
 
 /**
@@ -28,21 +26,15 @@ void gen_moxa_default_cfg(char *cfile)
 	FILE *out;
 
 	if ((out = fopen(cfile, "w")) == NULL) {
-		fprintf(stderr, "gen_moxa_default_cfg(): cannot open %s\n", cfile);
+		fprintf(stderr, "gen_moxa_default_cfg(): cannot open %s\n",
+			cfile);
 	} else {
 		cfg = ht_new(0);
 
 		cfg_put(cfg, "moxa:log", "mslave.log");
 		cfg_put(cfg, "moxa:log_old", "mslave-old.log");
-
-		/** Базовый таймер 50ms.
-		 * Таймер активных устройств сети RS485 
-		 * Tusec(50000us)= 50ms */
-		cfg_put(cfg, "moxa:Tsec", "0");
-		cfg_put(cfg, "moxa:Tusec", "50000");
 	
-		/** Таймер сканирования устройств на сети RS485 
-		 * Tusec*Tscan= 1000ms */
+		/** Таймер сканирования устройств на сети RS485 */
 		cfg_put(cfg, "moxa:Tscan", "20");
 
 		/** Таймаут приема кадра на сети RS485 
@@ -83,7 +75,7 @@ void gen_moxa_default_cfg(char *cfile)
 		cfg_put(cfg, "LOGGER:sendIp", "192.168.1.127");
 		cfg_put(cfg, "LOGGER:sendPort", "8890");
 		cfg_put(cfg, "LOGGER:maxLines", "1024");
-	
+		
 		/** SNMP */
 		/** Массив IP адресов для мониторинга
 		 * состояния магистрали */
@@ -91,6 +83,8 @@ void gen_moxa_default_cfg(char *cfile)
 		cfg_put(cfg, "SNMP:2", "192.168.1.151");
 		/** Размер массива */
 		cfg_put(cfg, "SNMP:n", "2");
+		/** Адрес УСО */
+		cfg_put(cfg, "SNMP:uso", "159");
 		
 		/** Параметры серийного порта */
 		/** 0: none, 1: odd, 2: even, 3: space, 4: mark */
@@ -126,15 +120,13 @@ void gen_moxa_default_cfg(char *cfile)
 		cfg_put(cfg, "RS485_2:dstEnd", "5");
 
 		/** Идентификаторы подсистем ЛС */
-		cfg_put(cfg, "LS:gen", "General");         /** 0xC2*/
+		cfg_put(cfg, "LS:gen", "General");           /** 0xC2*/
 	
 		/** Запросы */
 		cfg_put(cfg, "REQ:ag", "AccessGranted");     /** 0xE6 */
-		cfg_put(cfg, "REQ:ms", "GetNetworkStatus");  /** 0x29 */
+		cfg_put(cfg, "REQ:ms", "GetMagStatus");      /** ???? */
 		cfg_put(cfg, "REQ:gl", "GetLog");            /** 0x0E */
-		cfg_put(cfg, "REQ:ns", "GetNetRS485Status"); /** ???? */
-		
-		cfg_put(cfg, "REQ:sq", "StartQuench");       /** 0xC5 */
+		cfg_put(cfg, "REQ:ns", "GetNetworkStatus");  /** 0x29 */
 
 		cfg_save(cfg, out);
 		fclose(out);
@@ -196,6 +188,7 @@ int get_state(struct sta *st)
 void init_thrDstBuf(struct thr_dst_buf *b)
 {
 	pthread_mutex_init(&b->mx, NULL);
+	memset(b->fbuf, 1, DST_BUF_SZ);
 	b->rpos = 0;
 	b->wpos = 0;
 }
@@ -209,78 +202,6 @@ void destroy_thrDstBuf(struct thr_dst_buf *b)
 	pthread_mutex_destroy(&b->mx);
 }
 
-/**
- * clrFlags_bufDst - Очистить буфер флажков.
- * @b:    Указатель на структуру thr_dst_buf{}.
- */
-void clrFlags_bufDst(struct thr_dst_buf *b)
-{
-	int i;
-	
-	pthread_mutex_lock(&b->mx);
-	
-	for (i=0; i<b->wpos; i++)
-		b->fbuf[i] = 0;
-
-	pthread_mutex_unlock(&b->mx);
-}
-
-/**
- * setFlags_bufDst - Установить все флажки в буфере.
- * @b:    Указатель на структуру thr_dst_buf{}.
- */
-void setFlags_bufDst(struct thr_dst_buf *b)
-{
-	int i;
-	
-	pthread_mutex_lock(&b->mx);
-	
-	for (i=0; i<b->wpos; i++)
-		b->fbuf[i] = 1;
-
-	pthread_mutex_unlock(&b->mx);
-}
-
-/**
- * setFlag_bufDst - Установить флажок в буфере fbuf.
- * @b:   Указатель на структуру thr_dst_buf{}.
- * @pos: Позиция для записи в буфер.
- */
-void setFlag_bufDst(struct thr_dst_buf *b, int pos)
-{
-	pthread_mutex_lock(&b->mx);
-	b->fbuf[pos] = 1;
-	pthread_mutex_unlock(&b->mx);
-}
-
-/**
- * resetFlag_bufDst - Сбросить флажок в буфере fbuf.
- * @b:   Указатель на структуру thr_dst_buf{}.
- * @pos: Позиция для записи в буфер.
- */
-void resetFlag_bufDst(struct thr_dst_buf *b, int pos)
-{
-	pthread_mutex_lock(&b->mx);
-	b->fbuf[pos] = 0;
-	pthread_mutex_unlock(&b->mx);
-}
-
-/**
- * getFlag_bufDst - Получить флажок из буфера fbuf.
- * @b:   Указатель на структуру thr_dst_buf{}.
- * @pos: Позиция флажка в буфере.
- * @return  Значение флажка 0/1.
- */
-int getFlag_bufDst(struct thr_dst_buf *b, int pos)
-{
-	int fl;
-	
-	pthread_mutex_lock(&b->mx);
-	fl = b->fbuf[pos];
-	pthread_mutex_unlock(&b->mx);
-
-	return fl;
-}
 
 /**
  * test_bufDst - Поиск элемента в буфере.
@@ -504,7 +425,7 @@ void put_rtbl(struct chan_thread_arg *targ, struct thr_dst_buf *b, int dst)
 	unsigned char cbuf[2] = {0};
 	unsigned int dataSize = 23;
 	char data[dataSize];
-	
+
 	memset(key, 0, 3);
 	sprintf(key, "%03d", dst);
 
@@ -528,10 +449,6 @@ void put_rtbl(struct chan_thread_arg *targ, struct thr_dst_buf *b, int dst)
 				buf[3],
 				targ->port+1);
 			rt_put(rtl, key, val);
-
-			/** Установить флажки для загрузки новой
-			 * конфигурации сети RS485 */
-			setFlags_bufDst(&dstBuf);
 			
 			if (rtSend_sock > 0) {
 				/** Послать мастеру изменения в
@@ -596,10 +513,6 @@ void remf_rtbl(struct chan_thread_arg *targ, struct thr_dst_buf *b, int dst)
 			 * отправляем мастеру изменения */
 			rt_remove(rtl, key);
 			
-			/** Установить флажки для загрузки новой
-			 * конфигурации сети RS485 */
-			setFlags_bufDst(&dstBuf);
-			
 			if (rtSend_sock > 0) {
 				/** Послать мастеру изменения в
 				 * таблицу маршрутов */
@@ -629,9 +542,8 @@ void remf_rtbl(struct chan_thread_arg *targ, struct thr_dst_buf *b, int dst)
 
 /**
  * putLog - Посылка сообщения мастеру для логирования.
- *          Данные для лога формируются из приемного буфера канала 2
- *          RS485, что является ответом пассивного устройства на
- *          запрос активного устройства. 
+ *          Данные для лога формируются из буфера передатчика канала 2
+ *          RS485, что является запросом пассивному устройству.
  */
 void putLog()
 {
@@ -649,23 +561,23 @@ void putLog()
 		data[1] = (ptm >> 8) & 0xff;
 		data[2] = (ptm >> 16) & 0xff;
 		data[3] = (ptm >> 24) & 0xff;
-		data[4] = rx2Buf.buf[0];
-		data[5] = rx2Buf.buf[1];
-		data[6] = rx2Buf.buf[2];
-		data[7] = rx2Buf.buf[3];
-		data[8] = rx2Buf.buf[4];
-		data[9] = rx2Buf.buf[5];
+		data[4] = tx2Buf.buf[0];
+		data[5] = tx2Buf.buf[1];
+		data[6] = tx2Buf.buf[2];
+		data[7] = tx2Buf.buf[3];
+		data[8] = tx2Buf.buf[4];
+		data[9] = tx2Buf.buf[5];
 		
-		for (i=0; i<rx2Buf.buf[5]; i++)
-			data[10+i] = rx2Buf.buf[6+i];
+		for (i=0; i<tx2Buf.buf[5]; i++)
+			data[10+i] = tx2Buf.buf[6+i];
 	
-		crc = crc16modbus(data, rx2Buf.buf[5]+10);
+		crc = crc16modbus(data, tx2Buf.buf[5]+10);
 		
 		boIntToChar(crc, cbuf);
-		data[rx2Buf.buf[5]+10] = cbuf[0];
-		data[rx2Buf.buf[5]+11] = cbuf[1];
+		data[tx2Buf.buf[5]+10] = cbuf[0];
+		data[tx2Buf.buf[5]+11] = cbuf[1];
 	
-		dataSize = (unsigned int)(rx2Buf.buf[5]+12);
+		dataSize = (unsigned int)(tx2Buf.buf[5]+12);
 		
 		pthread_mutex_lock(&mx_sendSocket);
 		
@@ -678,57 +590,57 @@ void putLog()
 }
 
 /**
- * sendFIFO - Формирование и отправка запроса на сервер FIFO.
+ * prepareFIFO - Формирование и отправка запроса на сервер FIFO.
  * @key: Адрес устройства в виде ключа глобальной таблицы маршрутов.
  */
-void sendFIFO(char *key)
+void prepareFIFO(struct thr_rx_buf *b, char *key, int dst)
 {
-	char id[9];
+	unsigned char buf[BUF485_SZ];
+	char ip[16];
+	int ibuf[4];
+	char val[16];
+	int ln;
 	int i;
+	int ans;
 	
 	pthread_mutex_lock(&mx_rtg);
-	pthread_mutex_lock(&mx_dtFIFO);
 	/** Получить адрес FIFO сервера из таблицы маршрутов. */
-	rt_getip(rtg, key, sfifo.ip);
+	rt_getip(rtg, key, ip);
+	pthread_mutex_unlock(&mx_rtg);
 
-	if (sfifo.ip[0] != 'N') {
+	if (ip[0] != 'N') {
 		/** Если устройство существует в глобальной таблице
 		 * маршрутов, то сформировать запрос с уникальным
 		 * индексом и отправить его на сервер FIFO
 		 * соответствующему узлу. */
-		if (get_state(&fifodata_ready)) {
-			/** Поток send_fifo() готов принять данные для
-			 * передачи чужому узлу через стек FIFO */
-			
-			/** Формирование индекса для кадра посылаемого на
-			 * чужой узел (защита от дублирования пакетов) */
-			fifo_idx++;
-			if (fifo_idx == FIFO_IDX_MAX) fifo_idx = 1;
-			
-			sprintf(id, "%08d", (fifo_idx & 0xffffffff));
-			
-			/** Подготовка буфера для FIFO */
-			for (i=0; i<8; i++)
-				sfifo.buf[i] = id[i];
-			
-			sfifo.ln = rxBuf.wpos;
-			for (i=0; i<sfifo.ln; i++)
-				sfifo.buf[i+8] = rxBuf.buf[i];
+		
+		memset(val, 0, 16);
+		str_splitInt(ibuf, ip, ".");
+		sprintf(val,
+			"%d.%d.%d.%d",
+			ibuf[0],
+			ibuf[1],
+			ibuf[2],
+			ibuf[3]);
+		
+		ln = b->wpos;
+		for (i=0; i<ln; i++)
+			buf[i] = b->buf[i];
 
-			sfifo.ln += 8;
-			
-			/** Кадр данных сформирован - даем сигнал
-			 * отправки на чужой узел a_threads.c:
-			 * send_fifo(). */
-			put_state(&fifodata_ready, 0);
-			pthread_cond_signal(&fifodata);
-		}
+		/** bo_log("prepareFIFO: bo_add_fifo_out() before
+		 * ln=[%d]", ln); */
+		
+		ans = bo_add_fifo_out(buf, ln, val);
+		if (ans == 0)
+			bo_log("prepareFIFO: bo_add_fifo_out() == 0");
+		else if (ans == -1)
+			bo_log("prepareFIFO: bo_add_fifo_out() == -1");
+		
+		/** bo_log("prepareFIFO: bo_add_fifo_out() after",
+		    ln); */
 	} else {
-		bo_log("sendFIFO(): fifo_ipSend= NULL");
+		bo_log("prepareFIFO(): fifo_ipSend= NULL");
 	}
-	
-	pthread_mutex_unlock(&mx_dtFIFO);
-	pthread_mutex_unlock(&mx_rtg);
 }
 
 
@@ -754,7 +666,9 @@ void prepare_cadr(struct thr_tx_buf *b, char *buf, int ln)
  * @b:    Указатель на структуру thr_tx_buf{}.
  * @dst:  Адрес устройства.
  */
-void prepare_cadr_scan(struct chan_thread_arg *targ, struct thr_tx_buf *b, int dst)
+void prepare_cadr_scan(struct chan_thread_arg *targ,
+		       struct thr_tx_buf *b,
+		       int dst)
 {
 	unsigned int crc;
 	
@@ -768,326 +682,68 @@ void prepare_cadr_scan(struct chan_thread_arg *targ, struct thr_tx_buf *b, int d
 	put_txBuf(b, (char)((crc >> 8) & 0xff));
 }
 
+
 /**
- * prepare_cadr_act - Формирование кадра для передающего буфера
- *                     (Разрешение активным устройствам на сети RS485).
+ * tx - Передача кадра данных устройствам сети RS485.
  * @targ: Указатель на структуру chan_thread_arg{}.
- * @b:    Указатель на структуру thr_tx_buf{}.
- * @dst:  Адрес устройства.
+ * @b:
+ * @return  0- успех, -1 неудача.
  */
-void prepare_cadr_act(struct chan_thread_arg *targ, struct thr_tx_buf *b, int dst)
+int tx(struct chan_thread_arg *targ, struct thr_tx_buf *b, char *msg)
 {
-	unsigned int crc;
+	char buf[BUF485_SZ];  /** Буфер передатчика RS485 */
+	int res;
+	
+	res = writer(b, buf, targ->port);	
+	if (res < 0) return -1;
 
-	b->wpos = 0;
-	put_txBuf(b, (char)dst);
-	put_txBuf(b, (char)targ->src);
-
-	put_txBuf(b, (char)targ->cdaId);
-	put_txBuf(b, (char)targ->cdaDest);
-	put_txBuf(b, (char)0);
-	put_txBuf(b, (char)0);
-
-	crc = crc16modbus(b->buf, 6);
-
-	put_txBuf(b, (char)(crc & 0xff));
-	put_txBuf(b, (char)((crc >> 8) & 0xff));
+	/**
+	bo_log("tx(%s): [%d %d %d %d %d %d]",
+	       msg,
+	       (unsigned char)buf[0],
+	       (unsigned char)buf[1],
+	       (unsigned char)buf[2],
+	       (unsigned char)buf[3],
+	       (unsigned char)buf[4],
+	       (unsigned char)buf[5]
+		);
+	*/
+	
+	return 0;
 }
 
 /**
- * prepare_cadr_actNetStat - Формирование кадра для передающего буфера
- *                     (конфигурация устройств на сети RS485).
+ * rx - Прием кадра данных от устройства сети RS485.
  * @targ: Указатель на структуру chan_thread_arg{}.
- * @b:    Указатель на структуру thr_tx_buf{}.
- * @dst:  Адрес устройства.
- *
- * adr: 15 -> bitAdr: 1000 0000 0000 0000
- *                    |                 |
- *                   15                 0
- */
-void prepare_cadr_actNetStat(struct chan_thread_arg *targ,
-			     struct thr_tx_buf *b,
-			     int dst)
-{
-	unsigned int crc;
-	int i;
-	unsigned int n = 0;
-	char *key;
-	char ip[16] = {0};
-	int uadr;
-	unsigned char abit[32] = {0};
-
-	b->wpos = 0;
-	put_txBuf(b, (char)dst);
-	put_txBuf(b, (char)targ->src);
-
-	put_txBuf(b, (char)targ->cdnsId);
-	put_txBuf(b, (char)targ->cdnsDest);
-	put_txBuf(b, (char)0);
-
-	pthread_mutex_lock(&mx_rtg);
-	for (i=0; i<rt_getsize(rtg); i++) {
-		key = rt_getkey(rtg, i);
-		if (key == NULL) continue;
-		rt_getip(rtg, key, ip);
-		if (ip[0] == 'N') continue;
-		
-		uadr = atoi(key);
-		/** Получаем список адресов
-		 * устройств на глобальном пространстве. */
-		abit[31-(uadr/8)] |= (unsigned char)(1 << (uadr % 8));
-		n++;
-	}
-	pthread_mutex_unlock(&mx_rtg);
-
-	if (n == 0) {
-		/** Если глобальная таблица маршрутов пуста, то
-		 * используем данные локальной сети. */
-		pthread_mutex_lock(&mx_rtl);
-		for (i=0; i<rt_getsize(rtl); i++) {
-			key = rt_getkey(rtl, i);
-			if (key == NULL) continue;
-			rt_getip(rtl, key, ip);
-			if (ip[0] == 'N') continue;
-			
-			uadr = atoi(key);
-			abit[31-(uadr/8)] |= (unsigned char)(1 << (uadr % 8));
-			n++;
-		}
-		pthread_mutex_unlock(&mx_rtl);
-	}
-
-	n = 32;
-	put_txBuf(b, (char)n);
-	
-	for (i=0; i<n; i++)
-		put_txBuf(b, (char)abit[i]);
-
-	crc = crc16modbus(b->buf, n+6);
-
-	put_txBuf(b, (char)(crc & 0xff));
-	put_txBuf(b, (char)((crc >> 8) & 0xff));
-}
-
-
-/**
- * prepare_cadr_quLog - Формирование кадра для передающего буфера
- *                     (запрос лога).
- * @targ: Указатель на структуру chan_thread_arg{}.
- * @b:    Указатель на структуру thr_tx_buf{}.
- * @dst:  Адрес устройства.
- */
-void prepare_cadr_quLog(struct chan_thread_arg *targ, struct thr_tx_buf *b, int dst)
-{
-	unsigned int crc;
-	unsigned short nLogLine, qLogLine;
-	int i, j;
-	unsigned int nn;
-	unsigned int logSz = 0;
-	char buf[BO_ARR_ITEM_VAL];
-	int bufSize = BO_ARR_ITEM_VAL;
-	
-	if (logSend_sock > 0) {
-
-		b->wpos = 0;
-		put_txBuf(b, (char)dst);
-		put_txBuf(b, (char)targ->src);
-
-		put_txBuf(b, (char)targ->cdquLogId);
-		put_txBuf(b, (char)targ->cdquDest);
-		put_txBuf(b, (char)0);
-
-		put_txBuf(b, (char)4);
-
-		put_txBuf(b, rxBuf.buf[6]);
-		put_txBuf(b, rxBuf.buf[7]);
-		put_txBuf(b, rxBuf.buf[8]);
-		put_txBuf(b, rxBuf.buf[9]);
-		
-		/** Ограничиваем запрашиваемый номер строки лога
-		    nLogLine = ((rxBuf.buf[6] & 0xff) |
-		    (rxBuf.buf[7] << 8)) & (targ->logMaxLines-1); */
-		nLogLine = ((rxBuf.buf[6] & 0xff) |
-			    (rxBuf.buf[7] << 8)) % (targ->logMaxLines);
-		qLogLine = (rxBuf.buf[8] & 0xff) | (rxBuf.buf[9] << 8);
-		
-		pthread_mutex_lock(&mx_sendSocket);
-		
-		for (j=0; j<qLogLine; j++) {
-			nn = bo_master_core_logRecv(logSend_sock,
-						    nLogLine+j,
-						    buf,
-						    bufSize);
-			if (nn == -1) {
-				bo_log("prepare_cadr_quLog(): bo_master_core_logRecv ERROR");
-				break;
-			} else if (nn > 0) {
-				logSz += nn;
-				for (i=0; i<nn; i++) {
-					put_txBuf(b, (char)buf[i]);
-				}
-			} else {
-				/**
-				bo_log("prepare_cadr_quLog(): = 0");
-				*/
-			}
-		}
-		
-		pthread_mutex_unlock(&mx_sendSocket);
-
-		if (logSz > 0)
-			/** Установить длину сообщения */
-			set_txBuf(b, 5, (char)(logSz+4));
-		
-		crc = crc16modbus(b->buf, logSz+10);
-
-		put_txBuf(b, (char)(crc & 0xff));
-		put_txBuf(b, (char)((crc >> 8) & 0xff));
-	}
-}
-
-/**
- * prepare_cadr_snmpStat - Формирование кадра для передающего буфера
- *                         (запрос состояния магистрали).
- * @targ: Указатель на структуру chan_thread_arg{}.
- * @b:    Указатель на структуру thr_tx_buf{}.
- * @dst:  Адрес устройства.
- */
-void prepare_cadr_snmpStat(struct chan_thread_arg *targ,
-			   struct thr_tx_buf *b,
-			   int dst)
-{
-	unsigned int crc;
-	char data[1024];
-	char dt[32] = {0};
-	char ip[16] = {0};
-	
-	struct OPT_SWITCH *o_sw;
-	struct OPT_SWITCH *sw;
-	struct PortItem *port;
-	struct PortItem *prt;
-	unsigned int snmpSz;
-	int i, j, m;
-	
-	b->wpos = 0;
-	put_txBuf(b, (char)dst);
-	put_txBuf(b, (char)targ->src);
-
-	put_txBuf(b, (char)targ->cdmsId);
-	put_txBuf(b, (char)targ->cdmsDest);
-	put_txBuf(b, (char)0);
-
-	put_txBuf(b, (char)4);
-
-	/** IP адрес */
-	put_txBuf(b, rxBuf.buf[6]);
-	put_txBuf(b, rxBuf.buf[7]);
-	put_txBuf(b, rxBuf.buf[8]);
-	put_txBuf(b, rxBuf.buf[9]);
-
-	/** Длина сообщения */
-	put_txBuf(b, (char)0);
-	put_txBuf(b, (char)0);
-
-	bo_snmp_lock_mut();
-		
-	memset(data, 0, 1024);
-
-	o_sw = bo_snmp_get_tab();
-	
-	snmpSz = 0;
-	sprintf(ip, "%d.%d.%d.%d",
-		rxBuf.buf[6],
-		rxBuf.buf[7],
-		rxBuf.buf[8],
-		rxBuf.buf[9]);
-	
-	if (o_sw == NULL) {
-		/** Нет данных */
-	} else {
-		/** "ip[%s] flg[%d] link[%d] speed[%d] descr[%s]\n" */
-		for (i=0; i<targ->snmp_n; i++) {
-			sw = o_sw + i;
-			
-			if (strcmp(sw->ip, ip)) continue;
-			
-			sprintf(dt, "\nip=[%15s]\n", sw->ip);
-			strncat(data, dt, 22);
-
-			snmpSz += 22;
-			
-			port = sw->ports;
-			for (j=0; j<BO_OPT_SW_PORT_N; j++) {
-				prt = port + j;
-				
-				sprintf(dt, "flg=[%03d] ", prt->flg);
-				strncat(data, dt, 10);
-				sprintf(dt, "link=[%01d] ", prt->link);
-				strncat(data, dt, 9);
-				sprintf(dt, "speed=[%03d] ", prt->speed);
-				strncat(data, dt, 12);
-				sprintf(dt, "descr=[%21s]\n", prt->descr);
-				strncat(data, dt, 30);
-
-				snmpSz += 10+9+12+30;
-			}
-		}
-	}
-	
-	if (snmpSz > 0) {
-		/*
-		printf("prepare_cadr_snmpStat: snmpSz=%d\n", snmpSz);
-		bo_log("prepare_cadr_snmpStat: snmp=%s", data);
-		*/
-		
-		for (m=0; m<snmpSz; m++)
-			put_txBuf(b, (char)data[m]);
-		
-		/** Установить длину сообщения */
-		set_txBuf(b, 10, (char)(snmpSz & 0xff));
-		set_txBuf(b, 11, (char)((snmpSz >> 8) & 0xff));
-	}
-	
-	crc = crc16modbus(b->buf, snmpSz+12);
-	
-	put_txBuf(b, (char)(crc & 0xff));
-	put_txBuf(b, (char)((crc >> 8) & 0xff));
-	
-	bo_snmp_unlock_mut();
-}
-
-
-/**
- * trx - Передача кадра данных устройствам сети RS485 и
- *       получение от него ответа.
- * @targ: Указатель на структуру chan_thread_arg{}.
- * @tb:
- * @rb:
+ * @b:
  * @tout:
  * @return  0- успех, -1 неудача.
  */
-int trx(struct chan_thread_arg *targ,
-	struct thr_tx_buf *tb,
-	struct thr_rx_buf *rb,
-	int tout)
+int rx(struct chan_thread_arg *targ, struct thr_rx_buf *b, int tout, char *msg)
 {
-	char tbuf[BUF485_SZ];  /** Буфер передатчика RS485 */
 	char buf[BUF485_SZ];  /** Буфер приемника RS485 */
 	int res;
 
-	/** Tx */
-	res = writer(tb, tbuf, targ->port);	
-	if (res < 0) return -1;
-
-	/** Rx */
-	put_rxFl(rb, RX_WAIT);  /** Состояние приема - 'ожидание данных' */
-	rb->wpos = 0;  /** Позиция записи в начало буфера приемника */
+	put_rxFl(b, RX_WAIT);  /** Состояние приема - 'ожидание данных' */
+	b->wpos = 0;           /** Позиция записи в начало буфера приемника */
 	res = 1;
 	
 	while (res) {
-		res = reader(rb, buf, targ->port, tout);
+		res = reader(b, buf, targ->port, tout);
 		if (res < 0) return -1;
 	}
+
+	/**
+	bo_log("rx(%s): [%d %d %d %d %d %d]",
+	       msg,
+	       (unsigned char)buf[0],
+	       (unsigned char)buf[1],
+	       (unsigned char)buf[2],
+	       (unsigned char)buf[3],
+	       (unsigned char)buf[4],
+	       (unsigned char)buf[5]
+		);
+	*/
 	
 	return 0;
 }
@@ -1124,7 +780,13 @@ int scan(struct chan_thread_arg *targ,
 	prepare_cadr_scan(targ, tb, dst);
 
 	/** Данные для передачи подготовлены */
-	res = trx(targ, tb, rb, targ->tout);
+
+	/** Передача */
+	res = tx(targ, tb, msg);
+	if (res < 0) return -1;
+	
+	/** Прием */
+	res = rx(targ, rb, targ->tout, msg);
 	if (res < 0) return -1;
 	
 	if ((get_rxFl(rb) >= RX_DATA_READY) &&
