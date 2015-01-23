@@ -326,8 +326,9 @@ int active_netStat(struct chan_thread_arg *targ, int dst)
 	/** Данные для передачи подготовлены */
 	res = tx(targ, &txBuf, "1netStat");
 	if (res < 0) return -1;
-	
-	usleep(targ->utxdel * txBuf.wpos);
+
+	/** usleep(100000);
+	usleep(targ->utxdel * txBuf.wpos); */
 	
 	return 0;
 }
@@ -350,7 +351,8 @@ int active_getLog(struct chan_thread_arg *targ, int dst)
 	res = tx(targ, &txBuf, "1log");
 	if (res < 0) return -1;
 	
-	usleep(targ->utxdel * txBuf.wpos);
+	/** usleep(100000);
+	usleep(targ->utxdel * txBuf.wpos); */
 	
 	return 0;
 }
@@ -372,7 +374,8 @@ int active_snmp(struct chan_thread_arg *targ, int dst)
 	res = tx(targ, &txBuf, "1snmp");
 	if (res < 0) return -1;
 	
-	usleep(targ->utxdel * txBuf.wpos);
+	/** usleep(100000);
+	usleep(targ->utxdel * txBuf.wpos); */
 	
 	return 0;
 }
@@ -451,7 +454,8 @@ int active_process(struct chan_thread_arg *targ, int dst)
 			res = tx(targ, &txBuf, "1aproc");
 			if (res < 0) return -1;
 
-			usleep(targ->utxdel * txBuf.wpos);
+			/** usleep(100000);
+			usleep(targ->utxdel * txBuf.wpos); */
 		} else
 			bo_log("active(): key= [%s] ch2 disable", key);
 		
@@ -476,6 +480,7 @@ int active_process(struct chan_thread_arg *targ, int dst)
 int activeFromFIFO(struct chan_thread_arg *targ)
 {
 	int res;
+	/* char tmstr[50] = {0}; */
 	
 	if (get_state(&actFIFOdata_ready) == 1) {
 		/** Есть данные для передачи ответа активному
@@ -507,7 +512,13 @@ int activeFromFIFO(struct chan_thread_arg *targ)
 		       txBuf.buf[9]
 			);
 		*/
-		usleep(targ->utxdel * txBuf.wpos);
+		/**
+		bo_getTimeNow(tmstr, 50);
+		printf("otvet[%d] tm= [%d]\n", tmstr, targ->utxdel * txBuf.wpos);
+		*/
+		
+		/** usleep(100000);
+		usleep(targ->utxdel * txBuf.wpos); */
 	}
 
 	return 0;
@@ -641,12 +652,12 @@ void *chan1(void *arg)
 					} else {
 						bo_snmp_unlock_mut();
 						/** Разрешение активным устройствам
-						bo_log("ch1(): activate"); */
+						bo_log("ch1(): activate 1 dst=[%d]", dst); */
 						res = active(targ, dst);
 					}
 				} else {
 					/** Разрешение активным устройствам
-					bo_log("ch1(): activate"); */
+					bo_log("ch1(): activate 2 dst=[%d]", dst); */
 					res = active(targ, dst);
 				}
 				
