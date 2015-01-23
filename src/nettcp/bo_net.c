@@ -132,6 +132,7 @@ int bo_sendDataFIFO(char *ip, unsigned int port,
 	sock = bo_get_sock_by_ip(lst, ip);
 	if(sock  == -1) {
 		sock = bo_addToSockLst(lst, ip);
+		printf("CLIENT sock[%d]\n", sock);
 		if(sock == -1) {
 			err_count++;
 			bo_log("bo_sendDataFIFO[%s] can't add to lst", ip);
@@ -210,31 +211,45 @@ static int bo_addToSockLst(struct BO_SOCK_LST *lst, char *ip)
 static int bo_sendData(int sock, char *data, unsigned int dataSize) 
 {
 	int exec = -1, ans = -1;
+	const int err = -1;
 	char head[3] = "SET";
 	unsigned char len[2] = {0};
-	char buf[3] = {0};
-	
+	char buf[4] = {0};
 	if(sock != -1) {
 		boIntToChar(dataSize, len);
 		exec = bo_sendAllData(sock, (unsigned char*)head, 3);
-		if(exec == -1) goto exit;
-		
+		if(exec == -1) {
+			bo_log("SEND HEAD ERROR errno[%s]", strerror(errno));
+			goto error;
+		}
 		exec = bo_sendAllData(sock, len, 2);
-		if(exec == -1) goto exit;
+		if(exec == -1) {
+			bo_log("SEND LEN ERROR errno[%s]", strerror(errno));
+			goto error;
+		}
 		
 		exec = bo_sendAllData(sock, (unsigned char*)data, dataSize);
-		if(exec == -1) goto exit;
-		
+		if(exec == -1) {
+			bo_log("SEND DATA ERROR errno[%s]", strerror(errno));
+			goto error;
+		}
 		exec = bo_recvAllData(sock, (unsigned char*)buf, 3, 3);
-		if(exec == -1) goto exit;
-		
+		if(exec == -1) {
+			bo_log("RECV ANS ERROR errno[%s]", strerror(errno));
+			goto error;
+		}
 		if(strstr(buf, "OK")) ans = 1;
 		else {
+			buf[3] = 0;
 			bo_log("bo_sendData wait OK recv[%s]", buf);
-			goto exit;
+			goto error;
 		}
 	} 
-	exit:
+	if(err == 1) {
+		error:
+		bo_log("bo_sendData ERROR errno[%s]", strerror(errno));
+		ans = -1;
+	}
 	return ans;
 }
 

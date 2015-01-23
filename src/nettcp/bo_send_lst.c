@@ -166,7 +166,6 @@ int bo_add_sock_lst(struct BO_SOCK_LST *sock_lst, char *ip)
 	int exec	= -1;
 	
 	i = *(sock_lst->free);
-	printf("bo_add_sock_lst free index[%d]\n", i);
 	if(i != -1) {
 		exec = bo_add(sock_lst, ip);
 		if(exec == -1) {
@@ -343,7 +342,6 @@ int bo_get_sock_by_ip(struct BO_SOCK_LST *sock_lst, char *ip)
 	i = sock_lst->head;
 	while(i != -1) {
 		item = sock_lst->arr + i;
-		printf("bo_get_sock_by_ip -> ip[%s]", item->ip);
 		if(strstr(ip, item->ip)) {
 			ans = item->sock;
 			item->rate++;

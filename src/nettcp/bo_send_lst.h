@@ -53,5 +53,6 @@ void bo_del_item_sock_lst(struct BO_SOCK_LST *sock_lst, int i);
 void bo_del_sock_lst(struct BO_SOCK_LST *sock_lst);
 
 void bo_del_by_sck_sock_lst(struct BO_SOCK_LST *sock_lst, int sock);
+
 #endif	/* BO_SEND_LST_H */
 

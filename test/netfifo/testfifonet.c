@@ -344,10 +344,10 @@ TEST(fifo, testThrModel)
 	printf("testThrModel ... run \n");
 	bo_setLogParam("thr.log", "thr.log_old", 0, 1000);
 	exec = pthread_create(&thr1, NULL, &startServer, NULL);
-	if(exec == -1) { printf("create thr1 startServer ... "); goto error;}
+	if(exec == -1) { printf("create thr1 startServer ... ERROR"); goto error;}
 	
 	exec = pthread_create(&thr2, NULL, &testThr, NULL);
-	if(exec == -1) { printf("create thr2 testThr ... "); goto error;}
+	if(exec == -1) { printf("create thr2 testThr ... ERROR"); goto error;}
 	
 	pthread_join(thr2, NULL);
 	printf("... test finish\n");
@@ -422,10 +422,10 @@ void *testThr(void *arg)
 		
 		sprintf(msg, "%18d", i);
 		memcpy( (packet + 10) , msg, 18);
-		
+		bo_log("send ->");
 		exec = bo_sendDataFIFO("127.0.0.1", 8888, packet, 28);
 		if(exec == -1) { printf("testThr send %s\n", strerror(errno)); goto error; }
-		
+		bo_log("send end");
 		if(st_thr == -1) {
 			exec = pthread_create(&thr3, NULL, &get10thr, NULL);
 			if(exec == -1) { printf("create thr3 get10thr ... "); goto error;}

@@ -18,6 +18,7 @@ SRC1 = \
     ../../src/nettcp/bo_fifo.c \
     ../../src/nettcp/bo_net_get.c \
     ../../src/nettcp/bo_net.c \
+    ../../src/nettcp/bo_send_lst.c \
     ../../src/tools/ocfg.c \
     ../../src/tools/oht.c \
     ../../src/tools/dbgout.c \
