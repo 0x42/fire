@@ -545,7 +545,7 @@ void remf_rtbl(struct chan_thread_arg *targ, struct thr_dst_buf *b, int dst)
  *          Данные для лога формируются из буфера передатчика канала 2
  *          RS485, что является запросом пассивному устройству.
  */
-void putLog()
+void putLog(struct thr_rx_buf *b)
 {
 	unsigned int crc;
 	unsigned char cbuf[2] = {0};
@@ -561,23 +561,23 @@ void putLog()
 		data[1] = (ptm >> 8) & 0xff;
 		data[2] = (ptm >> 16) & 0xff;
 		data[3] = (ptm >> 24) & 0xff;
-		data[4] = tx2Buf.buf[0];
-		data[5] = tx2Buf.buf[1];
-		data[6] = tx2Buf.buf[2];
-		data[7] = tx2Buf.buf[3];
-		data[8] = tx2Buf.buf[4];
-		data[9] = tx2Buf.buf[5];
+		data[4] = b->buf[0];
+		data[5] = b->buf[1];
+		data[6] = b->buf[2];
+		data[7] = b->buf[3];
+		data[8] = b->buf[4];
+		data[9] = b->buf[5];
 		
-		for (i=0; i<tx2Buf.buf[5]; i++)
-			data[10+i] = tx2Buf.buf[6+i];
+		for (i=0; i<b->buf[5]; i++)
+			data[10+i] = b->buf[6+i];
 	
-		crc = crc16modbus(data, tx2Buf.buf[5]+10);
+		crc = crc16modbus(data, b->buf[5]+10);
 		
 		boIntToChar(crc, cbuf);
-		data[tx2Buf.buf[5]+10] = cbuf[0];
-		data[tx2Buf.buf[5]+11] = cbuf[1];
+		data[b->buf[5]+10] = cbuf[0];
+		data[b->buf[5]+11] = cbuf[1];
 	
-		dataSize = (unsigned int)(tx2Buf.buf[5]+12);
+		dataSize = (unsigned int)(b->buf[5]+12);
 		
 		pthread_mutex_lock(&mx_sendSocket);
 		

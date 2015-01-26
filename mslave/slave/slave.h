@@ -215,7 +215,7 @@ int get_bufDst(struct thr_dst_buf *b);
 void send_rtbl(char *ip);
 void put_rtbl(struct chan_thread_arg *targ, struct thr_dst_buf *b, int dst);
 void remf_rtbl(struct chan_thread_arg *targ, struct thr_dst_buf *b, int dst);
-void putLog();
+void putLog(struct thr_rx_buf *b);
 
 void prepareFIFO(struct thr_rx_buf *rb, char *key, int dst);
 

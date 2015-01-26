@@ -327,8 +327,8 @@ int active_netStat(struct chan_thread_arg *targ, int dst)
 	res = tx(targ, &txBuf, "1netStat");
 	if (res < 0) return -1;
 
-	/** usleep(100000);
-	usleep(targ->utxdel * txBuf.wpos); */
+	usleep(100000);
+	/** usleep(targ->utxdel * txBuf.wpos); */
 	
 	return 0;
 }
@@ -351,8 +351,8 @@ int active_getLog(struct chan_thread_arg *targ, int dst)
 	res = tx(targ, &txBuf, "1log");
 	if (res < 0) return -1;
 	
-	/** usleep(100000);
-	usleep(targ->utxdel * txBuf.wpos); */
+	usleep(100000);
+	/** usleep(targ->utxdel * txBuf.wpos); */
 	
 	return 0;
 }
@@ -374,8 +374,8 @@ int active_snmp(struct chan_thread_arg *targ, int dst)
 	res = tx(targ, &txBuf, "1snmp");
 	if (res < 0) return -1;
 	
-	/** usleep(100000);
-	usleep(targ->utxdel * txBuf.wpos); */
+	usleep(100000);
+	/** usleep(targ->utxdel * txBuf.wpos); */
 	
 	return 0;
 }
@@ -420,12 +420,15 @@ int active_process(struct chan_thread_arg *targ, int dst)
 			res = active_snmp(targ, dst);
 		} else {
 			/** ID ???
-			bo_log("active(): ID= [%d]", rxBuf.buf[2]); */
+			    bo_log("active(): ID= [%d]", rxBuf.buf[2]); */
 		}
 		
 	} else if (test_bufDst(&dst2Buf, (unsigned char)rxBuf.buf[0]) != -1) {
 		if (targ->ch2_enable) {
 			/** Кадр сети RS485 (local node) */
+			/** Запрос для пассивного устройства загрузить в лог. */
+			putLog(&rxBuf);
+			
 			pthread_mutex_lock(&mx_psv);
 
 			put_state(&psvdata_ready, 1);
@@ -454,13 +457,15 @@ int active_process(struct chan_thread_arg *targ, int dst)
 			res = tx(targ, &txBuf, "1aproc");
 			if (res < 0) return -1;
 
-			/** usleep(100000);
-			usleep(targ->utxdel * txBuf.wpos); */
+			usleep(100000);
+			/** usleep(targ->utxdel * txBuf.wpos); */
 		} else
 			bo_log("active(): key= [%s] ch2 disable", key);
 		
 	} else if (rt_iskey(rtg, key)) {
 		/** Кадр сети RS485 (FIFO) */		
+		/** Запрос для пассивного устройства загрузить в лог. */
+		putLog(&rxBuf);
 		prepareFIFO(&rxBuf, key, dst);
 	} else {
 		bo_log("active(): key= [%s] ???", key);
@@ -517,8 +522,8 @@ int activeFromFIFO(struct chan_thread_arg *targ)
 		printf("otvet[%d] tm= [%d]\n", tmstr, targ->utxdel * txBuf.wpos);
 		*/
 		
-		/** usleep(100000);
-		usleep(targ->utxdel * txBuf.wpos); */
+		usleep(100000);
+		/** usleep(targ->utxdel * txBuf.wpos); */
 	}
 
 	return 0;

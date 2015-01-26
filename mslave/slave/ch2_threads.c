@@ -109,9 +109,6 @@ int passiveFromActive(struct chan_thread_arg *targ)
 
 	prepare_cadr(&tx2Buf, rxBuf.buf, rxBuf.wpos);
 	
-	/** Запрос для пассивного устройства загрузить в лог.
-	putLog(); */
-	
 	put_state(&psvdata_ready, 0);
 	pthread_cond_signal(&psvdata);
 	
@@ -214,10 +211,6 @@ int data_FIFO(struct chan_thread_arg *targ)
 	}
 	
 	prepare_cadr(&tx2Buf, (char *)getFifo_buf, getFifo_ans);
-
-	/** Запрос для пассивного устройства загрузить в лог.
-	bo_log("data_FIFO after putLog()");
-	putLog(); */
 
 	/**
 	bo_log("data_FIFO before TX [%d %d %d %d %d %d %d %d %d %d]",
