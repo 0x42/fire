@@ -13,8 +13,8 @@ extern unsigned int boCharToInt	(unsigned char *buf);
 
 struct ParamSt;
 static void readConfig		(TOHT *cfg, int n, char **argv);
-static int runSockServ		();
-static void workSockServ		(int sock_serv, unsigned char *buf, 
+static int  runSockServ		();
+static void workSockServ	(int sock_serv, unsigned char *buf, 
 				int bufSize, TOHT *tab);
 
 static void clientEvent		(struct BO_SOCK_LST *sock_lst, 
@@ -251,7 +251,7 @@ static void workSockServ(int sock_serv, unsigned char *buf, int bufSize, TOHT *t
 	struct BO_SOCK_LST *sock_lst = NULL;
 
 	/* создаем список подкл клиентов */
-	sock_lst = bo_init_sock_lst(255, 0);
+	sock_lst = bo_init_sock_lst(5, 0);
 	if(sock_lst == NULL) {
 		bo_log("fifoServWork->bo_init_sock_lst ERROR can't crt sock_lst");
 		goto exit;

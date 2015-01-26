@@ -954,6 +954,4 @@ TEST(fifo, out_overflowFifo)
 	TEST_ASSERT_EQUAL(1, flag);
 }
 
-
-
 /* 0x42 */

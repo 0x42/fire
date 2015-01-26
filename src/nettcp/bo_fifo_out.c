@@ -193,3 +193,5 @@ static int bo_getPos_fifo_out(char *ip)
 	exit:
 	return ans;
 }
+
+/* 0x42 */
