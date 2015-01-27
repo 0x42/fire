@@ -208,7 +208,7 @@ static void m_servWork(int sock_in, int sock_out,
 	
 	while(stop == 1) {
 		tval.tv_sec  = 0;
-		tval.tv_usec = 100000;
+		tval.tv_usec = 5000;
 		FD_ZERO(&r_set);
 		FD_ZERO(&w_set);
 		FD_ZERO(&e_set);
