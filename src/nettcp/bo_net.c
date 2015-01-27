@@ -385,7 +385,9 @@ int bo_sendLogMsg(int sock, char *data, unsigned int dataSize)
 {
 	int ans  = -1;
 	char *head = "LOG";
+	bo_log("bo_sendLogMsg START >>>");
 	ans = bo_sendXXXMsg(sock, head, data, dataSize);
+	bo_log("bo_sendLogMsg END   >>>");
 	return ans;
 }
 
