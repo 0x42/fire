@@ -14,7 +14,7 @@ rs2_end=$8
 echo $node_ip >> $nodesfile
 
 # Установка адреса IP мастера
-master_ip="192.168.100.129"
+master_ip="192.168.1.129"
 
 # Адрес УСО для отправки состояния магистрали
 snmp_uso="129"
@@ -173,8 +173,8 @@ echo "prmStopbit = 1" >> $cfgfile
 # 600, 1200, 1800, 2400, 4800, 9600,
 # 19200, 38400, 57600, 115200, 230400,
 # 460800, 500000, 576000, 921600
-echo "speed = 19200" >> $cfgfile
-#echo "speed = 57600" >> $cfgfile
+#echo "speed = 19200" >> $cfgfile
+echo "speed = 57600" >> $cfgfile
 #echo "speed = 115200" >> $cfgfile
 
 echo >> $cfgfile
