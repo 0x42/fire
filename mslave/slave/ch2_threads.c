@@ -108,7 +108,7 @@ int passiveFromActive(struct chan_thread_arg *targ)
 	dst = (unsigned int)rxBuf.buf[0];
 
 	prepare_cadr(&tx2Buf, rxBuf.buf, rxBuf.wpos);
-	
+		
 	put_state(&psvdata_ready, 0);
 	pthread_cond_signal(&psvdata);
 	

@@ -576,9 +576,9 @@ void putLog(struct thr_rx_buf *b)
 		boIntToChar(crc, cbuf);
 		data[b->buf[5]+10] = cbuf[0];
 		data[b->buf[5]+11] = cbuf[1];
-	
-		dataSize = (unsigned int)(b->buf[5]+12);
 		
+		dataSize = (unsigned int)(b->buf[5]+12);
+				
 		pthread_mutex_lock(&mx_sendSocket);
 		
 		if (bo_sendLogMsg(logSend_sock, data, dataSize) == -1) {
@@ -687,7 +687,7 @@ void prepare_cadr_scan(struct chan_thread_arg *targ,
  * tx - Передача кадра данных устройствам сети RS485.
  * @targ: Указатель на структуру chan_thread_arg{}.
  * @b:
- * @return  0- успех, -1 неудача.
+ * @return  длина данных / -1 неудача.
  */
 int tx(struct chan_thread_arg *targ, struct thr_tx_buf *b, char *msg)
 {
@@ -709,7 +709,7 @@ int tx(struct chan_thread_arg *targ, struct thr_tx_buf *b, char *msg)
 		);
 	*/
 	
-	return 0;
+	return res;
 }
 
 /**

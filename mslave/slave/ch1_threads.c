@@ -327,8 +327,8 @@ int active_netStat(struct chan_thread_arg *targ, int dst)
 	res = tx(targ, &txBuf, "1netStat");
 	if (res < 0) return -1;
 
-	usleep(100000);
-	/** usleep(targ->utxdel * txBuf.wpos); */
+	/* usleep(100000); */
+	usleep(targ->utxdel * res);
 	
 	return 0;
 }
@@ -351,8 +351,8 @@ int active_getLog(struct chan_thread_arg *targ, int dst)
 	res = tx(targ, &txBuf, "1log");
 	if (res < 0) return -1;
 	
-	usleep(100000);
-	/** usleep(targ->utxdel * txBuf.wpos); */
+	/** usleep(100000); */
+	usleep(targ->utxdel * res);
 	
 	return 0;
 }
@@ -374,8 +374,8 @@ int active_snmp(struct chan_thread_arg *targ, int dst)
 	res = tx(targ, &txBuf, "1snmp");
 	if (res < 0) return -1;
 	
-	usleep(100000);
-	/** usleep(targ->utxdel * txBuf.wpos); */
+	/** usleep(100000); */
+	usleep(targ->utxdel * res);
 	
 	return 0;
 }
@@ -420,7 +420,7 @@ int active_process(struct chan_thread_arg *targ, int dst)
 			res = active_snmp(targ, dst);
 		} else {
 			/** ID ???
-			    bo_log("active(): ID= [%d]", rxBuf.buf[2]); */
+			bo_log("active(): ID= [%d]", rxBuf.buf[2]); */
 		}
 		
 	} else if (test_bufDst(&dst2Buf, (unsigned char)rxBuf.buf[0]) != -1) {
@@ -457,8 +457,8 @@ int active_process(struct chan_thread_arg *targ, int dst)
 			res = tx(targ, &txBuf, "1aproc");
 			if (res < 0) return -1;
 
-			usleep(100000);
-			/** usleep(targ->utxdel * txBuf.wpos); */
+			/** usleep(100000); */
+			usleep(targ->utxdel * res + 20000);
 		} else
 			bo_log("active(): key= [%s] ch2 disable", key);
 		
@@ -485,7 +485,7 @@ int active_process(struct chan_thread_arg *targ, int dst)
 int activeFromFIFO(struct chan_thread_arg *targ)
 {
 	int res;
-	/* char tmstr[50] = {0}; */
+	char tmstr[50] = {0};
 	
 	if (get_state(&actFIFOdata_ready) == 1) {
 		/** Есть данные для передачи ответа активному
@@ -519,11 +519,11 @@ int activeFromFIFO(struct chan_thread_arg *targ)
 		*/
 		/**
 		bo_getTimeNow(tmstr, 50);
-		printf("otvet[%d] tm= [%d]\n", tmstr, targ->utxdel * txBuf.wpos);
+		printf("otvet[tm=[%d] / res=%d] tm= [%d]\n",
+		       tmstr, res, targ->utxdel * res);
 		*/
-		
-		usleep(100000);
-		/** usleep(targ->utxdel * txBuf.wpos); */
+		/** usleep(100000); */
+		usleep(targ->utxdel * res + 10000);
 	}
 
 	return 0;
