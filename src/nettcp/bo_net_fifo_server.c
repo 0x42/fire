@@ -243,7 +243,7 @@ static int runSockServ()
 }
 
 static void workSockServ(int sock_serv, unsigned char *buf, int bufSize, TOHT *tab)
-{
+ {
 	int stop = 1, exec = -1, sock_cl = -1;
 	int option;
 	int err_count = 0; 

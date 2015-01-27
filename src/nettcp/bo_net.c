@@ -2,6 +2,8 @@
 #include "bo_send_lst.h"
 
 static int bo_sendData(int sock, char *data, unsigned int dataSize);
+static int bo_sendData2(int sock, char *data, unsigned int dataSize);
+
 static void delSockLst(struct BO_SOCK_LST *lst);
 static int bo_addToSockLst(struct BO_SOCK_LST *lst, char *ip);
 /*
@@ -126,6 +128,7 @@ int bo_sendDataFIFO(char *ip, unsigned int port,
 	static int err_count = 0;
 	int ans = -1, sock = 0, exec = -1;
 	
+	bo_log("bo_sendDataFIFO go ...");
 	if(lst == NULL) lst = bo_init_sock_lst(10, port);
 	if(lst == NULL) goto exit;
 	/**/
@@ -167,6 +170,7 @@ int bo_sendDataFIFO(char *ip, unsigned int port,
 	}
 	
 	exit:
+	bo_log("bo_sendDataFIFO ... end");
 	return ans;
 }
 
@@ -215,6 +219,7 @@ static int bo_sendData(int sock, char *data, unsigned int dataSize)
 	char head[3] = "SET";
 	unsigned char len[2] = {0};
 	char buf[4] = {0};
+	bo_log("bo_sendData START >>> ");
 	if(sock != -1) {
 		boIntToChar(dataSize, len);
 		exec = bo_sendAllData(sock, (unsigned char*)head, 3);
@@ -250,9 +255,50 @@ static int bo_sendData(int sock, char *data, unsigned int dataSize)
 		bo_log("bo_sendData ERROR errno[%s]", strerror(errno));
 		ans = -1;
 	}
+	bo_log("bo_sendData END >>>");
 	return ans;
 }
 
+static int bo_sendData2(int sock, char *data, unsigned int dataSize)
+{
+	int exec = -1, ans = -1;
+	const int err = -1;
+	char head[3] = "SET";
+	unsigned char len[2] = {0};
+	unsigned char tmp[1300] = {0};
+	char buf[4] = {0};
+	bo_log("bo_sendData2 START >>> ");
+	if(sock != -1) {
+		memcpy(tmp, head, 3);
+		boIntToChar(dataSize, len);
+		memcpy(tmp +3, len, 2);
+		memcpy(tmp + 5, data, dataSize);
+		
+		exec = bo_sendAllData(sock, tmp, dataSize+5);
+		if(exec == -1) {
+			bo_log("SEND DATA ERROR errno[%s]", strerror(errno));
+			goto error;
+		}
+		exec = bo_recvAllData(sock, (unsigned char*)buf, 3, 3);
+		if(exec == -1) {
+			bo_log("RECV ANS ERROR errno[%s]", strerror(errno));
+			goto error;
+		}
+		if(strstr(buf, "OK")) ans = 1;
+		else {
+			buf[3] = 0;
+			bo_log("bo_sendData2 wait OK recv[%s]", buf);
+			goto error;
+		}
+	} 
+	if(err == 1) {
+		error:
+		bo_log("bo_sendData2 ERROR errno[%s]", strerror(errno));
+		ans = -1;
+	}
+	bo_log("bo_sendData2 END >>>");
+	return ans;
+} 
 /* ----------------------------------------------------------------------------
  * @brief	устанав соед с узлом -> отпр SET|LEN|DATA -> ждем ответ OK ->
  *		закр сокет
