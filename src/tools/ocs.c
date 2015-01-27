@@ -332,20 +332,22 @@ int prepare_buf_tx(struct thr_tx_buf *b, char *buf)
  * @b:    Указатель на структуру thr_tx_buf{} (ocs.h).
  * @buf:  Указатель на буфер передатчика RS485.
  * @port: Порт RS485.
- * @return  0: успешно передали кадр,
- *         -1: не успех.
+ * @return  длина перед. данных / -1: не успех.
  */
 int writer(struct thr_tx_buf *b, char *buf, int port)
 {
 	int n;  /** Кол-во байт подготовленных для передачи */
+	int res;
 	
 	n = prepare_buf_tx(b, buf);
+
+	res = SerialWrite(port, buf, n);
 	
-	if (SerialWrite(port, buf, n) <= 0) {
+	if (res <= 0) {
 		bo_log("writer: SerialWrite exit");
 		return -1;
 	}
 
-	return 0;
+	return res;
 }
 

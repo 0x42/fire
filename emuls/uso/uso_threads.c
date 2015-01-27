@@ -229,7 +229,12 @@ int uso_proc(struct actx_thread_arg *targ, unsigned int sch)
 					rcv_ok = 1;
 					res = 0;
 					 */
-					res = -2;
+					bo_log("actx_485: uso_answer()");
+					res = uso_answer(targ, &txBuf);
+					if (res < 0)
+						res = -1;
+					else
+						res = -2;
 				}
 			} else {
 				/** Выполнять блок размером в N запросов
