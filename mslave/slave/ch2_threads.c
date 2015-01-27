@@ -210,7 +210,7 @@ int data_FIFO(struct chan_thread_arg *targ)
 		return 0;
 	}
 	
-	bo_log("data_FIFO() tx before");
+	/* bo_log("data_FIFO() tx before"); */
 
 	prepare_cadr(&tx2Buf, (char *)getFifo_buf, getFifo_ans);
 
@@ -235,13 +235,13 @@ int data_FIFO(struct chan_thread_arg *targ)
 		res = tx(targ, &tx2Buf, "2fifo");
 		if (res < 0) return -1;
 	
-		bo_log("data_FIFO() tx after");
+		/* bo_log("data_FIFO() tx after"); */
 
 		/** Прием */
 		res = rx(targ, &rx2Buf, targ->tout*(n<<i), "2fifo");
 		if (res < 0) return -1;
 		
-		bo_log("data_FIFO() rx after");
+		/* bo_log("data_FIFO() rx after"); */
 
 		if ((get_rxFl(&rx2Buf) >= RX_DATA_READY) &&
 		    ((rx2Buf.buf[1] & 0xFF) == dst)) {
