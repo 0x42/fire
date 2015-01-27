@@ -128,7 +128,6 @@ int bo_sendDataFIFO(char *ip, unsigned int port,
 	static int err_count = 0;
 	int ans = -1, sock = 0, exec = -1;
 	
-	bo_log("bo_sendDataFIFO go ...");
 	if(lst == NULL) lst = bo_init_sock_lst(10, port);
 	if(lst == NULL) goto exit;
 	/**/
@@ -170,7 +169,6 @@ int bo_sendDataFIFO(char *ip, unsigned int port,
 	}
 	
 	exit:
-	bo_log("bo_sendDataFIFO ... end");
 	return ans;
 }
 
@@ -219,7 +217,6 @@ static int bo_sendData(int sock, char *data, unsigned int dataSize)
 	char head[3] = "SET";
 	unsigned char len[2] = {0};
 	char buf[4] = {0};
-	bo_log("bo_sendData START >>> ");
 	if(sock != -1) {
 		boIntToChar(dataSize, len);
 		exec = bo_sendAllData(sock, (unsigned char*)head, 3);
@@ -255,7 +252,6 @@ static int bo_sendData(int sock, char *data, unsigned int dataSize)
 		bo_log("bo_sendData ERROR errno[%s]", strerror(errno));
 		ans = -1;
 	}
-	bo_log("bo_sendData END >>>");
 	return ans;
 }
 
