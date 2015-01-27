@@ -444,7 +444,7 @@ int bo_sendXXXMsg(int sock, char *head, char *data, int dataSize)
 			strerror(errno));
 		goto end;
 	}
-
+	bo_log("bo_sendXXXMsg recv start");
 	exec = bo_recvAllData(sock, (unsigned char*)buf, 3, 3);
 	if(exec == -1) {
 		bo_log("bo_sendXXXMsg() %s recv ans errno[%s]",
@@ -457,6 +457,7 @@ int bo_sendXXXMsg(int sock, char *head, char *data, int dataSize)
 				buf, "data don't send to client.");
 		}
 	}
+	bo_log("bo_sendXXXMsg recv end");
 	end:
 	return ans;
 }

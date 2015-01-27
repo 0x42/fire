@@ -354,6 +354,7 @@ static void m_workClient(struct bo_llsock *list_in, struct bo_llsock *list_out,
 	
 	
 	dbgout("CHK FROM LIST_IN: ");
+	bo_log("m_workClient START");
 	i = bo_get_head(list_in);
 	while(i != -1) {
 		exec = bo_get_val(list_in, &val, i);
@@ -421,6 +422,8 @@ static void m_workClient(struct bo_llsock *list_in, struct bo_llsock *list_out,
 			dbgout("\n");
 		}
 	}
+	bo_log("m_workClient END");
+
 	dbgout("\n");
 }
 
@@ -497,9 +500,12 @@ static int m_recvClientMsg(int sock, TOHT *tr)
 	p.bufSize = recvBufLen;
 	p.length = 0;
 	p.log = logArr;
-	
+	bo_log("m_recvClientMsg START >>>");
 	t_msg = bo_master_core(&p);
-	
+	if(t_msg == 2)
+		bo_log("m_recvClientMsg END >>> LOG");
+	else 	bo_log("m_recvClientMsg END>>>");
+
 	tr_log("==== TAB ROUTE ==== \n");
 	dbgout("==== TAB ROUTE ==== \n");
 	for(i = 0; i < tr->size; i++) {
