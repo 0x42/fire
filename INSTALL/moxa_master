@@ -1,0 +1,21 @@
+#!/bin/sh
+
+nodes=`cat $1`
+
+pthm=/home/tabr
+
+ftpfile=ftp.txt
+ftplog=ftp.log
+
+echo "binary" > $ftpfile
+echo "cd $pthm" >> $ftpfile
+echo "put master" >> $ftpfile
+echo "chmod 755 master" >> $ftpfile
+echo "exit" >> $ftpfile
+chmod 640 $ftpfile
+
+for node in $nodes
+do
+	ftp $node < $ftpfile > ftplog
+	echo "master ($node) ... ok"
+done

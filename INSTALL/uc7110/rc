@@ -1,0 +1,49 @@
+#!/bin/sh
+
+hostname moxa.com.tw
+cat /etc/motd
+ifconfig lo 127.0.0.1
+route add -net 127.0.0.0 netmask 255.255.255.0 lo
+ifconfig eth0 192.168.1.129 netmask 255.255.255.0
+ifconfig eth1 192.168.100.129 netmask 255.255.255.0
+#route add default gw 192.168.3.254 dev eth0
+# if you want DHCP, please set this
+#dhcpcd -p -a eth0 &
+#dhcpcd -p -a eth1 &
+
+#rtc clock to system clock
+hwclock -s
+#nfs portmap
+portmap &
+#factory & broadcast version
+necid &
+#simple snmp daemon
+snmpd &
+
+#Loading your driver here
+
+#-->uart driver for /dev/ttyM0 /dev/ttyM1
+insmod /lib/modules/2.6.19-uc1MoXaRt/kernel/drivers/char/mxser.ko
+
+#-->gpio driver for /dev/pio
+#insmod /lib/modules/2.6.19-uc1MoXaRt/kernel/drivers/char/gpio.ko
+
+# set the serial port interface, now default set to RS232
+# if you want to change, then you need modify following
+# Usage: setinterface device-node [interface-no]
+#	device-node	- must be /dev/ttyM0 or /dev/ttyM1
+#	interface-no is following:
+#	none	- to view now setting
+#	0	- set to RS232
+#	1	- set to RS485-2Wires
+#	2	- set to RS422
+#	3	- set to RS485-4Wires
+setinterface /dev/ttyM0 0	# set the serial port interface to RS232
+setinterface /dev/ttyM1 0	# set the serial port interface to RS232
+
+#Below line will change your network configuration
+#after execute MDMAgent.exe.
+#Mark '#' below 3 line if you don't want the configuration valid.
+if [ -f /etc/rc.local ]; then
+	/etc/rc.local
+fi

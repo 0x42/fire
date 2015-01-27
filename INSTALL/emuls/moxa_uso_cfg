@@ -1,0 +1,20 @@
+#!/bin/sh
+
+nodes=`cat $1`
+
+pthm=/home/slave
+
+ftpfile=ftp.txt
+ftplog=ftp.log
+
+echo "ascii" > $ftpfile
+echo "cd $pthm" >> $ftpfile
+echo "put uso.cfg" >> $ftpfile
+echo "exit" >> $ftpfile
+chmod 640 $ftpfile
+
+for node in $nodes
+do
+	ftp $node < $ftpfile > ftplog
+	echo "uso.cfg ($node) ... ok"
+done

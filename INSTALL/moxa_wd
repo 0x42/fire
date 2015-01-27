@@ -1,0 +1,21 @@
+#!/bin/sh
+
+nodes=`cat $1`
+
+pthu=/home/utils
+
+ftpfile=ftp.txt
+ftplog=ftp.log
+
+echo "binary" > $ftpfile
+echo "cd $pthu" >> $ftpfile
+echo "put wd" >> $ftpfile
+echo "chmod 755 wd" >> $ftpfile
+echo "exit" >> $ftpfile
+chmod 640 $ftpfile
+
+for node in $nodes
+do
+	ftp $node < $ftpfile > ftplog
+	echo "cron wd ($node) ... ok"
+done

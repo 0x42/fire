@@ -1,0 +1,21 @@
+#!/bin/sh
+
+nodes=`cat $1`
+
+pthe=/etc
+
+ftpfile=ftp.txt
+ftplog=ftp.log
+
+for node in $nodes
+do
+	echo "ascii" > $ftpfile
+	echo "cd $pthe" >> $ftpfile
+	echo "put rc_$node.local rc.local" >> $ftpfile
+	echo "chmod 755 rc.local" >> $ftpfile
+	echo "exit" >> $ftpfile
+	chmod 640 $ftpfile
+	
+	ftp $node < $ftpfile > ftplog
+	echo "rc.local ($node) ... ok"
+done

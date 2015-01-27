@@ -1,0 +1,66 @@
+#!/bin/sh
+
+eth0_ip=$1
+eth0_netmask=$2
+eth1_ip=$3
+eth1_netmask=$4
+
+#	interface-no is following:
+#	0	- set to RS232
+#	1	- set to RS485-2Wires
+#	2	- set to RS422
+#	3	- set to RS485-4Wires
+rs1_mode=$5
+rs2_mode=$5
+
+rcfile="rc"
+
+echo "#!/bin/sh" > $rcfile
+echo >> $rcfile
+echo "hostname moxa.com.tw" >> $rcfile
+echo "cat /etc/motd" >> $rcfile
+echo "ifconfig lo 127.0.0.1" >> $rcfile
+echo "route add -net 127.0.0.0 netmask 255.255.255.0 lo" >> $rcfile
+echo "ifconfig eth0 $eth0_ip netmask $eth0_netmask" >> $rcfile
+echo "ifconfig eth1 $eth1_ip netmask $eth1_netmask" >> $rcfile
+echo "#route add default gw 192.168.3.254 dev eth0" >> $rcfile
+echo "# if you want DHCP, please set this" >> $rcfile
+echo "#dhcpcd -p -a eth0 &" >> $rcfile
+echo "#dhcpcd -p -a eth1 &" >> $rcfile
+echo >> $rcfile
+echo "#rtc clock to system clock" >> $rcfile
+echo "hwclock -s" >> $rcfile
+echo "#nfs portmap" >> $rcfile
+echo "portmap &" >> $rcfile
+echo "#factory & broadcast version" >> $rcfile
+echo "necid &" >> $rcfile
+echo "#simple snmp daemon" >> $rcfile
+echo "snmpd &" >> $rcfile
+echo >> $rcfile
+echo "#Loading your driver here" >> $rcfile
+echo >> $rcfile
+echo "#-->uart driver for /dev/ttyM0 /dev/ttyM1" >> $rcfile
+echo "insmod /lib/modules/2.6.19-uc1MoXaRt/kernel/drivers/char/mxser.ko" >> $rcfile
+echo >> $rcfile
+echo "#-->gpio driver for /dev/pio" >> $rcfile
+echo "#insmod /lib/modules/2.6.19-uc1MoXaRt/kernel/drivers/char/gpio.ko" >> $rcfile
+echo >> $rcfile
+echo "# set the serial port interface, now default set to RS232" >> $rcfile
+echo "# if you want to change, then you need modify following" >> $rcfile
+echo "# Usage: setinterface device-node [interface-no]" >> $rcfile
+echo "#	device-node	- must be /dev/ttyM0 or /dev/ttyM1" >> $rcfile
+echo "#	interface-no is following:" >> $rcfile
+echo "#	none	- to view now setting" >> $rcfile
+echo "#	0	- set to RS232" >> $rcfile
+echo "#	1	- set to RS485-2Wires" >> $rcfile
+echo "#	2	- set to RS422" >> $rcfile
+echo "#	3	- set to RS485-4Wires" >> $rcfile
+echo "setinterface /dev/ttyM0 $rs1_mode	# set the serial port interface to RS232" >> $rcfile
+echo "setinterface /dev/ttyM1 $rs2_mode	# set the serial port interface to RS232" >> $rcfile
+echo >> $rcfile
+echo "#Below line will change your network configuration" >> $rcfile
+echo "#after execute MDMAgent.exe." >> $rcfile
+echo "#Mark '#' below 3 line if you don't want the configuration valid." >> $rcfile
+echo "if [ -f /etc/rc.local ]; then" >> $rcfile
+echo "	/etc/rc.local" >> $rcfile
+echo "fi" >> $rcfile

@@ -1,0 +1,5 @@
+#!/bin/sh
+
+mke2fs /dev/ram1 $1
+mount /dev/ram1 /ramdisk
+rm -fr /ramdisk/lost+found
