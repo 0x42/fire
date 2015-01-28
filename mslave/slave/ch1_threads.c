@@ -427,8 +427,8 @@ int active_process(struct chan_thread_arg *targ, int dst)
 	} else if (test_bufDst(&dst2Buf, (unsigned char)rxBuf.buf[0]) != -1) {
 		if (targ->ch2_enable) {
 			/** Кадр сети RS485 (local node) */
-			/** Запрос для пассивного устройства загрузить в лог.
-			putLog(&rxBuf); */
+			/** Запрос для пассивного устройства загрузить в лог. */
+			putLog(&rxBuf);
 			
 			pthread_mutex_lock(&mx_psv);
 
@@ -465,8 +465,8 @@ int active_process(struct chan_thread_arg *targ, int dst)
 		
 	} else if (rt_iskey(rtg, key)) {
 		/** Кадр сети RS485 (FIFO) */		
-		/** Запрос для пассивного устройства загрузить в лог.
-		putLog(&rxBuf); */
+		/** Запрос для пассивного устройства загрузить в лог. */
+		putLog(&rxBuf);
 		prepareFIFO(&rxBuf, key, dst);
 	} else {
 		bo_log("active(): key= [%s] ???", key);
@@ -589,6 +589,14 @@ int active(struct chan_thread_arg *targ, int dst)
 			case RX_TIMEOUT:
 				/** Текущее устройство не успело дать ответ. */
 				bo_log("active(): timeout dst= %d", dst);
+				bo_log("active(): [%d %d %d %d %d %d]",
+				       (unsigned char)txBuf.buf[0],
+				       (unsigned char)txBuf.buf[1],
+				       (unsigned char)txBuf.buf[2],
+				       (unsigned char)txBuf.buf[3],
+				       (unsigned char)txBuf.buf[4],
+				       (unsigned char)txBuf.buf[5]
+					);
 				break;
 			default:
 				bo_log("active(): state ??? fl= %d",
