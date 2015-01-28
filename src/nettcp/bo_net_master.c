@@ -271,7 +271,8 @@ static void m_servWork(int sock_in, int sock_out,
  */
 static void m_addClient(struct bo_llsock *list, int servSock, fd_set *set)
 {
-	int sock = -1;
+	int sock = -1, exec = -1;
+	int flag = 1;
 	/* char ip[16] = {0}; */
 	/* провер подкл ли кто-нибудь на серверный сокет */
 	if(FD_ISSET(servSock, set) == 1) {
@@ -282,6 +283,13 @@ static void m_addClient(struct bo_llsock *list, int servSock, fd_set *set)
 		} else {
 			/* макс время ожид прихода пакета, 
 			 * чтобы искл блокировки */
+			/* откл Алгоритм Нейгла */
+			exec = setsockopt(sock, 
+				IPPROTO_TCP, 
+				TCP_NODELAY, 
+				(char*)&flag,
+				sizeof(flag));
+			if(exec == -1) bo_log("m_addClient can't setsockopt(TCP_NODELAY)");
 			bo_setTimerRcv2(sock, 5, 500);
 			bo_addll(list, sock);
 			/*
@@ -493,7 +501,6 @@ static int m_recvClientMsg(int sock, TOHT *tr)
 	int t_msg = 0;
 	int i; char *key; char *val;
 
-	dbgout("m_recvClientMsg() sock is set[%d] \n", sock);
 	p.sock = sock;
 	p.route_tab = tr;
 	p.buf = recvBuf;
@@ -505,7 +512,7 @@ static int m_recvClientMsg(int sock, TOHT *tr)
 	if(t_msg == 2)
 		bo_log("m_recvClientMsg END >>> LOG");
 	else 	bo_log("m_recvClientMsg END >>>");
-
+/*
 	tr_log("==== TAB ROUTE ==== \n");
 	dbgout("==== TAB ROUTE ==== \n");
 	for(i = 0; i < tr->size; i++) {
@@ -518,7 +525,7 @@ static int m_recvClientMsg(int sock, TOHT *tr)
 	}
 	dbgout("==== END TAB ==== \n");
 	tr_log("==== END TAB ==== \n");
-
+*/
 	return t_msg;
 }
 

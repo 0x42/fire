@@ -532,11 +532,18 @@ int bo_setConnect(char *ip, int port)
 	int n = 0;
 	int conSet = 0;
 	struct sockaddr_in saddr;
-	
+	int exec = -1, flag = 1;
 	sock = bo_crtSock(ip, port, &saddr);
 
 	if(sock > 0) {
 		bo_setTimerRcv(sock);
+		/* откл Алгоритм Нейгла */
+		exec = setsockopt(sock, 
+			IPPROTO_TCP, 
+			TCP_NODELAY, 
+			(char*)&flag,
+			sizeof(flag));
+		if(exec == -1) bo_log("m_addClient can't setsockopt(TCP_NODELAY)");
 		while(n < 10) {
 			if(connect(sock, (struct sockaddr *)&saddr, 
 			   sizeof(struct sockaddr)) == 0) {

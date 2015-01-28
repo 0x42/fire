@@ -6,6 +6,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <sys/socket.h>
+#include <netinet/tcp.h>
 #include <unistd.h>
 #include <errno.h>
 #include "../tools/dbgout.h"
