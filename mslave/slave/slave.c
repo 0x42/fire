@@ -570,7 +570,7 @@ void putLog(struct thr_rx_buf *b)
 		
 		for (i=0; i<b->buf[5]; i++)
 			data[10+i] = b->buf[6+i];
-	
+		
 		crc = crc16modbus(data, b->buf[5]+10);
 		
 		boIntToChar(crc, cbuf);
@@ -578,7 +578,8 @@ void putLog(struct thr_rx_buf *b)
 		data[b->buf[5]+11] = cbuf[1];
 		
 		dataSize = (unsigned int)(b->buf[5]+12);
-				
+		/** printf("dataSize=[%d]\n", dataSize); */
+		
 		pthread_mutex_lock(&mx_sendSocket);
 		
 		if (bo_sendLogMsg(logSend_sock, data, dataSize) == -1) {

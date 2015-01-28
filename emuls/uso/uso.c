@@ -132,17 +132,19 @@ int rx(struct actx_thread_arg *targ)
 			return -1;
 		}
 		
-		/** printf("rx: "); */
+		/* printf("rx: "); */
 		for (i=0; i<n; i++) {
-			/* bo_log("rx_485: buf[i]= %d", (unsigned int)buf[i]);
-			   printf("0x%02x ", (unsigned char)buf[i]); */
+			/**
+			   bo_log("rx_485: buf[i]= %d", (unsigned int)buf[i]);
+			   / printf("0x%02x ", (unsigned char)buf[i]); /
+			*/
 			
 			put_rxFl(&rxBuf,
 				 read_byte(&rxBuf, buf[i], get_rxFl(&rxBuf)));
 
 			if (get_rxFl(&rxBuf) >= RX_DATA_READY) break;		
 		}
-		/** printf("\n"); */
+		/* printf("\n"); */
 		
 		if (get_rxFl(&rxBuf) >= RX_DATA_READY) {
 			/** Данные приняты */

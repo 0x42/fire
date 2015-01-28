@@ -103,11 +103,18 @@ int	SerialOpen( int port)
 int	SerialWrite( int port, char* str, int len)
 {
 	int fd= FindFD( port);
-
+	int res;
+	
 	if( fd < 0)			///< error
 		return fd;
 
-	return write( fd, str, len);
+	res = write( fd, str, len);
+	if (res < 0)
+		return -1;
+	
+	tcdrain(fd);
+	
+	return res;
 }
 
 /*---------------------------------------------------------------------------*/
