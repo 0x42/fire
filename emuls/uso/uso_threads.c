@@ -349,6 +349,7 @@ void *actx_485(void *arg)
 	struct actx_thread_arg *targ = (struct actx_thread_arg *)arg;
 	int res;
 	unsigned int sch;
+	char tmstr[50] = {0};
 	
 	sch = (unsigned int)targ->test_ln;
 	nm = 1;
@@ -361,6 +362,13 @@ void *actx_485(void *arg)
 	write(1, "uso:\n", 5);
 
 	while (1) {
+		/**
+		memset(tmstr, 0, 50);
+		
+		bo_getTimeNow(tmstr, 50);
+
+		printf("actx_485[%s]\n", tmstr);
+		*/
 		res = rx(targ);
 		if (res < 0) {
 			bo_log("actx_485: rx() exit");

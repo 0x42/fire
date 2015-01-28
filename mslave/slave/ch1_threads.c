@@ -589,6 +589,7 @@ int active(struct chan_thread_arg *targ, int dst)
 			case RX_TIMEOUT:
 				/** Текущее устройство не успело дать ответ. */
 				bo_log("active(): timeout dst= %d", dst);
+				/**
 				bo_log("active(): [%d %d %d %d %d %d]",
 				       (unsigned char)txBuf.buf[0],
 				       (unsigned char)txBuf.buf[1],
@@ -597,6 +598,7 @@ int active(struct chan_thread_arg *targ, int dst)
 				       (unsigned char)txBuf.buf[4],
 				       (unsigned char)txBuf.buf[5]
 					);
+				*/
 				break;
 			default:
 				bo_log("active(): state ??? fl= %d",

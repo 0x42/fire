@@ -581,6 +581,8 @@ void putLog(struct thr_rx_buf *b)
 		/** printf("dataSize=[%d]\n", dataSize); */
 		
 		pthread_mutex_lock(&mx_sendSocket);
+
+		bo_log("bo_sendLogMsg() before");
 		
 		if (bo_sendLogMsg(logSend_sock, data, dataSize) == -1) {
 			bo_log("putLog(): bo_sendLogMsg() %s", "ERROR");

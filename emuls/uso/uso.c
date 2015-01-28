@@ -136,9 +136,11 @@ int rx(struct actx_thread_arg *targ)
 		for (i=0; i<n; i++) {
 			/**
 			   bo_log("rx_485: buf[i]= %d", (unsigned int)buf[i]);
-			   / printf("0x%02x ", (unsigned char)buf[i]); /
-			*/
+			   /  /
 			
+			
+			printf("0x%02x ", (unsigned char)buf[i]);
+			*/
 			put_rxFl(&rxBuf,
 				 read_byte(&rxBuf, buf[i], get_rxFl(&rxBuf)));
 
