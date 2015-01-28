@@ -421,7 +421,7 @@ int bo_sendXXXMsg(int sock, char *head, char *data, int dataSize)
 	int exec = -1;
 	unsigned char len[2] = {0};
 	char buf[4] = {0};
-	
+	bo_log("bo_sendXXXMsg send start");
 	boIntToChar(dataSize, len);
 	exec = bo_sendAllData(sock, (unsigned char*)head, 3);
 	if(exec == -1) {
