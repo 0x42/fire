@@ -225,7 +225,6 @@ static void m_servWork(int sock_in, int sock_out,
 		 * значит его надо закрыть.*/
 		m_addSockToSet(llist_out, &r_set);
 		exec = select(maxdesc, &r_set, NULL, NULL, &tval);
-		bo_log("MASTER - go");
 		if(exec == -1) {
 			bo_log("bo_net_master.c->m_servWork() select errno[%s]",
 				strerror(errno));
@@ -259,7 +258,6 @@ static void m_servWork(int sock_in, int sock_out,
 			/*	dbgout("CHK SOCK OUT END \n"); */
 			}
 		}
-		bo_log("MASTER - end");
 	}
 	/* Очистить все клиент сокеты*/
 }

@@ -9,6 +9,7 @@ LDFLAGS	     = -Wl, -elf2flt -lpthread
 CFLAGS		     = -Wall -c -g 
 
 # Выводит отлад инфу в терминал
+CFLAGS		     += -D __MOXA__
 CFLAGS		     += -D __PRINT__ 
 CFLAGS		     += -D __PRINT_TAB_ROUTE__
 # =========================================
