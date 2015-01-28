@@ -352,7 +352,6 @@ static void m_workClient(struct bo_llsock *list_in, struct bo_llsock *list_out,
 	tval.tv_sec = 0;
 	tval.tv_usec = 50;
 	
-	
 	dbgout("CHK FROM LIST_IN: ");
 	bo_log("m_workClient START");
 	i = bo_get_head(list_in);
@@ -383,6 +382,7 @@ static void m_workClient(struct bo_llsock *list_in, struct bo_llsock *list_out,
 		}
 		i = exec;
 	}
+	bo_log("m_workClient end recv msg flag[%d]", flag);
 	/* закрываем сокет удал записи из таблицы роутов для этого сокета */
 	dbgout("\nCHK LIST OUT TO CLOSE:  ");
 	i = bo_get_head(list_out);
@@ -504,7 +504,7 @@ static int m_recvClientMsg(int sock, TOHT *tr)
 	t_msg = bo_master_core(&p);
 	if(t_msg == 2)
 		bo_log("m_recvClientMsg END >>> LOG");
-	else 	bo_log("m_recvClientMsg END>>>");
+	else 	bo_log("m_recvClientMsg END >>>");
 
 	tr_log("==== TAB ROUTE ==== \n");
 	dbgout("==== TAB ROUTE ==== \n");
