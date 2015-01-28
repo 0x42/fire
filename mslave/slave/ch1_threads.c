@@ -327,8 +327,8 @@ int active_netStat(struct chan_thread_arg *targ, int dst)
 	res = tx(targ, &txBuf, "1netStat");
 	if (res < 0) return -1;
 
-	/* usleep(100000); */
-	usleep(targ->utxdel * res);
+	/* usleep(100000);
+	usleep(targ->utxdel * res); */
 	
 	return 0;
 }
@@ -351,8 +351,8 @@ int active_getLog(struct chan_thread_arg *targ, int dst)
 	res = tx(targ, &txBuf, "1log");
 	if (res < 0) return -1;
 	
-	/** usleep(100000); */
-	usleep(targ->utxdel * res);
+	/** usleep(100000);
+	usleep(targ->utxdel * res); */
 	
 	return 0;
 }
@@ -374,8 +374,8 @@ int active_snmp(struct chan_thread_arg *targ, int dst)
 	res = tx(targ, &txBuf, "1snmp");
 	if (res < 0) return -1;
 	
-	/** usleep(100000); */
-	usleep(targ->utxdel * res);
+	/** usleep(100000);
+	usleep(targ->utxdel * res); */
 	
 	return 0;
 }
@@ -427,8 +427,8 @@ int active_process(struct chan_thread_arg *targ, int dst)
 	} else if (test_bufDst(&dst2Buf, (unsigned char)rxBuf.buf[0]) != -1) {
 		if (targ->ch2_enable) {
 			/** Кадр сети RS485 (local node) */
-			/** Запрос для пассивного устройства загрузить в лог. */
-			putLog(&rxBuf);
+			/** Запрос для пассивного устройства загрузить в лог.
+			putLog(&rxBuf); */
 			
 			pthread_mutex_lock(&mx_psv);
 
@@ -458,15 +458,15 @@ int active_process(struct chan_thread_arg *targ, int dst)
 			res = tx(targ, &txBuf, "1aproc");
 			if (res < 0) return -1;
 
-			/** usleep(100000); */
-			usleep(targ->utxdel * res + 20000);
+			/** usleep(100000);
+			usleep(targ->utxdel * res + 20000); */
 		} else
 			bo_log("active(): key= [%s] ch2 disable", key);
 		
 	} else if (rt_iskey(rtg, key)) {
 		/** Кадр сети RS485 (FIFO) */		
-		/** Запрос для пассивного устройства загрузить в лог. */
-		putLog(&rxBuf);
+		/** Запрос для пассивного устройства загрузить в лог.
+		putLog(&rxBuf); */
 		prepareFIFO(&rxBuf, key, dst);
 	} else {
 		bo_log("active(): key= [%s] ???", key);
@@ -486,7 +486,7 @@ int active_process(struct chan_thread_arg *targ, int dst)
 int activeFromFIFO(struct chan_thread_arg *targ)
 {
 	int res;
-	char tmstr[50] = {0};
+	/* char tmstr[50] = {0}; */
 	
 	if (get_state(&actFIFOdata_ready) == 1) {
 		/** Есть данные для передачи ответа активному
@@ -523,10 +523,10 @@ int activeFromFIFO(struct chan_thread_arg *targ)
 		/**
 		bo_getTimeNow(tmstr, 50);
 		printf("otvet[tm=[%d] / res=%d] tm= [%d]\n",
-		       tmstr, res, targ->utxdel * res);
-		*/
-		/** usleep(100000); */
-		usleep(targ->utxdel * res + 10000);
+		       tmstr, res, targ->utxdel * res);*/
+		
+		/** usleep(100000);
+		usleep(targ->utxdel * res + 10000); */
 
 		/* bo_log("activeFromFIFO() tx after"); */
 	}
@@ -548,6 +548,7 @@ int activeFromFIFO(struct chan_thread_arg *targ)
  */
 int active(struct chan_thread_arg *targ, int dst)
 {
+	/* char tmstr[50] = {0}; */
 	int res;
 	int i;
 	int n = 1;    /** При использовании n<<i в цикле for имеем
@@ -565,6 +566,10 @@ int active(struct chan_thread_arg *targ, int dst)
 		res = tx(targ, &txBuf, "1act");
 		if (res < 0) return -1;
 
+		/**
+		   bo_getTimeNow(tmstr, 50);
+		   printf("active[tm=[%d] / res=%d]\n", tmstr, res); */
+		
 		/** Прием */
 		res = rx(targ, &rxBuf, targ->tout*(n<<i), "1act");
 		if (res < 0) return -1;

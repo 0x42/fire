@@ -164,6 +164,7 @@ int passiveFromActive(struct chan_thread_arg *targ)
 
 int data_FIFO(struct chan_thread_arg *targ)
 {
+	/* char tmstr[50] = {0}; */
 	int dst;
 	int res;
 	int i;
@@ -234,7 +235,11 @@ int data_FIFO(struct chan_thread_arg *targ)
 		/** Передача */
 		res = tx(targ, &tx2Buf, "2fifo");
 		if (res < 0) return -1;
-	
+
+		/**
+		   bo_getTimeNow(tmstr, 50);
+		   printf("data_FIFO[tm=[%d] / res=%d]\n", tmstr, res); */
+		
 		/* bo_log("data_FIFO() tx after"); */
 
 		/** Прием */

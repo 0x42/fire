@@ -226,10 +226,9 @@ int uso_proc(struct actx_thread_arg *targ, unsigned int sch)
 					res = sch;
 				} else {
 					/** Стоп
-					rcv_ok = 1;
-					res = 0;
-					 */
-					bo_log("actx_485: uso_answer()");
+					    rcv_ok = 1;
+					
+					    bo_log("actx_485: uso_answer()"); */
 					res = uso_answer(targ, &txBuf);
 					if (res < 0)
 						res = -1;
@@ -279,7 +278,9 @@ int uso_session(struct actx_thread_arg *targ, unsigned int sch)
 					    printf("actx_485: next zapros\n"); */
 					res = uso_proc(targ, sch);
 				} else {
-					bo_log("actx_485: uso_answer()");
+					/**
+					bo_log("actx_485:
+					uso_answer()"); */
 					res = uso_answer(targ, &txBuf);
 				}
 			} else {
@@ -288,8 +289,8 @@ int uso_session(struct actx_thread_arg *targ, unsigned int sch)
 			}
 		}
 	} else if (rxBuf.buf[2] == (char)targ->cdsqId) {
-		/** Ответ от устройства */
-		bo_log("actx_485: from PR");
+		/** Ответ от устройства
+		bo_log("actx_485: from PR"); */
 		res = uso_print_sq(targ, sch);
 		/* 
 		if (targ->test_nm > 0) {

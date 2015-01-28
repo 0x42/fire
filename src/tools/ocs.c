@@ -342,8 +342,12 @@ int writer(struct thr_tx_buf *b, char *buf, int port)
 	n = prepare_buf_tx(b, buf);
 
 	res = SerialWrite(port, buf, n);
-	
-	if (res <= 0) {
+
+	if (res != n) {
+		bo_log("writer: res= [%d] n= [%d]", res, n);
+	}
+
+	if (res < 0) {
 		bo_log("writer: SerialWrite exit");
 		return -1;
 	}
