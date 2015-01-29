@@ -1,10 +1,10 @@
 TARGET		     = build/master
 # ========== for Moxa ====================
-#CC	     = arm-elf-gcc
-#LDFLAGS	     = -Wl, -elf2flt -lpthread
+CC	     = arm-elf-gcc
+LDFLAGS	     = -Wl, -elf2flt -lpthread
 # ========== for PC   ====================
-CC = gcc
-LDFLAGS		     = -lpthread
+#CC = gcc
+#LDFLAGS		     = -lpthread
 # ========================================
 CFLAGS		     = -Wall -c -g 
 
