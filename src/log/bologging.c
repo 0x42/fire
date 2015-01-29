@@ -22,8 +22,6 @@ static struct {
 	int nrow;
 	/*макс кол-во строк в лог файле*/
 	int maxrow;
-	
-
 } log = {0};
 
 /* инициализация MUTEX*/
@@ -75,6 +73,7 @@ void loggingINIT()
 #ifdef __MOXA__
 	log.fifo_log   = "/mnt/ramdisk/fifo.trace";
 	log.master_tab = "/mnt/ramdisk/master_tab.trace";
+	
 #endif	
 	log.maxrow     = 1000;
 	/* ================= */

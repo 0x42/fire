@@ -156,8 +156,6 @@ static void m_readConfig(TOHT *cfg, int n, char **argv)
 			f_log	  = cfg_getstring(cfg, "log:file", f_log);
 			f_log_old = cfg_getstring(cfg, "log:file_old", f_log_old);
 			maxrow    = cfg_getint(cfg, "log:maxrow", maxrow);
-			
-
 		} else {
 			bo_log(" WARNING error[%s] %s", 
 				"can't read config file",
