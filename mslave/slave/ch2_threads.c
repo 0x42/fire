@@ -119,7 +119,7 @@ int passiveFromActive(struct chan_thread_arg *targ)
 	
 	for (i=0; i<targ->nretries; i++) {
 		/** Передача */
-		res = tx(targ, &tx2Buf, "2pasFact");
+		res = tx(targ, &tx2Buf, 0, "2pasFact");
 		if (res < 0) return -1;
 		
 		/** Прием */
@@ -233,7 +233,7 @@ int data_FIFO(struct chan_thread_arg *targ)
 	
 	for (i=0; i<targ->nretries; i++) {
 		/** Передача */
-		res = tx(targ, &tx2Buf, "2fifo");
+		res = tx(targ, &tx2Buf, 0, "2fifo");
 		if (res < 0) return -1;
 
 		/**

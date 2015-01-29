@@ -68,7 +68,7 @@
 #define	CMSPAR					010000000000	///< mark or space (stick) parity
 
 int	SerialOpen( int port);
-int	SerialWrite( int port, char* str, int len);
+int	SerialWrite( int port, char* str, int len, int dfl);
 int	SerialNonBlockRead( int port, char* buf, int len);
 int	SerialBlockRead( int port, char* buf, int len);
 int	SerialClose( int port);

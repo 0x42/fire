@@ -692,12 +692,12 @@ void prepare_cadr_scan(struct chan_thread_arg *targ,
  * @b:
  * @return  длина данных / -1 неудача.
  */
-int tx(struct chan_thread_arg *targ, struct thr_tx_buf *b, char *msg)
+int tx(struct chan_thread_arg *targ, struct thr_tx_buf *b, int dfl, char *msg)
 {
 	char buf[BUF485_SZ];  /** Буфер передатчика RS485 */
 	int res;
 	
-	res = writer(b, buf, targ->port);	
+	res = writer(b, buf, targ->port, dfl);	
 	if (res < 0) return -1;
 
 	/**
@@ -785,7 +785,7 @@ int scan(struct chan_thread_arg *targ,
 	/** Данные для передачи подготовлены */
 
 	/** Передача */
-	res = tx(targ, tb, msg);
+	res = tx(targ, tb, 0, msg);
 	if (res < 0) return -1;
 	
 	/** Прием */

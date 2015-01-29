@@ -222,7 +222,7 @@ void prepareFIFO(struct thr_rx_buf *rb, char *key, int dst);
 void prepare_cadr(struct thr_tx_buf *b, char *buf, int ln);
 void prepare_cadr_scan(struct chan_thread_arg *targ, struct thr_tx_buf *b, int dst);
 
-int tx(struct chan_thread_arg *targ, struct thr_tx_buf *b, char *msg);
+int tx(struct chan_thread_arg *targ, struct thr_tx_buf *b, int dfl, char *msg);
 int rx(struct chan_thread_arg *targ, struct thr_rx_buf *b, int tout, char *msg);
 
 int scan(struct chan_thread_arg *targ,

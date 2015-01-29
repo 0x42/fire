@@ -88,7 +88,7 @@ int tx(struct actx_thread_arg *targ)
 	printf("\n");
 	*/
 	
-	res = writer(&txBuf, buf, targ->port);	
+	res = writer(&txBuf, buf, targ->port, 0);	
 	if (res < 0) return -1;
 	
 	return 0;

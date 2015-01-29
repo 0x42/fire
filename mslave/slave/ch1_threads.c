@@ -324,7 +324,7 @@ int active_netStat(struct chan_thread_arg *targ, int dst)
 	prepare_cadr_actNetStat(targ, &txBuf, dst);
 	
 	/** Данные для передачи подготовлены */
-	res = tx(targ, &txBuf, "1netStat");
+	res = tx(targ, &txBuf, 1, "1netStat");
 	if (res < 0) return -1;
 
 	/* usleep(100000);
@@ -348,7 +348,7 @@ int active_getLog(struct chan_thread_arg *targ, int dst)
 	prepare_cadr_quLog(targ, &txBuf, dst);
 	
 	/** Данные для передачи подготовлены */
-	res = tx(targ, &txBuf, "1log");
+	res = tx(targ, &txBuf, 1, "1log");
 	if (res < 0) return -1;
 	
 	/** usleep(100000);
@@ -371,7 +371,7 @@ int active_snmp(struct chan_thread_arg *targ, int dst)
 	prepare_cadr_snmpStat(targ, &txBuf, dst);
 	
 	/** Данные для передачи подготовлены */
-	res = tx(targ, &txBuf, "1snmp");
+	res = tx(targ, &txBuf, 1, "1snmp");
 	if (res < 0) return -1;
 	
 	/** usleep(100000);
@@ -455,7 +455,7 @@ int active_process(struct chan_thread_arg *targ, int dst)
 			pthread_mutex_unlock(&mx_psv);
 			
 			/** Данные для передачи подготовлены */
-			res = tx(targ, &txBuf, "1aproc");
+			res = tx(targ, &txBuf, 1, "1aproc");
 			if (res < 0) return -1;
 
 			/** usleep(100000);
@@ -503,7 +503,7 @@ int activeFromFIFO(struct chan_thread_arg *targ)
 		/* bo_log("activeFromFIFO() tx before"); */
 		
 		/** Данные для передачи подготовлены */
-		res = tx(targ, &txBuf, "1fifo");
+		res = tx(targ, &txBuf, 1, "1fifo");
 		if (res < 0) return -1;
 
 		/**
@@ -563,7 +563,7 @@ int active(struct chan_thread_arg *targ, int dst)
 	for (i=0; i<targ->nretries; i++) {
 		
 		/** Передача */
-		res = tx(targ, &txBuf, "1act");
+		res = tx(targ, &txBuf, 0, "1act");
 		if (res < 0) return -1;
 
 		/**

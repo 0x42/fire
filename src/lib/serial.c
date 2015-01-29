@@ -97,10 +97,11 @@ int	SerialOpen( int port)
   @param	port		port number
   @param	str		string to write
   @param	len		length of str
+  @param	dfl		1- tcdrain()
   @return	return length of str for success, on error return error code
  */
 /*---------------------------------------------------------------------------*/
-int	SerialWrite( int port, char* str, int len)
+int	SerialWrite( int port, char* str, int len, int dfl)
 {
 	int fd= FindFD( port);
 	int res;
@@ -111,8 +112,8 @@ int	SerialWrite( int port, char* str, int len)
 	res = write( fd, str, len);
 	if (res < 0)
 		return -1;
-	
-	tcdrain(fd);
+
+	if (dfl) tcdrain(fd);
 	
 	return res;
 }
