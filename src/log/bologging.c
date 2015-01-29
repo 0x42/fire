@@ -22,8 +22,6 @@ static struct {
 	int nrow;
 	/*макс кол-во строк в лог файле*/
 	int maxrow;
-	
-
 } log = {0};
 
 /* инициализация MUTEX*/

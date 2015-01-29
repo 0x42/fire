@@ -410,10 +410,13 @@ TEST(master, sendLogTest) /* NEED RUN SERVER */
 	char packet[24] = {0};
 	unsigned char crcTxt[2] = {0};
 	int crc = 0;
+	char timeStr[50] = {0};
 	
 	gen_tbl_crc16modbus();
 		
-	in = bo_setConnect("127.0.0.1", 8890);
+	in = bo_setConnect("192.168.1.129", 8890);
+//	in = bo_setConnect("127.0.0.1", 8890);
+
 	if(in == -1) {
 		printf("bo_setConnect ERROR\n"); goto exit;
 	}
@@ -426,7 +429,13 @@ TEST(master, sendLogTest) /* NEED RUN SERVER */
 	packet[22] = crcTxt[0];
 	packet[23] = crcTxt[1];
 	
+	bo_getTimeNow(timeStr, 50);
+	printf("[%s] bo_sendLogMsg start\n", timeStr);
 	exec = bo_sendLogMsg(in, packet, 24);
+	memset(timeStr, 0, 50);
+	bo_getTimeNow(timeStr, 50);
+	printf("[%s] bo_sendLogMsg start\n", timeStr);
+
 	if(exec == -1) {
 		printf("bo_sendLogMsg() ERROR\n");
 	}

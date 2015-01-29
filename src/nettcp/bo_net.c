@@ -142,7 +142,7 @@ int bo_sendDataFIFO(char *ip, unsigned int port,
 		}
 	}
 	/* Отправка данных */
-	exec = bo_sendData(sock, data, dataSize);
+	exec = bo_sendData2(sock, data, dataSize);
 	if(exec == -1) {
 		bo_log("bo_sendData[%s] can't send. Reconnect", ip);
 		bo_del_by_sck_sock_lst(lst, sock);
@@ -152,7 +152,7 @@ int bo_sendDataFIFO(char *ip, unsigned int port,
 			err_count++;
 			goto exit;
 		}
-		exec = bo_sendData(sock, data, dataSize);
+		exec = bo_sendData2(sock, data, dataSize);
 		if(exec == -1) {
 			bo_log("bo_sendDataFIFO[%s] can't send", ip);
 			bo_del_by_sck_sock_lst(lst, sock);
@@ -420,9 +420,14 @@ int bo_sendXXXMsg(int sock, char *head, char *data, int dataSize)
 	int ans  = -1;
 	int exec = -1;
 	unsigned char len[2] = {0};
-	char buf[4] = {0};
+	/*
+		char buf[4] = {0};
+	*/
+	unsigned char tmp[1300] = {0};
+	
 	bo_log("bo_sendXXXMsg send start");
 	boIntToChar(dataSize, len);
+	/*
 	exec = bo_sendAllData(sock, (unsigned char*)head, 3);
 	if(exec == -1) {
 		bo_log("bo_sendXXXMsg() %s send[head] errno[%s]",
@@ -444,7 +449,19 @@ int bo_sendXXXMsg(int sock, char *head, char *data, int dataSize)
 			strerror(errno));
 		goto end;
 	}
-	bo_log("bo_sendXXXMsg recv start");
+	*/
+	memcpy(tmp, head, 3);
+	memcpy(tmp + 3, len, 2);
+	memcpy(tmp + 5, data, dataSize);
+	exec = bo_sendAllData(sock, tmp, dataSize + 5);
+	if(exec == -1) {
+		bo_log("bo_sendXXXMsg() %s send[data] errno[%s]",
+			"WARN",
+			strerror(errno));
+		goto end;
+	} else ans = 1;
+	
+	/*
 	exec = bo_recvAllData(sock, (unsigned char*)buf, 3, 3);
 	if(exec == -1) {
 		bo_log("bo_sendXXXMsg() %s recv ans errno[%s]",
@@ -457,6 +474,7 @@ int bo_sendXXXMsg(int sock, char *head, char *data, int dataSize)
 				buf, "data don't send to client.");
 		}
 	}
+	 */
 	bo_log("bo_sendXXXMsg recv end");
 	end:
 	return ans;
