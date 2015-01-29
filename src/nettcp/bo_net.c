@@ -263,7 +263,6 @@ static int bo_sendData2(int sock, char *data, unsigned int dataSize)
 	unsigned char len[2] = {0};
 	unsigned char tmp[1300] = {0};
 	char buf[4] = {0};
-	bo_log("bo_sendData2 START >>> ");
 	if(sock != -1) {
 		memcpy(tmp, head, 3);
 		boIntToChar(dataSize, len);
@@ -292,7 +291,6 @@ static int bo_sendData2(int sock, char *data, unsigned int dataSize)
 		bo_log("bo_sendData2 ERROR errno[%s]", strerror(errno));
 		ans = -1;
 	}
-	bo_log("bo_sendData2 END >>>");
 	return ans;
 } 
 /* ----------------------------------------------------------------------------
@@ -381,9 +379,7 @@ int bo_sendLogMsg(int sock, char *data, unsigned int dataSize)
 {
 	int ans  = -1;
 	char *head = "LOG";
-	bo_log("bo_sendLogMsg START >>>");
 	ans = bo_sendXXXMsg(sock, head, data, dataSize);
-	bo_log("bo_sendLogMsg END   >>>");
 	return ans;
 }
 
@@ -425,7 +421,6 @@ int bo_sendXXXMsg(int sock, char *head, char *data, int dataSize)
 	*/
 	unsigned char tmp[1300] = {0};
 	
-	bo_log("bo_sendXXXMsg send start");
 	boIntToChar(dataSize, len);
 	/*
 	exec = bo_sendAllData(sock, (unsigned char*)head, 3);
@@ -475,7 +470,6 @@ int bo_sendXXXMsg(int sock, char *head, char *data, int dataSize)
 		}
 	}
 	 */
-	bo_log("bo_sendXXXMsg recv end");
 	end:
 	return ans;
 }
