@@ -172,9 +172,9 @@ int data_FIFO(struct chan_thread_arg *targ)
 		       * ряд 1,2,4.. для последующего увеличения
 		       * времени таймаута при приеме данных по каналу RS485 */
 
-	/**
-	   bo_log("data_FIFO  bo_getFifoVal(): before");
-	*/
+	
+	bo_log("data_FIFO  bo_getFifoVal(): before");
+	
 	getFifo_ans = bo_getFifoVal(getFifo_buf, BO_FIFO_ITEM_VAL);
 	if (getFifo_ans <= 0) {
 		/** Если в FIFO нет данных
@@ -184,9 +184,9 @@ int data_FIFO(struct chan_thread_arg *targ)
 		
 		return 0;
 	}
-	/**
-	   bo_log("data_FIFO bo_getFifoVal(): after");
-	*/
+	
+	bo_log("data_FIFO bo_getFifoVal(): after");
+	
 	/** В FIFO есть данные для передачи пассивному устройству */
 	dst = (unsigned int)getFifo_buf[0];
 
@@ -211,7 +211,7 @@ int data_FIFO(struct chan_thread_arg *targ)
 		return 0;
 	}
 	
-	/* bo_log("data_FIFO() tx before"); */
+	bo_log("data_FIFO() tx before");
 
 	prepare_cadr(&tx2Buf, (char *)getFifo_buf, getFifo_ans);
 
@@ -240,13 +240,13 @@ int data_FIFO(struct chan_thread_arg *targ)
 		   bo_getTimeNow(tmstr, 50);
 		   printf("data_FIFO[tm=[%d] / res=%d]\n", tmstr, res); */
 		
-		/* bo_log("data_FIFO() tx after"); */
+		bo_log("data_FIFO() tx after");
 
 		/** Прием */
 		res = rx(targ, &rx2Buf, targ->tout*(n<<i), "2fifo");
 		if (res < 0) return -1;
 		
-		/* bo_log("data_FIFO() rx after"); */
+		bo_log("data_FIFO() rx after");
 
 		if ((get_rxFl(&rx2Buf) >= RX_DATA_READY) &&
 		    ((rx2Buf.buf[1] & 0xFF) == dst)) {
