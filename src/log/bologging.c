@@ -360,8 +360,8 @@ void bo_getTimeNow(char *timeStr, int sizeBuf)
 		printf("bo_getTimeNow() - ERROR - массив не достаточного размера\n");
 	sprintf(timeStr, "%s%d ", buffer, micro);
 }
-void fifo_log(char *msg, ...) {}
-void fifo_log_(char *msg, ...)
+
+void fifo_log(char *msg, ...)
 {
 	FILE *file = NULL;
 	int print_in_file = -1;
