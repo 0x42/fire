@@ -77,19 +77,18 @@ int tx(struct actx_thread_arg *targ)
 {
 	char buf[BUF485_SZ];  /** Буфер передатчика RS485 */
 	int res;
-	/**
+	
 	int i;
-
-	printf("tx: ");
-	for (i=0; i<8; i++) {
-		// bo_log("rx_485: buf[i]= %d", (unsigned int)buf[i]); /
-		printf("0x%02x ", (unsigned char)txBuf.buf[i]);
-	}
-	printf("\n");
-	*/
 	
 	res = writer(&txBuf, buf, targ->port, 0);	
 	if (res < 0) return -1;
+	
+	printf("tx: ");
+	for (i=0; i<res; i++) {
+		/** bo_log("rx_485: buf[i]= %d", (unsigned int)buf[i]); */
+		printf("0x%02x ", (unsigned char)txBuf.buf[i]);
+	}
+	printf("\n");
 	
 	return 0;
 }

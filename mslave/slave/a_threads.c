@@ -96,9 +96,10 @@ void *send_fifo(void *arg)
 			ans = 0;
 			
 			sfifo.ln += 8;
-			/**
-			   bo_log("bo_sendDataFIFO ip= [%s] ln= [%d]-->", sfifo.ip, sfifo.ln);
-			*/
+			
+			/* bo_log("bo_sendDataFIFO ip= [%s] ln=
+			 * [%d]-->", sfifo.ip, sfifo.ln); */
+			
 			while (ans != 1) {
 				ans = bo_sendDataFIFO(
 					sfifo.ip,
@@ -111,9 +112,10 @@ void *send_fifo(void *arg)
 					usleep(200000);
 				}
 			}
-			/**
-			   bo_log("bo_sendDataFIFO finish np= [%d]-->", np);
-			*/
+			
+			/* bo_log("bo_sendDataFIFO finish np=
+			 * [%d]-->", np); */
+			
 			if (ans != 1)
 				bo_log("send_fifo(): bo_sendDataFIFO(): ERROR");
 		} else

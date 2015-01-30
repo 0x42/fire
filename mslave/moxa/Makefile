@@ -8,8 +8,8 @@ CFLAGS = -O2 -fomit-frame-pointer -fno-builtin -fpic -msingle-pic-base
 CFLAGS += -D __MOXA_TARGET__
 #CFLAGS += -D __WDT__
 CFLAGS += -D __PRINT__
-CFLAGS += -D __MOXA__
-CFLAGS += -D __PRINT_FIFO__
+#CFLAGS += -D __MOXA__
+#CFLAGS += -D __PRINT_FIFO__
 
 LDFLAGS =  -Wl,-elf2flt="-r -z -s 32768"
 INC_DIRS = -I/usr/local/arm-elf/include -I../ -I../../src/log \
