@@ -427,8 +427,8 @@ int active_process(struct chan_thread_arg *targ, int dst)
 	} else if (test_bufDst(&dst2Buf, (unsigned char)rxBuf.buf[0]) != -1) {
 		if (targ->ch2_enable) {
 			/** Кадр сети RS485 (local node) */
-			/** Запрос для пассивного устройства загрузить в лог.
-			putLog(&rxBuf); */
+			/** Запрос для пассивного устройства загрузить в лог. */
+			putLog(&rxBuf);
 			
 			pthread_mutex_lock(&mx_psv);
 
@@ -465,8 +465,8 @@ int active_process(struct chan_thread_arg *targ, int dst)
 		
 	} else if (rt_iskey(rtg, key)) {
 		/** Кадр сети RS485 (FIFO) */		
-		/** Запрос для пассивного устройства загрузить в лог.
-		putLog(&rxBuf); */
+		/** Запрос для пассивного устройства загрузить в лог. */
+		putLog(&rxBuf);
 		prepareFIFO(&rxBuf, key, dst);
 	} else {
 		bo_log("active(): key= [%s] ???", key);

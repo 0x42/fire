@@ -235,24 +235,12 @@ int read_byte(struct thr_rx_buf *b, char data, int fl)
 	return get_rxFl(b);
 }
 
-/**
- * reader - Чтение байт по каналу RS485 и первичная обработка данных.
- * @b:     Указатель на структуру thr_rx_buf{} (ocs.h).
- * @buf:   Указатель на буфер приемника RS485.
- * @port:  Порт RS485.
- * @ptout: Предустановка таймаута приема кадра.
- * @return  0: успешно приняли кадр,
- *          1: кадр принят не полностью,
- *         -1: не успех.
- */
-int reader(struct thr_rx_buf *b, char *buf, int port, int ptout)
+int inpQu(int port, int ptout)
 {
 	int nq;       /** Кол-во байт проверенных функцией
 		       * SerialDataInInputQueue() */
-	int n;        /** Кол-во байт принятых функцией
-		       * SerialNonBlockRead() */
 	int tout = 0;
-	int i;
+	int res;
 	
 	while (tout < ptout) {  /** default: 20ms */
 		tout++;
@@ -267,27 +255,62 @@ int reader(struct thr_rx_buf *b, char *buf, int port, int ptout)
 		}
 	}
 	
-	if (tout > 0) {
-		/** Ответ не получен за допустимый период */
-		put_rxFl(b, RX_TIMEOUT);
-		
-	} else {
-		n = 1;
-		while (n != 0) {
-			
-			n = SerialNonBlockRead(port, buf, BUF485_SZ);
-			if (n < 0) {
-				bo_log("reader: SerialNonBlockRead exit");
-				return -1;
-			}
+	return tout;
+}
 
-			for (i=0; i<n; i++) {
-				put_rxFl(b, read_byte(b, buf[i], get_rxFl(b)));
-				if (get_rxFl(b) >= RX_DATA_READY) {
-					n = 0;
-					break;
+/**
+ * reader - Чтение байт по каналу RS485 и первичная обработка данных.
+ * @b:     Указатель на структуру thr_rx_buf{} (ocs.h).
+ * @buf:   Указатель на буфер приемника RS485.
+ * @port:  Порт RS485.
+ * @ptout: Предустановка таймаута приема кадра.
+ * @return  0: успешно приняли кадр,
+ *          1: кадр принят не полностью,
+ *         -1: не успех.
+ */
+int reader(struct thr_rx_buf *b, char *buf, int port, int ptout)
+{
+	int n;        /** Кол-во байт принятых функцией
+		       * SerialNonBlockRead() */
+	int tout;
+	int i;
+	int err;
+	
+	while (1) {
+		
+		tout = inpQu(port, ptout);
+	
+		if (tout > 0) {
+			/** Ответ не получен за допустимый период */
+			put_rxFl(b, RX_TIMEOUT);
+			break;
+		} else {
+			n = 1;
+			while (n > 0) {
+				
+				n = SerialNonBlockRead(port, buf, BUF485_SZ);
+				if (n < 0) {
+					err = errno;
+					if (err == EAGAIN) {
+						n = -1;
+						break;
+					} else {
+						bo_log("reader: SerialNonBlockRead exit [%s]",
+						       strerror(err));
+						return -1;
+					}
+				}
+				
+				for (i=0; i<n; i++) {
+					put_rxFl(b, read_byte(b, buf[i], get_rxFl(b)));
+					if (get_rxFl(b) >= RX_DATA_READY) {
+						n = 0;
+						break;
+					}
 				}
 			}
+			
+			if (n == 0) break;
 		}
 	}
 	

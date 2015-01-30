@@ -4,7 +4,8 @@
 
 
 CC = arm-elf-gcc
-CFLAGS = -O2 -fomit-frame-pointer -fno-builtin -fpic -msingle-pic-base
+#CFLAGS = -O2 -fomit-frame-pointer -fno-builtin -fpic -msingle-pic-base
+CFLAGS  = -O3 -mapcs-32
 CFLAGS += -D __MOXA_TARGET__
 #CFLAGS += -D __WDT__
 CFLAGS += -D __PRINT__

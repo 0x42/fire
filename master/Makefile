@@ -7,7 +7,7 @@ CC = gcc
 LDFLAGS		     = -lpthread
 # ========================================
 CFLAGS		     = -Wall -c -g 
-#CFLAGS		     += -mfpmath=sse -Ofast -flto -march=native -funroll-loops
+CFLAGS		     += -m32 -mfpmath=sse -Ofast -flto -march=native -funroll-loops
 # Выводит отлад инфу в терминал
 CFLAGS		     += -D __MOXA__
 CFLAGS		     += -D __PRINT__ 
