@@ -700,7 +700,7 @@ int tx(struct chan_thread_arg *targ, struct thr_tx_buf *b, int dfl, char *msg)
 	res = writer(b, buf, targ->port, dfl);	
 	if (res < 0) return -1;
 
-	/**
+	
 	bo_log("tx(%s): [%d %d %d %d %d %d]",
 	       msg,
 	       (unsigned char)buf[0],
@@ -710,7 +710,7 @@ int tx(struct chan_thread_arg *targ, struct thr_tx_buf *b, int dfl, char *msg)
 	       (unsigned char)buf[4],
 	       (unsigned char)buf[5]
 		);
-	*/
+	
 	
 	return res;
 }
@@ -736,7 +736,7 @@ int rx(struct chan_thread_arg *targ, struct thr_rx_buf *b, int tout, char *msg)
 		if (res < 0) return -1;
 	}
 
-	/**
+	
 	bo_log("rx(%s): [%d %d %d %d %d %d]",
 	       msg,
 	       (unsigned char)buf[0],
@@ -746,7 +746,7 @@ int rx(struct chan_thread_arg *targ, struct thr_rx_buf *b, int tout, char *msg)
 	       (unsigned char)buf[4],
 	       (unsigned char)buf[5]
 		);
-	*/
+	
 	
 	return 0;
 }
