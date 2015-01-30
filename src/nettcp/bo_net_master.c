@@ -491,8 +491,9 @@ static int m_recvClientMsg(int sock, TOHT *tr)
 	struct paramThr p;
 	/*  */
 	int t_msg = 0;
+	/*
 	int i; char *key; char *val;
-
+	*/
 	p.sock = sock;
 	p.route_tab = tr;
 	p.buf = recvBuf;
