@@ -272,16 +272,22 @@ int reader(struct thr_rx_buf *b, char *buf, int port, int ptout)
 		put_rxFl(b, RX_TIMEOUT);
 		
 	} else {
-		n = SerialNonBlockRead(port, buf, BUF485_SZ);
-		if (n < 0) {
-			bo_log("reader: SerialNonBlockRead exit");
-			return -1;
-		}
+		n = 1;
+		while (n != 0) {
+			
+			n = SerialNonBlockRead(port, buf, BUF485_SZ);
+			if (n < 0) {
+				bo_log("reader: SerialNonBlockRead exit");
+				return -1;
+			}
 
-		for (i=0; i<n; i++) {
-			put_rxFl(b, read_byte(b, buf[i], get_rxFl(b)));
-			if (get_rxFl(b) >= RX_DATA_READY)
-				break;
+			for (i=0; i<n; i++) {
+				put_rxFl(b, read_byte(b, buf[i], get_rxFl(b)));
+				if (get_rxFl(b) >= RX_DATA_READY) {
+					n = 0;
+					break;
+				}
+			}
 		}
 	}
 	
