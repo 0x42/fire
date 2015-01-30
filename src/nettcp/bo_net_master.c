@@ -245,7 +245,7 @@ static void m_servWork(int sock_in, int sock_out,
 		
 		if(exec > -1) {
 			chk_sock_N++;
-			if(chk_sock_N == 10) {
+			if(chk_sock_N == 200) {
 			/*	dbgout("CHK SOCK OUT exec[%d]\n", exec); */
 				/* проверка соединений sock_out */
 				m_askSock(llist_out, tr);
@@ -370,7 +370,7 @@ static void m_workClient(struct bo_llsock *list_in, struct bo_llsock *list_out,
 					
 					if(ok == 1) tr_log("From ip[%s]", ip);
 					else tr_log("From ip[can't read ip]");
-					
+
 					tr_log("<<<< TAB ROUTE <<<< ");
 					for(i = 0; i < tr->size; i++) {
 						key = *(tr->key + i);

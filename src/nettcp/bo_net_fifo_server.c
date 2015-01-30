@@ -23,6 +23,7 @@ static void clientEvent		(struct BO_SOCK_LST *sock_lst,
 				int bufSize,
 				int *end, 
 				TOHT *tab);
+static int isClosed	(int sock);
 
 static void fifoServWork	();
 static int  fifoReadPacket	(int clientSock, unsigned char *buffer, 
@@ -328,18 +329,20 @@ static void clientEvent(struct BO_SOCK_LST *sock_lst,
 	struct BO_ITEM_SOCK_LST *item = NULL;
 	int i = -1, exec = -1;
 	
-	
 	if(sock_lst->n > 0) {
 		i = sock_lst->head;
 		while(i != -1) {
 			item = sock_lst->arr + i;
 			if(FD_ISSET(item->sock, set) == 1) {
+				if(isClosed(item->sock) == -1) {
+					bo_del_item_sock_lst(sock_lst, i);
+				}
 				exec = fifoReadPacket(
-							item->sock,
-							buf, 
-							bufSize, 
-							end, 
-							tab);
+					item->sock,
+					buf, 
+					bufSize, 
+					end, 
+					tab);
 				if(exec == -1) { 
 					bo_del_item_sock_lst(sock_lst, i);
 				}
@@ -347,6 +350,16 @@ static void clientEvent(struct BO_SOCK_LST *sock_lst,
 			i = *(sock_lst->next + i);
 		}
 	}
+}
+
+static int isClosed(int sock)
+{
+	int fl = -1, ans = -1;
+	char buf;
+	fl = recv(sock, &buf, 1, MSG_PEEK);
+	if(fl < 1) ans = -1;
+	else ans = 1;
+	return ans;
 }
 /* ---------------------------------------------------------------------------
  * @brief		читаем пакет и пишем/забираем/удаляем в/из FIFO
