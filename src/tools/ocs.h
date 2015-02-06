@@ -66,7 +66,7 @@ void set_txBuf(struct thr_tx_buf *b, int pos, char data);
 int read_byte(struct thr_rx_buf *b, char data, int fl);
 int reader(struct thr_rx_buf *b, char *buf, int port, int ptout);
 int prepare_buf_tx(struct thr_tx_buf *b, char *buf);
-int writer(struct thr_tx_buf *b, char *buf, int port, int dfl);
+int writer(struct thr_tx_buf *b, char *buf, int port);
 
 
 #endif	/* _OCS_H */

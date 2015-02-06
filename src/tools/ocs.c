@@ -301,13 +301,18 @@ int reader(struct thr_rx_buf *b, char *buf, int port, int ptout)
 					}
 				}
 				
+				/** printf("rx: "); */
 				for (i=0; i<n; i++) {
+					/** printf("0x%02x ",
+					 * (unsigned char)buf[i]); */
+					
 					put_rxFl(b, read_byte(b, buf[i], get_rxFl(b)));
 					if (get_rxFl(b) >= RX_DATA_READY) {
 						n = 0;
 						break;
 					}
 				}
+				/** printf("\n"); */
 			}
 			
 			if (n == 0) break;
@@ -361,27 +366,54 @@ int prepare_buf_tx(struct thr_tx_buf *b, char *buf)
  * @b:    Указатель на структуру thr_tx_buf{} (ocs.h).
  * @buf:  Указатель на буфер передатчика RS485.
  * @port: Порт RS485.
- * @dfl:  1- tcdrain()
  * @return  длина перед. данных / -1: не успех.
- */
-int writer(struct thr_tx_buf *b, char *buf, int port, int dfl)
+int writer(struct thr_tx_buf *b, char *buf, int port)
 {
-	int n;  /** Кол-во байт подготовленных для передачи */
+	int n;  // Кол-во байт подготовленных для передачи /
 	int res;
 	
 	n = prepare_buf_tx(b, buf);
 
-	res = SerialWrite(port, buf, n, dfl);
-
-	if (res != n) {
-		bo_log("writer: res= [%d] n= [%d]", res, n);
-	}
+	res = SerialWrite(port, buf, n);
 
 	if (res < 0) {
 		bo_log("writer: SerialWrite exit");
 		return -1;
 	}
 
+	if (res != n) {
+		bo_log("writer: res= [%d] n= [%d]", res, n);
+	}
+	
+	return res;
+}
+ */
+
+/**
+ * writer - Передача кадра данных по каналу RS485.
+ * @b:    Указатель на структуру thr_tx_buf{} (ocs.h).
+ * @buf:  Указатель на буфер передатчика RS485.
+ * @port: Порт RS485.
+ * @return  длина перед. данных / -1: не успех.
+ */
+int writer(struct thr_tx_buf *b, char *buf, int port)
+{
+	int n;  /** Кол-во байт подготовленных для передачи */
+	int res;
+	int i = 0;
+	
+	n = prepare_buf_tx(b, buf);
+	
+	while (i != n) {
+		res = SerialWrite(port, buf+i, n-i);
+		if (res < 0) {
+			bo_log("writer: SerialWrite exit");
+			return -1;
+		}
+		
+		i += res;
+	}
+	
 	return res;
 }
 

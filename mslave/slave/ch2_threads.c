@@ -119,7 +119,7 @@ int passiveFromActive(struct chan_thread_arg *targ)
 	
 	for (i=0; i<targ->nretries; i++) {
 		/** Передача */
-		res = tx(targ, &tx2Buf, 0, "2pasFact");
+		res = tx(targ, &tx2Buf, "2pasFact");
 		if (res < 0) return -1;
 		
 		/** Прием */
@@ -164,33 +164,23 @@ int passiveFromActive(struct chan_thread_arg *targ)
 
 int data_FIFO(struct chan_thread_arg *targ)
 {
-	/* char tmstr[50] = {0}; */
-	int dst;
+	unsigned int dst;
 	int res;
 	int i;
 	int n = 1;    /** При использовании n<<i в цикле for имеем
 		       * ряд 1,2,4.. для последующего увеличения
 		       * времени таймаута при приеме данных по каналу RS485 */
-
-	
-	/* bo_log("data_FIFO  bo_getFifoVal(): before"); */
 	
 	getFifo_ans = bo_getFifoVal(getFifo_buf, BO_FIFO_ITEM_VAL);
 	if (getFifo_ans <= 0) {
-		/** Если в FIFO нет данных
-		bo_log("data_FIFO bo_getFifoVal(): no data");
-		usleep(50000); */
-		/* printf("fifo?\n"); */
-		
+		/** Если в FIFO нет данных */
 		return 0;
 	}
 	
-	/* bo_log("data_FIFO bo_getFifoVal(): after"); */
-	
-	/** В FIFO есть данные для передачи пассивному устройству */
 	dst = (unsigned int)getFifo_buf[0];
-
+	
 	if (test_bufDst(&dstBuf, dst) != -1) {
+		/** В FIFO есть данные для передачи активному устройству */
 		if (targ->ch1_enable) {
 			/** Кадр сети RS485 (alien node) */
 			pthread_mutex_lock(&mx_actFIFO);
@@ -208,83 +198,49 @@ int data_FIFO(struct chan_thread_arg *targ)
 		} else
 			bo_log("data_FIFO(): ch1 disable");
 		
-		return 0;
-	}
+	} else if (test_bufDst(&dst2Buf, dst) != -1) {
+		/** В FIFO есть данные для передачи пассивному устройству */
+		prepare_cadr(&tx2Buf, (char *)getFifo_buf, getFifo_ans);
+
+		/** Данные для передачи подготовлены */
 	
-	/* bo_log("data_FIFO() tx before"); */
+		for (i=0; i<targ->nretries; i++) {
+			/** Передача */
+			res = tx(targ, &tx2Buf, "2fifo");
+			if (res < 0) return -1;
 
-	prepare_cadr(&tx2Buf, (char *)getFifo_buf, getFifo_ans);
-
-	/**
-	bo_log("data_FIFO before TX [%d %d %d %d %d %d %d %d %d %d]",
-	       tx2Buf.buf[0],
-	       tx2Buf.buf[1],
-	       tx2Buf.buf[2],
-	       tx2Buf.buf[3],
-	       tx2Buf.buf[4],
-	       tx2Buf.buf[5],
-	       tx2Buf.buf[6],
-	       tx2Buf.buf[7],
-	       tx2Buf.buf[8],
-	       tx2Buf.buf[9]
-		);
-	*/
-	/** Данные для передачи подготовлены */
-	
-	for (i=0; i<targ->nretries; i++) {
-		/** Передача */
-		res = tx(targ, &tx2Buf, 0, "2fifo");
-		if (res < 0) return -1;
-
-		/**
-		   bo_getTimeNow(tmstr, 50);
-		   printf("data_FIFO[tm=[%d] / res=%d]\n", tmstr, res); */
+			/** Прием */
+			res = rx(targ, &rx2Buf, targ->tout*(n<<i), "2fifo");
+			if (res < 0) return -1;
 		
-		/* bo_log("data_FIFO() tx after"); */
-
-		/** Прием */
-		res = rx(targ, &rx2Buf, targ->tout*(n<<i), "2fifo");
-		if (res < 0) return -1;
-		
-		/* bo_log("data_FIFO() rx after"); */
-
-		if ((get_rxFl(&rx2Buf) >= RX_DATA_READY) &&
-		    ((rx2Buf.buf[1] & 0xFF) == dst)) {
-			switch (get_rxFl(&rx2Buf)) {
-			case RX_DATA_READY:
-				/** Ответ пассивного устройства
-				bo_log("data_FIFO after RX [%d %d %d %d %d %d %d %d %d %d]",
-				       rx2Buf.buf[0],
-				       rx2Buf.buf[1],
-				       rx2Buf.buf[2],
-				       rx2Buf.buf[3],
-				       rx2Buf.buf[4],
-				       rx2Buf.buf[5],
-				       rx2Buf.buf[6],
-				       rx2Buf.buf[7],
-				       rx2Buf.buf[8],
-				       rx2Buf.buf[9]
-					); */
-				
-				return passive_process(targ, dst);
-			case RX_ERROR:
-				/** Ошибка кадра */
-				bo_log("data_FIFO(): Cadr Error !");
-				break;
-			case RX_TIMEOUT:
-				/** Текущее устройство не успело дать ответ. */
-				bo_log("data_FIFO(): timeout dst= %d", dst);
-				break;
-			default:
-				bo_log("data_FIFO(): state ??? fl= %d",
-				       get_rxFl(&rx2Buf));
-				break;
+			if ((get_rxFl(&rx2Buf) >= RX_DATA_READY) &&
+			    ((rx2Buf.buf[1] & 0xFF) == dst)) {
+				switch (get_rxFl(&rx2Buf)) {
+				case RX_DATA_READY:
+					/** Ответ пассивного устройства */
+					return passive_process(targ, dst);
+				case RX_ERROR:
+					/** Ошибка кадра */
+					bo_log("data_FIFO(): Cadr Error !");
+					break;
+				case RX_TIMEOUT:
+					/** Текущее устройство не
+					 * успело дать ответ. */
+					bo_log("data_FIFO(): timeout dst= %d",
+					       dst);
+					break;
+				default:
+					bo_log("data_FIFO(): state ??? fl= %d",
+					       get_rxFl(&rx2Buf));
+					break;
+				}
 			}
 		}
-	}
-	/** Текущее устройство не отвечает, вычеркиваем его из списка. */
-	remf_rtbl(targ, &dst2Buf, dst);
-
+		/** Текущее устройство не отвечает, вычеркиваем его из списка. */
+		remf_rtbl(targ, &dst2Buf, dst);
+	} else
+		bo_log("data_FIFO(): unknown dst= %d", dst);
+	
 	return 0;
 }
 

@@ -81,7 +81,7 @@ int tx(struct actx_thread_arg *targ)
 	   int i;
 	   char tmstr[50] = {0};
 	*/
-	res = writer(&txBuf, buf, targ->port, 0);	
+	res = writer(&txBuf, buf, targ->port);	
 	if (res < 0) return -1;
 	/**
 	   bo_getTimeNow(tmstr, 50);
@@ -228,6 +228,39 @@ int uso(struct actx_thread_arg *targ,
 	return 0;
 }
 
+int uso_new(struct actx_thread_arg *targ,
+	    struct thr_tx_buf *b,
+	    unsigned int sch,
+	    int dst)
+{
+	unsigned int crc;
+	int res;
+	
+	b->wpos = 0;
+	put_txBuf(b, (char)dst);     /** dst */
+	put_txBuf(b, rxBuf.buf[0]);  /** src */
+
+	put_txBuf(b, (char)0XD4);
+	put_txBuf(b, (char)0X5D);
+	put_txBuf(b, (char)0);
+	put_txBuf(b, (char)0);
+	
+	crc = crc16modbus(b->buf, 6);
+
+	put_txBuf(b, (char)(crc & 0xff));
+	put_txBuf(b, (char)((crc >> 8) & 0xff));
+
+	bo_log("uso(): sch=%d dst=%d src=%d",
+	       sch,
+	       (unsigned char)dst,
+	       (unsigned char)rxBuf.buf[0]);
+	
+	res = tx(targ);
+	if (res < 0) return -1;
+
+	return 0;
+}
+
 int uso_quNetStat(struct actx_thread_arg *targ, struct thr_tx_buf *b)
 {
 	unsigned int crc;
@@ -324,14 +357,11 @@ int uso_answer(struct actx_thread_arg *targ, struct thr_tx_buf *b)
 	put_txBuf(b, rxBuf.buf[1]);  /** dst */
 	put_txBuf(b, rxBuf.buf[0]);  /** src */
 	
-	put_txBuf(b, 0);  /** */
-	put_txBuf(b, 0);  /** */
-
-	crc = crc16modbus(b->buf, 4);
+	crc = crc16modbus(b->buf, 2);
 
 	put_txBuf(b, (char)(crc & 0xff));
 	put_txBuf(b, (char)((crc >> 8) & 0xff));
-								
+	
 	res = tx(targ);
 	if (res < 0) return -1;
 

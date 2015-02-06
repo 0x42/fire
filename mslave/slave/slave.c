@@ -63,7 +63,7 @@ void gen_moxa_default_cfg(char *cfile)
 		/** очередь коннектов */
 		cfg_put(cfg, "FIFO:queue_len", "10");
 		/** размер очереди */
-		cfg_put(cfg, "FIFO:len", "5");
+		cfg_put(cfg, "FIFO:len", "1000");
 		
 		/** RT server IP, port */
 		cfg_put(cfg, "RT:sendIp", "192.168.1.127");
@@ -692,14 +692,14 @@ void prepare_cadr_scan(struct chan_thread_arg *targ,
  * @b:
  * @return  длина данных / -1 неудача.
  */
-int tx(struct chan_thread_arg *targ, struct thr_tx_buf *b, int dfl, char *msg)
+int tx(struct chan_thread_arg *targ, struct thr_tx_buf *b, char *msg)
 {
 	char buf[BUF485_SZ];  /** Буфер передатчика RS485 */
 	int res;
 	
-	res = writer(b, buf, targ->port, dfl);	
+	res = writer(b, buf, targ->port);	
 	if (res < 0) return -1;
-
+	
 	/**
 	bo_log("tx(%s): [%d %d %d %d %d %d]",
 	       msg,
@@ -720,6 +720,7 @@ int tx(struct chan_thread_arg *targ, struct thr_tx_buf *b, int dfl, char *msg)
  * @targ: Указатель на структуру chan_thread_arg{}.
  * @b:
  * @tout:
+ * @msg:
  * @return  0- успех, -1 неудача.
  */
 int rx(struct chan_thread_arg *targ, struct thr_rx_buf *b, int tout, char *msg)
@@ -785,7 +786,7 @@ int scan(struct chan_thread_arg *targ,
 	/** Данные для передачи подготовлены */
 
 	/** Передача */
-	res = tx(targ, tb, 0, msg);
+	res = tx(targ, tb, msg);
 	if (res < 0) return -1;
 	
 	/** Прием */

@@ -140,14 +140,28 @@ int uso_tx(struct actx_thread_arg *targ, unsigned int sch)
 	return 0;
 }
 
-int uso_print_sq(struct actx_thread_arg *targ, unsigned int sch) 
+int uso_print_sq_new(struct actx_thread_arg *targ, unsigned int sch) 
+{
+	int j;
+	char data[1200] = {0};
+	int res = 0;
+
+	for (j=0; j<rxBuf.wpos; j++) {
+		data[j] = (unsigned char)rxBuf.buf[j];
+	}
+	
+	printf("[%s]\n", data);
+	
+	return res;
+}
+
+void uso_print_sq(struct actx_thread_arg *targ, unsigned int sch) 
 {
 	char csch[10];
 	unsigned char ln;
 	unsigned int rxsch;
 	int i, j;
 	char data[1200];
-	int res = 0;
 	char tmstr[50] = {0};
 
 	memset(csch, 0, 10);
@@ -195,8 +209,6 @@ int uso_print_sq(struct actx_thread_arg *targ, unsigned int sch)
 	}
 
 	rcv_ok = 1; */
-		
-	return res;
 }
 
 int uso_proc(struct actx_thread_arg *targ, unsigned int sch)
@@ -291,26 +303,12 @@ int uso_session(struct actx_thread_arg *targ, unsigned int sch)
 	} else if (rxBuf.buf[2] == (char)targ->cdsqId) {
 		/** Ответ от устройства
 		bo_log("actx_485: from PR"); */
-		res = uso_print_sq(targ, sch);
-		/* 
-		if (targ->test_nm > 0) {
-			if (rcv_nm <= targ->test_nm) {
-				if (rcv_sch < (targ->test_m + targ->test_ln))
-					rcv_sch++;
-				else {
-					rcv_sch = (unsigned int)targ->test_ln;
-					rcv_nm++;
-				}
-				
-				res = 0;
-			} else {
-				
-				res = -2;
-			}
-			} */
+		uso_print_sq(targ, sch);
+		res = uso_answer(targ, &txBuf);
 	} else if (rxBuf.buf[2] == (char)targ->cdmsId) {
 		printf("USO: magistral status\n");
 		uso_print_ms();
+		res = uso_answer(targ, &txBuf);
 	} else if (rxBuf.buf[2] == (char)targ->cdnsId) {
 		printf("uso_session: cdns\n");
 		/**
@@ -333,9 +331,11 @@ int uso_session(struct actx_thread_arg *targ, unsigned int sch)
 					apsv_ln++;
 				}
 			}
+		res = uso_answer(targ, &txBuf);
 	} else if (rxBuf.buf[2] == (char)targ->cdquLogId) {
 		/** Print Log */
 		if (targ->logger) uso_printLog();
+		res = uso_answer(targ, &txBuf);
 	} else {
 		bo_log("USO: ??? id= %d", (unsigned int)rxBuf.buf[2]);
 		printf("uso_session: error\n");

@@ -311,6 +311,62 @@ void prepare_cadr_snmpStat(struct chan_thread_arg *targ,
 
 
 /**
+ * active_TxRx - Цикл обмена данными по сети RS485.
+ * @targ: Указатель на структуру chan_thread_arg{}.
+ * @dst:  Адрес устройства.
+ * @msg:
+ * @return  0- успех, -1 неудача.
+ *
+ */
+int active_TxRx(struct chan_thread_arg *targ, int dst, char *msg)
+{
+	int res;
+	int i;
+	int n = 1;    /** При использовании n<<i в цикле for имеем
+		       * ряд 1,2,4.. для последующего увеличения
+		       * времени таймаута при приеме данных по каналу RS485 */
+	
+	for (i=0; i<targ->nretries; i++) {
+		
+		/** Передача */
+		res = tx(targ, &txBuf, msg);
+		if (res < 0) return -1;
+		
+		/** Прием */
+		res = rx(targ, &rxBuf, targ->tout*(n<<i), msg);
+		if (res < 0) return -1;
+		
+		if ((get_rxFl(&rxBuf) >= RX_DATA_READY) &&
+		    ((rxBuf.buf[1] & 0xFF) == dst)) {
+			switch (get_rxFl(&rxBuf)) {
+			case RX_DATA_READY:
+				/**  */
+				return 0;
+			case RX_ERROR:
+				/** Ошибка кадра */
+				bo_log("active_TxRx(%s): Cadr Error !",
+				       msg);
+				break;
+			case RX_TIMEOUT:
+				/** Текущее устройство
+				 * не успело дать ответ. */
+				bo_log("active_TxRx(%s): timeout dst= %d",
+				       msg, dst);
+				break;
+			default:
+				bo_log("active_TxRx(%s): state ??? fl= %d",
+				       msg, get_rxFl(&rxBuf));
+				break;
+			}
+		}
+	}
+	/** Текущее устройство не отвечает, вычеркиваем его из списка. */
+	remf_rtbl(targ, &dstBuf, dst);
+	
+	return 0;
+}
+
+/**
  * active_netStat - Запрос конфигурации сети RS485.
  * @targ: Указатель на структуру chan_thread_arg{}.
  * @dst:  Адрес устройства.
@@ -322,15 +378,11 @@ int active_netStat(struct chan_thread_arg *targ, int dst)
 	int res;
 	
 	prepare_cadr_actNetStat(targ, &txBuf, dst);
-	
-	/** Данные для передачи подготовлены */
-	res = tx(targ, &txBuf, 1, "1netStat");
-	if (res < 0) return -1;
 
-	/* usleep(100000);
-	usleep(targ->utxdel * res); */
+	/** Данные для передачи подготовлены */
+	res = active_TxRx(targ, dst, "1netStat");
 	
-	return 0;
+	return res;
 }
 
 
@@ -348,13 +400,9 @@ int active_getLog(struct chan_thread_arg *targ, int dst)
 	prepare_cadr_quLog(targ, &txBuf, dst);
 	
 	/** Данные для передачи подготовлены */
-	res = tx(targ, &txBuf, 1, "1log");
-	if (res < 0) return -1;
+	res = active_TxRx(targ, dst, "1log");
 	
-	/** usleep(100000);
-	usleep(targ->utxdel * res); */
-	
-	return 0;
+	return res;
 }
 
 /**
@@ -371,13 +419,83 @@ int active_snmp(struct chan_thread_arg *targ, int dst)
 	prepare_cadr_snmpStat(targ, &txBuf, dst);
 	
 	/** Данные для передачи подготовлены */
-	res = tx(targ, &txBuf, 1, "1snmp");
-	if (res < 0) return -1;
+	res = active_TxRx(targ, dst, "1snmp");
 	
-	/** usleep(100000);
-	usleep(targ->utxdel * res); */
+	return res;
+}
+
+/**
+ * active_local - Запросы устройствам локального узла.
+ * @targ: Указатель на структуру chan_thread_arg{}.
+ * @dst:  Адрес устройства.
+ * @return  0- успех, -1 неудача.
+ *
+ */
+int active_local(struct chan_thread_arg *targ, int dst)
+{
+	int res;
 	
-	return 0;
+	pthread_mutex_lock(&mx_psv);
+
+	put_state(&psvdata_ready, 1);
+	put_state(&psvAnsdata_ready, 1);
+	
+	/** Ожидаем готовности послать кадр
+	    пассивному устройствуву */
+	while (get_state(&psvdata_ready) == 1)
+		pthread_cond_wait(&psvdata, &mx_psv);
+
+	/** Ожидаем ответ от пассивного устройства */
+	while (get_state(&psvAnsdata_ready) == 1)
+		pthread_cond_wait(&psvAnsdata, &mx_psv);
+
+	if (get_state(&psvAnsdata_ready) == 3) {
+		/** Пассивное устройство не дало ответ */
+		bo_log("active_local(): not response from pass");
+		put_state(&psvAnsdata_ready, 0);
+		pthread_mutex_unlock(&mx_psv);
+		return 0;
+	}
+	
+	pthread_mutex_unlock(&mx_psv);
+	
+	/** Данные для передачи подготовлены */
+	res = active_TxRx(targ, dst, "1aloc");
+	
+	return res;
+}
+
+/**
+ * activeFromFIFO - Ответ от пассивного устройства активному устройству
+ *               через стек FIFO.
+ * @targ: Указатель на структуру chan_thread_arg{}.
+ * @return  0- успех, -1 неудача.
+ *
+ */
+int activeFromFIFO(struct chan_thread_arg *targ)
+{
+	unsigned int dst;
+	int res = 0;
+	
+	if (get_state(&actFIFOdata_ready) == 1) {
+		/** Есть данные для передачи ответа активному
+		 * устройству от пассивного через FIFO */
+		pthread_mutex_lock(&mx_actFIFO);
+
+		prepare_cadr(&txBuf, (char *)getFifo_buf, getFifo_ans);
+		
+		dst = (unsigned int)txBuf.buf[0];
+
+		put_state(&actFIFOdata_ready, 0);
+		pthread_cond_signal(&actFIFOdata);
+		
+		pthread_mutex_unlock(&mx_actFIFO);
+		
+		/** Данные для передачи подготовлены */
+		res = active_TxRx(targ, dst, "1fifo");
+	}
+
+	return res;
 }
 
 
@@ -409,57 +527,31 @@ int active_process(struct chan_thread_arg *targ, int dst)
 	if ((unsigned char)rxBuf.buf[0] == targ->src) {
 		/** Ответ активного устройства
 		 * для сетевого контроллера */
-		if (rxBuf.buf[2] == targ->cdquLogId) {
-			/** GetLog */
-			res = active_getLog(targ, dst);
-		} else if (rxBuf.buf[2] == targ->cdnsId) {
-			/** Запрос о составе сети RS485 */
-			res = active_netStat(targ, dst);
-		} else if (rxBuf.buf[2] == targ->cdmsId) {
-			/** Запрос о состоянии магистрали */
-			res = active_snmp(targ, dst);
-		} else {
-			/** ID ???
-			bo_log("active(): ID= [%d]", rxBuf.buf[2]); */
+		if (rxBuf.wpos > 4)
+			if (rxBuf.buf[2] == targ->cdquLogId) {
+				/** GetLog */
+				res = active_getLog(targ, dst);
+			} else if (rxBuf.buf[2] == targ->cdnsId) {
+				/** Запрос о составе сети RS485 */
+				res = active_netStat(targ, dst);
+			} else if (rxBuf.buf[2] == targ->cdmsId) {
+				/** Запрос о состоянии магистрали */
+				res = active_snmp(targ, dst);
+			} else {
+				/** ID ???
+				    bo_log("active(): ID= [%d]", rxBuf.buf[2]); */
+				res = 0;
+			}
+		else
 			res = 0;
-		}
 		
 	} else if (test_bufDst(&dst2Buf, (unsigned char)rxBuf.buf[0]) != -1) {
 		if (targ->ch2_enable) {
 			/** Кадр сети RS485 (local node) */
-			/** Запрос для пассивного устройства загрузить в лог. */
+			/** Запрос для пассивного устройства загрузить
+			 * в лог. */
 			putLog(&rxBuf);
-			
-			pthread_mutex_lock(&mx_psv);
-
-			put_state(&psvdata_ready, 1);
-			put_state(&psvAnsdata_ready, 1);
-			
-			/** Ожидаем готовности послать кадр
-			    пассивному устройствуву */
-			while (get_state(&psvdata_ready) == 1)
-				pthread_cond_wait(&psvdata, &mx_psv);
-
-			/** Ожидаем ответ от пассивного устройства */
-			while (get_state(&psvAnsdata_ready) == 1)
-				pthread_cond_wait(&psvAnsdata, &mx_psv);
-
-			if (get_state(&psvAnsdata_ready) == 3) {
-				/** Пассивное устройство не дало ответ */
-				bo_log("active(): not response from pass");
-				put_state(&psvAnsdata_ready, 0);
-				pthread_mutex_unlock(&mx_psv);
-				return 0;
-			}
-			
-			pthread_mutex_unlock(&mx_psv);
-			
-			/** Данные для передачи подготовлены */
-			res = tx(targ, &txBuf, 1, "1aproc");
-			if (res < 0) return -1;
-
-			/** usleep(100000);
-			usleep(targ->utxdel * res + 20000); */
+			res = active_local(targ, dst);
 		} else
 			bo_log("active(): key= [%s] ch2 disable", key);
 		
@@ -468,70 +560,12 @@ int active_process(struct chan_thread_arg *targ, int dst)
 		/** Запрос для пассивного устройства загрузить в лог. */
 		putLog(&rxBuf);
 		prepareFIFO(&rxBuf, key, dst);
+		
 	} else {
 		bo_log("active(): key= [%s] ???", key);
 	}
 	
 	return res;
-}
-
-
-/**
- * activeFromFIFO - Ответ от пассивного устройства активному устройству
- *               через стек FIFO.
- * @targ: Указатель на структуру chan_thread_arg{}.
- * @return  0- успех, -1 неудача.
- *
- */
-int activeFromFIFO(struct chan_thread_arg *targ)
-{
-	int res;
-	/* char tmstr[50] = {0}; */
-	
-	if (get_state(&actFIFOdata_ready) == 1) {
-		/** Есть данные для передачи ответа активному
-		 * устройству от пассивного через FIFO */
-		pthread_mutex_lock(&mx_actFIFO);
-
-		prepare_cadr(&txBuf, (char *)getFifo_buf, getFifo_ans);
-		
-		put_state(&actFIFOdata_ready, 0);
-		pthread_cond_signal(&actFIFOdata);
-		
-		pthread_mutex_unlock(&mx_actFIFO);
-
-		/* bo_log("activeFromFIFO() tx before"); */
-		
-		/** Данные для передачи подготовлены */
-		res = tx(targ, &txBuf, 1, "1fifo");
-		if (res < 0) return -1;
-
-		/**
-		bo_log("activeFromFIFO after TX [%d %d %d %d %d %d %d %d %d %d]",
-		       txBuf.buf[0],
-		       txBuf.buf[1],
-		       txBuf.buf[2],
-		       txBuf.buf[3],
-		       txBuf.buf[4],
-		       txBuf.buf[5],
-		       txBuf.buf[6],
-		       txBuf.buf[7],
-		       txBuf.buf[8],
-		       txBuf.buf[9]
-			);
-		*/
-		/**
-		bo_getTimeNow(tmstr, 50);
-		printf("otvet[tm=[%d] / res=%d] tm= [%d]\n",
-		       tmstr, res, targ->utxdel * res);*/
-		
-		/** usleep(100000);
-		usleep(targ->utxdel * res + 10000); */
-
-		/* bo_log("activeFromFIFO() tx after"); */
-	}
-
-	return 0;
 }
 
 
@@ -548,14 +582,11 @@ int activeFromFIFO(struct chan_thread_arg *targ)
  */
 int active(struct chan_thread_arg *targ, int dst)
 {
-	/* char tmstr[50] = {0}; */
 	int res;
 	int i;
 	int n = 1;    /** При использовании n<<i в цикле for имеем
 		       * ряд 1,2,4.. для последующего увеличения
 		       * времени таймаута при приеме данных по каналу RS485 */
-	
-	/* bo_log("active() tx before"); */
 	
 	prepare_cadr_act(targ, &txBuf, dst);
 
@@ -563,18 +594,12 @@ int active(struct chan_thread_arg *targ, int dst)
 	for (i=0; i<targ->nretries; i++) {
 		
 		/** Передача */
-		res = tx(targ, &txBuf, 0, "1act");
+		res = tx(targ, &txBuf, "1act");
 		if (res < 0) return -1;
-
-		/**
-		   bo_getTimeNow(tmstr, 50);
-		   printf("active[tm=[%d] / res=%d]\n", tmstr, res); */
 		
 		/** Прием */
 		res = rx(targ, &rxBuf, targ->tout*(n<<i), "1act");
 		if (res < 0) return -1;
-		
-		/* bo_log("active() rx after"); */
 		
 		if ((get_rxFl(&rxBuf) >= RX_DATA_READY) &&
 		    ((rxBuf.buf[1] & 0xFF) == dst)) {
@@ -589,16 +614,6 @@ int active(struct chan_thread_arg *targ, int dst)
 			case RX_TIMEOUT:
 				/** Текущее устройство не успело дать ответ. */
 				bo_log("active(): timeout dst= %d", dst);
-				/**
-				bo_log("active(): [%d %d %d %d %d %d]",
-				       (unsigned char)txBuf.buf[0],
-				       (unsigned char)txBuf.buf[1],
-				       (unsigned char)txBuf.buf[2],
-				       (unsigned char)txBuf.buf[3],
-				       (unsigned char)txBuf.buf[4],
-				       (unsigned char)txBuf.buf[5]
-					);
-				*/
 				break;
 			default:
 				bo_log("active(): state ??? fl= %d",

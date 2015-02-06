@@ -50,7 +50,7 @@ int tx(int port)
 	int res;
 
 	/** Tx */
-	res = writer(&txBuf, buf, port, 0);
+	res = writer(&txBuf, buf, port);
 	
 	if (res < 0) return -1;
 	
