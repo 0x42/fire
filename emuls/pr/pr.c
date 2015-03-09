@@ -136,6 +136,7 @@ void probot(struct thr_tx_buf *b, int msgln)
 	char csch[10];
 	unsigned int sch;
 	int j;
+	char tmstr[50] = {0};
 	/**
 	char data[1200];
 	*/
@@ -149,7 +150,9 @@ void probot(struct thr_tx_buf *b, int msgln)
 	
 	sch = (unsigned int)atoi(csch);
 
-	printf("PR: from active [%d] ------<<--<<-----\n", sch);
+	bo_getTimeNow(tmstr, 50);
+
+	printf("PR[%s]: from active      [%d] ------<<--<<-----\n", tmstr, sch);
 
 	/**
 	memset(data, 0, 1200);

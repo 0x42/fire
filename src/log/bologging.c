@@ -22,8 +22,6 @@ static struct {
 	int nrow;
 	/*макс кол-во строк в лог файле*/
 	int maxrow;
-	
-
 } log = {0};
 
 /* инициализация MUTEX*/
@@ -75,6 +73,7 @@ void loggingINIT()
 #ifdef __MOXA__
 	log.fifo_log   = "/mnt/ramdisk/fifo.trace";
 	log.master_tab = "/mnt/ramdisk/master_tab.trace";
+	
 #endif	
 	log.maxrow     = 1000;
 	/* ================= */
@@ -361,8 +360,8 @@ void bo_getTimeNow(char *timeStr, int sizeBuf)
 		printf("bo_getTimeNow() - ERROR - массив не достаточного размера\n");
 	sprintf(timeStr, "%s%d ", buffer, micro);
 }
-void fifo_log(char *msg, ...) {}
-void fifo_log_(char *msg, ...)
+
+void fifo_log(char *msg, ...)
 {
 	FILE *file = NULL;
 	int print_in_file = -1;

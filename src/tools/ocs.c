@@ -235,6 +235,7 @@ int read_byte(struct thr_rx_buf *b, char data, int fl)
 	return get_rxFl(b);
 }
 
+
 /**
  * reader - Чтение байт по каналу RS485 и первичная обработка данных.
  * @b:     Указатель на структуру thr_rx_buf{} (ocs.h).
@@ -247,47 +248,45 @@ int read_byte(struct thr_rx_buf *b, char data, int fl)
  */
 int reader(struct thr_rx_buf *b, char *buf, int port, int ptout)
 {
-	int nq;       /** Кол-во байт проверенных функцией
-		       * SerialDataInInputQueue() */
-	int n;        /** Кол-во байт принятых функцией
-		       * SerialNonBlockRead() */
-	int tout = 0;
+	fd_set set;
+	struct timeval timeout;
+	int n;
+	int sel;
 	int i;
+	int err;
+	int fd = FindFD(port);
 	
-	while (tout < ptout) {  /** default: 20ms */
-		tout++;
-		usleep(100);
-		nq = SerialDataInInputQueue(port);
-		if (nq > 1) {
-			tout = 0;
-			break;
-		} else if (nq < 0) {
-			bo_log("reader: nq <= 0 exit");
-			return -1;
-		}
-	}
-	
-	if (tout > 0) {
+	FD_ZERO(&set); /* clear the set */
+	FD_SET(fd, &set); /* add our file descriptor to the set */
+		
+	timeout.tv_sec = 0;
+	timeout.tv_usec = 1000 * ptout;
+		
+	sel = select(fd + 1, &set, NULL, NULL, &timeout);
+	if(sel < 0)
+		return -1;  /* an error accured */
+	else if (sel == 0) {
 		/** Ответ не получен за допустимый период */
 		put_rxFl(b, RX_TIMEOUT);
-		
-	} else {
-		n = SerialNonBlockRead(port, buf, BUF485_SZ);
-		if (n < 0) {
-			bo_log("reader: SerialNonBlockRead exit");
-			return -1;
-		}
-
-		for (i=0; i<n; i++) {
-			put_rxFl(b, read_byte(b, buf[i], get_rxFl(b)));
-			if (get_rxFl(b) >= RX_DATA_READY)
-				break;
-		}
-	}
-	
-	if (get_rxFl(b) >= RX_DATA_READY) {
-		/** Данные приняты */
 		return 0;
+	} else {
+		n = read(fd, buf, BUF485_SZ); /* there was data to read */
+		if (n < 0) {
+			err = errno;
+			bo_log("reader: read exit [%s]",
+			       strerror(err));
+			return -1;
+		} else if (n == 0) {
+			bo_log("reader: read exit n == 0");
+			return -1;
+		} else
+			for (i=0; i<n; i++) {
+				put_rxFl(b, read_byte(b, buf[i], get_rxFl(b)));
+				if (get_rxFl(b) >= RX_DATA_READY) {
+					/** Данные приняты */
+					return 0;
+				}
+			}
 	}
 
 	return 1;
@@ -332,20 +331,54 @@ int prepare_buf_tx(struct thr_tx_buf *b, char *buf)
  * @b:    Указатель на структуру thr_tx_buf{} (ocs.h).
  * @buf:  Указатель на буфер передатчика RS485.
  * @port: Порт RS485.
- * @return  0: успешно передали кадр,
- *         -1: не успех.
- */
+ * @return  длина перед. данных / -1: не успех.
 int writer(struct thr_tx_buf *b, char *buf, int port)
 {
-	int n;  /** Кол-во байт подготовленных для передачи */
+	int n;  // Кол-во байт подготовленных для передачи /
+	int res;
 	
 	n = prepare_buf_tx(b, buf);
-	
-	if (SerialWrite(port, buf, n) <= 0) {
+
+	res = SerialWrite(port, buf, n);
+
+	if (res < 0) {
 		bo_log("writer: SerialWrite exit");
 		return -1;
 	}
 
-	return 0;
+	if (res != n) {
+		bo_log("writer: res= [%d] n= [%d]", res, n);
+	}
+	
+	return res;
+}
+ */
+
+/**
+ * writer - Передача кадра данных по каналу RS485.
+ * @b:    Указатель на структуру thr_tx_buf{} (ocs.h).
+ * @buf:  Указатель на буфер передатчика RS485.
+ * @port: Порт RS485.
+ * @return  длина перед. данных / -1: не успех.
+ */
+int writer(struct thr_tx_buf *b, char *buf, int port)
+{
+	int n;  /** Кол-во байт подготовленных для передачи */
+	int res;
+	int i = 0;
+	
+	n = prepare_buf_tx(b, buf);
+	
+	while (i != n) {
+		res = SerialWrite(port, buf+i, n-i);
+		if (res < 0) {
+			bo_log("writer: SerialWrite exit");
+			return -1;
+		}
+		
+		i += res;
+	}
+	
+	return res;
 }
 

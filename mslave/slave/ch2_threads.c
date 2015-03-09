@@ -55,18 +55,24 @@ int passive_process(struct chan_thread_arg *targ, int dst)
 		} else
 			bo_log("passive(): key= [%s] ch1 disable", key);
 		
-	} else if (rt_iskey(rtg, key)) {
-		/** Кадр сети RS485 (FIFO) */		
-		prepareFIFO(&rx2Buf, key, (unsigned char)rx2Buf.buf[0]);
 	} else {
-		bo_log("passive(): key= [%s] ???", key);
-		/** Если пассивное устройство не ответило */
-		pthread_mutex_lock(&mx_psv);
+		pthread_mutex_lock(&mx_rtg);
 		
-		put_state(&psvAnsdata_ready, 3);
-		pthread_cond_signal(&psvAnsdata);
+		if (rt_iskey(rtg, key)) {
+			/** Кадр сети RS485 (FIFO) */		
+			prepareFIFO(&rx2Buf, key, (unsigned char)rx2Buf.buf[0]);
+		} else {
+			bo_log("passive(): key= [%s] ???", key);
+			/** Если пассивное устройство не ответило */
+			pthread_mutex_lock(&mx_psv);
 		
-		pthread_mutex_unlock(&mx_psv);
+			put_state(&psvAnsdata_ready, 3);
+			pthread_cond_signal(&psvAnsdata);
+		
+			pthread_mutex_unlock(&mx_psv);
+		}
+	
+		pthread_mutex_unlock(&mx_rtg);
 	}
 	
 	return res;
@@ -94,6 +100,7 @@ int passiveFromActive(struct chan_thread_arg *targ)
 {
 	unsigned int dst;
 	int res;
+	int rxer = 0;
 	int i;
 	int n = 1;    /** При использовании n<<i в цикле for имеем
 		       * ряд 1,2,4.. для последующего увеличения
@@ -108,10 +115,7 @@ int passiveFromActive(struct chan_thread_arg *targ)
 	dst = (unsigned int)rxBuf.buf[0];
 
 	prepare_cadr(&tx2Buf, rxBuf.buf, rxBuf.wpos);
-	
-	/** Запрос для пассивного устройства загрузить в лог.
-	putLog(); */
-	
+		
 	put_state(&psvdata_ready, 0);
 	pthread_cond_signal(&psvdata);
 	
@@ -129,8 +133,7 @@ int passiveFromActive(struct chan_thread_arg *targ)
 		res = rx(targ, &rx2Buf, targ->tout*(n<<i), "2pasFact");
 		if (res < 0) return -1;
 		
-		if ((get_rxFl(&rx2Buf) >= RX_DATA_READY) &&
-		    ((rx2Buf.buf[1] & 0xFF) == dst)) {
+		if (get_rxFl(&rx2Buf) >= RX_DATA_READY) {
 			switch (get_rxFl(&rx2Buf)) {
 			case RX_DATA_READY:
 				/** Ответ пассивного устройства */
@@ -138,21 +141,31 @@ int passiveFromActive(struct chan_thread_arg *targ)
 			case RX_ERROR:
 				/** Ошибка кадра */
 				bo_log("send_dataToPassive(): Cadr Error !");
+				rxer = 1;
 				break;
 			case RX_TIMEOUT:
 				/** Текущее устройство не успело дать ответ. */
 				bo_log("send_dataToPassive(): timeout dst= %d",
 				       dst);
+				rxer = 1;
 				break;
 			default:
 				bo_log("send_dataToPassive(): state ??? fl= %d",
 				       get_rxFl(&rx2Buf));
+				rxer = 1;
 				break;
 			}
 		}
 	}
-	/** Текущее устройство не отвечает, вычеркиваем его из списка. */
-	remf_rtbl(targ, &dst2Buf, dst);
+	bo_log("passiveFromActive(): get_rxFl(&rx2Buf)=[%d], rx2Buf.buf[1]=[%d], dst=[%d]",
+	       get_rxFl(&rx2Buf), rx2Buf.buf[1], dst);
+	
+	if (rxer)
+		/** Текущее устройство вычеркиваем из списка. */
+		remf_rtbl(targ, &dst2Buf, dst);
+	else if (get_rxFl(&rx2Buf) == RX_DATA_READY) {
+		return -1;
+	}
 
 	/** Если пассивное устройство не ответило */
 	pthread_mutex_lock(&mx_psv);
@@ -167,32 +180,24 @@ int passiveFromActive(struct chan_thread_arg *targ)
 
 int data_FIFO(struct chan_thread_arg *targ)
 {
-	int dst;
+	unsigned int dst;
 	int res;
+	int rxer = 0;
 	int i;
 	int n = 1;    /** При использовании n<<i в цикле for имеем
 		       * ряд 1,2,4.. для последующего увеличения
 		       * времени таймаута при приеме данных по каналу RS485 */
-
-	/**
-	   bo_log("data_FIFO  bo_getFifoVal(): before");
-	*/
+	
 	getFifo_ans = bo_getFifoVal(getFifo_buf, BO_FIFO_ITEM_VAL);
 	if (getFifo_ans <= 0) {
-		/** Если в FIFO нет данных
-		bo_log("data_FIFO bo_getFifoVal(): no data");
-		usleep(50000); */
-		/* printf("fifo?\n"); */
-		
+		/** Если в FIFO нет данных */
 		return 0;
 	}
-	/**
-	   bo_log("data_FIFO bo_getFifoVal(): after");
-	*/
-	/** В FIFO есть данные для передачи пассивному устройству */
+	
 	dst = (unsigned int)getFifo_buf[0];
-
+	
 	if (test_bufDst(&dstBuf, dst) != -1) {
+		/** В FIFO есть данные для передачи активному устройству */
 		if (targ->ch1_enable) {
 			/** Кадр сети RS485 (alien node) */
 			pthread_mutex_lock(&mx_actFIFO);
@@ -210,77 +215,58 @@ int data_FIFO(struct chan_thread_arg *targ)
 		} else
 			bo_log("data_FIFO(): ch1 disable");
 		
-		return 0;
-	}
-	
-	prepare_cadr(&tx2Buf, (char *)getFifo_buf, getFifo_ans);
+	} else if (test_bufDst(&dst2Buf, dst) != -1) {
+		/** В FIFO есть данные для передачи пассивному устройству */
+		prepare_cadr(&tx2Buf, (char *)getFifo_buf, getFifo_ans);
 
-	/** Запрос для пассивного устройства загрузить в лог.
-	bo_log("data_FIFO after putLog()");
-	putLog(); */
+		/** Данные для передачи подготовлены */
+	
+		for (i=0; i<targ->nretries; i++) {
+			/** Передача */
+			res = tx(targ, &tx2Buf, "2fifo");
+			if (res < 0) return -1;
 
-	/**
-	bo_log("data_FIFO before TX [%d %d %d %d %d %d %d %d %d %d]",
-	       tx2Buf.buf[0],
-	       tx2Buf.buf[1],
-	       tx2Buf.buf[2],
-	       tx2Buf.buf[3],
-	       tx2Buf.buf[4],
-	       tx2Buf.buf[5],
-	       tx2Buf.buf[6],
-	       tx2Buf.buf[7],
-	       tx2Buf.buf[8],
-	       tx2Buf.buf[9]
-		);
-	*/
-	/** Данные для передачи подготовлены */
-	
-	for (i=0; i<targ->nretries; i++) {
-		/** Передача */
-		res = tx(targ, &tx2Buf, "2fifo");
-		if (res < 0) return -1;
-	
-		/** Прием */
-		res = rx(targ, &rx2Buf, targ->tout*(n<<i), "2fifo");
-		if (res < 0) return -1;
+			/** Прием */
+			res = rx(targ, &rx2Buf, targ->tout*(n<<i), "2fifo");
+			if (res < 0) return -1;
 		
-		if ((get_rxFl(&rx2Buf) >= RX_DATA_READY) &&
-		    ((rx2Buf.buf[1] & 0xFF) == dst)) {
-			switch (get_rxFl(&rx2Buf)) {
-			case RX_DATA_READY:
-				/** Ответ пассивного устройства
-				bo_log("data_FIFO after RX [%d %d %d %d %d %d %d %d %d %d]",
-				       rx2Buf.buf[0],
-				       rx2Buf.buf[1],
-				       rx2Buf.buf[2],
-				       rx2Buf.buf[3],
-				       rx2Buf.buf[4],
-				       rx2Buf.buf[5],
-				       rx2Buf.buf[6],
-				       rx2Buf.buf[7],
-				       rx2Buf.buf[8],
-				       rx2Buf.buf[9]
-					); */
-				
-				return passive_process(targ, dst);
-			case RX_ERROR:
-				/** Ошибка кадра */
-				bo_log("data_FIFO(): Cadr Error !");
-				break;
-			case RX_TIMEOUT:
-				/** Текущее устройство не успело дать ответ. */
-				bo_log("data_FIFO(): timeout dst= %d", dst);
-				break;
-			default:
-				bo_log("data_FIFO(): state ??? fl= %d",
-				       get_rxFl(&rx2Buf));
-				break;
+			if (get_rxFl(&rx2Buf) >= RX_DATA_READY) {
+				switch (get_rxFl(&rx2Buf)) {
+				case RX_DATA_READY:
+					/** Ответ пассивного устройства */
+					return passive_process(targ, dst);
+				case RX_ERROR:
+					/** Ошибка кадра */
+					bo_log("data_FIFO(): Cadr Error !");
+					rxer = 1;
+					break;
+				case RX_TIMEOUT:
+					/** Текущее устройство не
+					 * успело дать ответ. */
+					bo_log("data_FIFO(): timeout dst= %d",
+					       dst);
+					rxer = 1;
+					break;
+				default:
+					bo_log("data_FIFO(): state ??? fl= %d",
+					       get_rxFl(&rx2Buf));
+					rxer = 1;
+					break;
+				}
 			}
 		}
-	}
-	/** Текущее устройство не отвечает, вычеркиваем его из списка. */
-	remf_rtbl(targ, &dst2Buf, dst);
-
+		bo_log("passiveFromActive(): get_rxFl(&rx2Buf)=[%d], rx2Buf.buf[1]=[%d], dst=[%d]",
+		       get_rxFl(&rx2Buf), rx2Buf.buf[1], dst);
+		
+		if (rxer)
+			/** Текущее устройство вычеркиваем из списка. */
+			remf_rtbl(targ, &dst2Buf, dst);
+		else if (get_rxFl(&rx2Buf) == RX_DATA_READY) {
+			return -1;
+		}
+	} else
+		bo_log("data_FIFO(): unknown dst= %d", dst);
+	
 	return 0;
 }
 
@@ -296,7 +282,8 @@ void *chan2(void *arg)
 {
 	struct chan_thread_arg *targ = (struct chan_thread_arg *)arg;
 	int count_scan = targ->tscan;
-	int dst;
+	int fscan = 1;
+	int scan_dst = targ->dst_beg;
 	int res;
 
 	while (1) {
@@ -309,23 +296,41 @@ void *chan2(void *arg)
 #ifdef __PRINT__
 				write (1, "chan2: 1000ms\n", 14);
 #endif
-				/**
-				bo_log("ch2(): scan");
-				*/
-				dst = targ->dst_beg;
-				while (dst <= targ->dst_end) {
+				if (fscan) {
+					fscan = 0;
+					while (scan_dst <= targ->dst_end) {
+						res = scan(targ,
+							   &tx2Buf,
+							   &rx2Buf,
+							   &dst2Buf,
+							   scan_dst,
+							   "2scan");
+						
+						if (res < 0) {
+							bo_log("chan2: exit");
+							pthread_exit(0);
+						}
+					
+						scan_dst++;
+					}
+					scan_dst = targ->dst_beg;
+				} else {
 					res = scan(targ,
 						   &tx2Buf,
 						   &rx2Buf,
 						   &dst2Buf,
-						   dst,
+						   scan_dst,
 						   "2scan");
+					
 					if (res < 0) {
 						bo_log("chan2: exit");
 						pthread_exit(0);
 					}
 					
-					dst++;
+					if (scan_dst < targ->dst_end)
+						scan_dst++;
+					else
+						scan_dst = targ->dst_beg;
 				}
 #ifdef __PRINT__
 				write(1, "\n", 1);

@@ -63,7 +63,7 @@ void gen_moxa_default_cfg(char *cfile)
 		/** очередь коннектов */
 		cfg_put(cfg, "FIFO:queue_len", "10");
 		/** размер очереди */
-		cfg_put(cfg, "FIFO:len", "5");
+		cfg_put(cfg, "FIFO:len", "1000");
 		
 		/** RT server IP, port */
 		cfg_put(cfg, "RT:sendIp", "192.168.1.127");
@@ -380,9 +380,26 @@ void send_rtbl(char *ip)
 	unsigned int dataSize = 23;
 	char data[dataSize];
 	int i;
+	/** char val[16]; */
 
 	if (rtl == NULL) return;
+	
 	str_splitInt(buf, ip, ".");
+
+	/**
+	memset(val, 0, 16);
+	sprintf(val,
+		"%d.%d.%d.%d",
+		buf[0],
+		buf[1],
+		buf[2],
+		buf[3]);
+	if (strstr(val, "192.0.0.0") ||
+	    strstr(val, "192.168.0.0") ||
+	    strstr(val, "192.168.100.0"))
+		bo_log("send_rtbl(): IP= [%s]  hostIP= [%s]", val, ip);
+	*/
+	
 	for (i=0; i<rt_getsize(rtl); i++) {
 		key = rt_getkey(rtl, i);
 		if (key == NULL) continue;
@@ -395,7 +412,7 @@ void send_rtbl(char *ip)
 			buf[2],
 			buf[3],
 			rt_getport(rtl, key));
-
+		
 		crc = crc16modbus(data, 21);
 		boIntToChar(crc, cbuf);
 		data[dataSize-2] = cbuf[0];
@@ -405,7 +422,7 @@ void send_rtbl(char *ip)
 			bo_log("send_rtbl(): bo_sendSetMsg() %s", "ERROR");
 		}
 		
-		bo_log("send_rtbl(): RT/key= %s", key);
+		/** bo_log("send_rtbl(): RT/key= %s", key); */
 	}
 }
 
@@ -540,12 +557,13 @@ void remf_rtbl(struct chan_thread_arg *targ, struct thr_dst_buf *b, int dst)
 	}
 }
 
+#ifdef __LOG__
 /**
  * putLog - Посылка сообщения мастеру для логирования.
  *          Данные для лога формируются из буфера передатчика канала 2
  *          RS485, что является запросом пассивному устройству.
  */
-void putLog()
+void putLog(struct thr_rx_buf *b)
 {
 	unsigned int crc;
 	unsigned char cbuf[2] = {0};
@@ -561,25 +579,28 @@ void putLog()
 		data[1] = (ptm >> 8) & 0xff;
 		data[2] = (ptm >> 16) & 0xff;
 		data[3] = (ptm >> 24) & 0xff;
-		data[4] = tx2Buf.buf[0];
-		data[5] = tx2Buf.buf[1];
-		data[6] = tx2Buf.buf[2];
-		data[7] = tx2Buf.buf[3];
-		data[8] = tx2Buf.buf[4];
-		data[9] = tx2Buf.buf[5];
+		data[4] = b->buf[0];
+		data[5] = b->buf[1];
+		data[6] = b->buf[2];
+		data[7] = b->buf[3];
+		data[8] = b->buf[4];
+		data[9] = b->buf[5];
 		
-		for (i=0; i<tx2Buf.buf[5]; i++)
-			data[10+i] = tx2Buf.buf[6+i];
-	
-		crc = crc16modbus(data, tx2Buf.buf[5]+10);
+		for (i=0; i<b->buf[5]; i++)
+			data[10+i] = b->buf[6+i];
+		
+		crc = crc16modbus(data, b->buf[5]+10);
 		
 		boIntToChar(crc, cbuf);
-		data[tx2Buf.buf[5]+10] = cbuf[0];
-		data[tx2Buf.buf[5]+11] = cbuf[1];
-	
-		dataSize = (unsigned int)(tx2Buf.buf[5]+12);
+		data[b->buf[5]+10] = cbuf[0];
+		data[b->buf[5]+11] = cbuf[1];
+		
+		dataSize = (unsigned int)(b->buf[5]+12);
+		/** printf("dataSize=[%d]\n", dataSize); */
 		
 		pthread_mutex_lock(&mx_sendSocket);
+
+		/* bo_log("bo_sendLogMsg() before"); */
 		
 		if (bo_sendLogMsg(logSend_sock, data, dataSize) == -1) {
 			bo_log("putLog(): bo_sendLogMsg() %s", "ERROR");
@@ -588,6 +609,7 @@ void putLog()
 		pthread_mutex_unlock(&mx_sendSocket);
 	}
 }
+#endif
 
 /**
  * prepareFIFO - Формирование и отправка запроса на сервер FIFO.
@@ -603,10 +625,8 @@ void prepareFIFO(struct thr_rx_buf *b, char *key, int dst)
 	int i;
 	int ans;
 	
-	pthread_mutex_lock(&mx_rtg);
 	/** Получить адрес FIFO сервера из таблицы маршрутов. */
 	rt_getip(rtg, key, ip);
-	pthread_mutex_unlock(&mx_rtg);
 
 	if (ip[0] != 'N') {
 		/** Если устройство существует в глобальной таблице
@@ -627,17 +647,11 @@ void prepareFIFO(struct thr_rx_buf *b, char *key, int dst)
 		for (i=0; i<ln; i++)
 			buf[i] = b->buf[i];
 
-		/** bo_log("prepareFIFO: bo_add_fifo_out() before
-		 * ln=[%d]", ln); */
-		
 		ans = bo_add_fifo_out(buf, ln, val);
 		if (ans == 0)
 			bo_log("prepareFIFO: bo_add_fifo_out() == 0");
 		else if (ans == -1)
 			bo_log("prepareFIFO: bo_add_fifo_out() == -1");
-		
-		/** bo_log("prepareFIFO: bo_add_fifo_out() after",
-		    ln); */
 	} else {
 		bo_log("prepareFIFO(): fifo_ipSend= NULL");
 	}
@@ -687,29 +701,30 @@ void prepare_cadr_scan(struct chan_thread_arg *targ,
  * tx - Передача кадра данных устройствам сети RS485.
  * @targ: Указатель на структуру chan_thread_arg{}.
  * @b:
- * @return  0- успех, -1 неудача.
+ * @return  длина данных / -1 неудача.
  */
 int tx(struct chan_thread_arg *targ, struct thr_tx_buf *b, char *msg)
 {
 	char buf[BUF485_SZ];  /** Буфер передатчика RS485 */
 	int res;
+	/**
+	int i;
+	char dt[3] = {0};
+	char data[1024] = {0};
+	*/
 	
 	res = writer(b, buf, targ->port);	
 	if (res < 0) return -1;
 
 	/**
-	bo_log("tx(%s): [%d %d %d %d %d %d]",
-	       msg,
-	       (unsigned char)buf[0],
-	       (unsigned char)buf[1],
-	       (unsigned char)buf[2],
-	       (unsigned char)buf[3],
-	       (unsigned char)buf[4],
-	       (unsigned char)buf[5]
-		);
-	*/
+	for (i=0; i<b->wpos+3; i++) {
+		sprintf(dt, "%02X", (unsigned char)buf[i]);
+		strncat(data, dt, 2);
+	}
+	printf("tx(%s): [%s]\n", msg, data); */
+	/** bo_log("tx(%s): [%s]", msg, data); */
 	
-	return 0;
+	return res;
 }
 
 /**
@@ -717,13 +732,19 @@ int tx(struct chan_thread_arg *targ, struct thr_tx_buf *b, char *msg)
  * @targ: Указатель на структуру chan_thread_arg{}.
  * @b:
  * @tout:
+ * @msg:
  * @return  0- успех, -1 неудача.
  */
 int rx(struct chan_thread_arg *targ, struct thr_rx_buf *b, int tout, char *msg)
 {
 	char buf[BUF485_SZ];  /** Буфер приемника RS485 */
 	int res;
-
+	/**
+	int i;
+	char dt[3] = {0};
+	char data[1024] = {0};
+	*/
+	
 	put_rxFl(b, RX_WAIT);  /** Состояние приема - 'ожидание данных' */
 	b->wpos = 0;           /** Позиция записи в начало буфера приемника */
 	res = 1;
@@ -734,16 +755,12 @@ int rx(struct chan_thread_arg *targ, struct thr_rx_buf *b, int tout, char *msg)
 	}
 
 	/**
-	bo_log("rx(%s): [%d %d %d %d %d %d]",
-	       msg,
-	       (unsigned char)buf[0],
-	       (unsigned char)buf[1],
-	       (unsigned char)buf[2],
-	       (unsigned char)buf[3],
-	       (unsigned char)buf[4],
-	       (unsigned char)buf[5]
-		);
-	*/
+	for (i=0; i<b->wpos+3; i++) {
+		sprintf(dt, "%02X", (unsigned char)buf[i]);
+		strncat(data, dt, 2);
+	}
+	printf("rx(%s): [%s]\n", msg, data); */
+	/** bo_log("rx(%s): [%s]", msg, data); */
 	
 	return 0;
 }
@@ -773,6 +790,7 @@ int scan(struct chan_thread_arg *targ,
 	 char *msg)
 {
 	int res;
+	
 #ifdef __PRINT__
 	char a[4];
 #endif
@@ -789,8 +807,7 @@ int scan(struct chan_thread_arg *targ,
 	res = rx(targ, rb, targ->tout, msg);
 	if (res < 0) return -1;
 	
-	if ((get_rxFl(rb) >= RX_DATA_READY) &&
-	    ((rb->buf[1] & 0xFF) == dst)) {
+	if (get_rxFl(rb) >= RX_DATA_READY) {
 		switch (get_rxFl(rb)) {
 		case RX_DATA_READY:
 			put_rtbl(targ, db, dst);
@@ -806,15 +823,16 @@ int scan(struct chan_thread_arg *targ,
 			break;
 		case RX_TIMEOUT:
 			/** Текущее устройство не отвечает,
-			 * вычеркиваем его из списка. */
-			bo_log("scan(%s): timeout dst= %d", msg, dst);
+			 * вычеркиваем его из списка.
+			bo_log("scan(%s): timeout dst= %d", msg, dst); */
 			remf_rtbl(targ, db, dst);
 #ifdef __PRINT__
 			write(1, ".", 1);
 #endif
 			break;
 		default:
-			bo_log("scan(%s): state ??? fl= %d", msg, get_rxFl(rb));
+			bo_log("scan(%s): state ??? fl= %d",
+			       msg, get_rxFl(rb));
 			break;
 		}
 	} else {
@@ -822,7 +840,7 @@ int scan(struct chan_thread_arg *targ,
 		write(1, "-", 1);
 #endif
 	}
-
+	
 	return 0;
 }
 

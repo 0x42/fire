@@ -11,11 +11,16 @@ void *actx_485(void *arg)
 	write(1, "pr:\n", 4);
 
 	while (1) {
+		/* bo_log("actx_485: rx before"); */
+		
 		res = rx(targ->port);
+		/** res = rx_pr(targ->port, targ->tout); */
 		if (res < 0) {
 			bo_log("actx_485: rx_pr exit");
 			break;
 		}
+		
+		/* bo_log("actx_485: rx after"); */
 		
 		if (rxBuf.buf[0] == (char)targ->adr) {
 			switch (get_rxFl(&rxBuf)) {
@@ -30,6 +35,9 @@ void *actx_485(void *arg)
 					   write(1, "pr: from active\n", 16);
 					*/
 					probot(&txBuf, targ->test_msgln);
+
+					/* bo_log("actx_485: tx
+					   before"); */
 				}
 				
 				res = tx(targ->port);

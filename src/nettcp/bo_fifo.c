@@ -121,6 +121,7 @@ int  bo_addFIFO(unsigned char *val, int size) /* THREAD SAFE */
 /*
 	pthread_mutex_lock(&fifo_mut);
 */
+	printf("fifo free = %d\n",fifo.free );
 	
 	if(val == NULL) goto exit;
 	if(size < 1)  goto exit;
@@ -247,6 +248,8 @@ int bo_getFifoVal(unsigned char *buf, int bufSize) /*THREAD SAFE */
 	int ans = -1;
 	int timeLen = 50;
 	char timeStr[50] = {0};
+	
+	
 	if(fifo.count > 0) {
 		pthread_mutex_lock(&fifo_mut);
 		if(fifo.mem != NULL) {

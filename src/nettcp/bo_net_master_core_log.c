@@ -127,6 +127,7 @@ static void logReadCrc(struct KA_log_param *p)
 
 static void logOk(struct KA_log_param *p) 
 {
+	/*
 	int exec = -1;
 	unsigned char msg[] = " OK";
 	int i = 0;
@@ -135,8 +136,9 @@ static void logOk(struct KA_log_param *p)
 		dbgout("%c", *(p->buf + i) );
 	}
 	dbgout("]\n");
-	
-	exec = bo_sendAllData(p->sock, msg, 3);
+	*/
+	/* для увелечения скорости не отправляем подтверждение */
+	/* exec = bo_sendAllData(p->sock, msg, 3); 
 	if(exec == -1) { 
 		bo_log("logOk() errno[%s]", strerror(errno));
 		p->len = -1;
@@ -144,6 +146,8 @@ static void logOk(struct KA_log_param *p)
 	} else {
 		p->status = LOGQUIT;
 	}
+	*/
+	p->status = LOGQUIT;
 }
 
 static void logErr(struct KA_log_param *p) {}

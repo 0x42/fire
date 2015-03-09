@@ -20,9 +20,12 @@
 #include "bo_fifo.h"
 #include "bo_fifo_out.h"
 #include "bo_net_master_core.h"
+#ifdef __SNMP__
 #include "bo_snmp_mng.h"
+#endif
 
 
+#ifdef __SNMP__
 /**
  * snmp_serv - Сервис SNMP.
  * @arg:  Параметры для потока.
@@ -38,6 +41,7 @@ void *snmp_serv(void *arg)
 	bo_log("snmp_serv: exit");
 	pthread_exit(0);
 }
+#endif
 
 /**
  * fifo_serv - Сервер FIFO.
@@ -87,7 +91,7 @@ void *send_fifo(void *arg)
 		/** Подготовка буфера для FIFO */
 		for (i=0; i<8; i++)
 			sfifo.buf[i] = id[i];
-
+		
 		sfifo.ln = bo_get_fifo_out(sfifo.buf+8, BUF485_SZ, sfifo.ip);
 		
 		if (sfifo.ln > 0) {
@@ -96,9 +100,10 @@ void *send_fifo(void *arg)
 			ans = 0;
 			
 			sfifo.ln += 8;
-			/**
-			   bo_log("bo_sendDataFIFO ip= [%s] ln= [%d]-->", sfifo.ip, sfifo.ln);
-			*/
+			
+			/* bo_log("bo_sendDataFIFO ip= [%s] ln=
+			 * [%d]-->", sfifo.ip, sfifo.ln); */
+			
 			while (ans != 1) {
 				ans = bo_sendDataFIFO(
 					sfifo.ip,
@@ -111,9 +116,10 @@ void *send_fifo(void *arg)
 					usleep(200000);
 				}
 			}
-			/**
-			   bo_log("bo_sendDataFIFO finish np= [%d]-->", np);
-			*/
+			
+			/* bo_log("bo_sendDataFIFO finish np=
+			 * [%d]-->", np); */
+			
 			if (ans != 1)
 				bo_log("send_fifo(): bo_sendDataFIFO(): ERROR");
 		} else
@@ -125,6 +131,7 @@ void *send_fifo(void *arg)
 	pthread_exit(0);
 }
 
+#ifdef __LOG__
 /**
  * logSendSock_connect - Создает сокет и подключается к серверу логов
  *                       на мастере.
@@ -180,6 +187,7 @@ void *logSendSock_connect(void *arg)
 	bo_log("logSendSock_connect: exit");
 	pthread_exit(0);
 }
+#endif
 
 /**
  * rtbl_recv - Создание сокета и подключения к мастеру для получения от него
@@ -199,6 +207,7 @@ void *rtbl_recv(void *arg)
 	while (1) {
 		
 		if (rtSend_sock != -1) {
+			bo_log("rtbl_recv(): IP= [%s]", targ->ip);
 			rtRecv_sock = bo_setConnect(targ->ip, targ->port);
 			if (rtRecv_sock < 0) {
 				sleep(10);
@@ -239,9 +248,9 @@ void *rtbl_recv(void *arg)
 			} else {
 				/* если событие произошло */
 				pthread_mutex_lock(&mx_rtg);
-
+				
 				ans = bo_master_core(&p);
-
+				
 				pthread_mutex_unlock(&mx_rtg);
 				if (ans < 0) {
 					bo_log("rtbl_recv(): %s",
@@ -273,6 +282,7 @@ void *rtbl_send(void *arg)
 	
 	while (1) {
 		sock_temp = -1;
+		bo_log("rtbl_send(): IP= [%s]", targ->ip);
 		sock_temp = bo_setConnect(targ->ip, targ->port);
 		if (sock_temp < 0) {
 			bo_log("rtbl_send: bo_setConnect ERROR");

@@ -1,0 +1,226 @@
+#!/bin/sh
+
+nodesfile=$1
+node_ip=$2
+rs1_enable=$3
+rs1_beg=$4
+rs1_end=$5
+rs2_enable=$6
+rs2_beg=$7
+rs2_end=$8
+
+
+# Добавляем адрес IP узла в файл списка узлов
+echo $node_ip >> $nodesfile
+
+# Установка адреса IP мастера
+master_ip="192.168.100.129"
+
+# Адрес УСО для отправки состояния магистрали
+snmp_uso="129"
+
+# файл /etc/rc.local
+rclocalfile="rc_$node_ip.local"
+
+# файл счетчиков жизни программ узла
+lifesfile="wd_$node_ip.lifes"
+
+# файл конфигурации программы 'mslave' узла
+cfgfile="mslave_$node_ip.cfg"
+
+################### rc.local ########################
+echo "#!/bin/sh" > $rclocalfile
+
+echo >> $rclocalfile
+#echo "# Создание RAM диска размером 2MB" >> $rclocalfile
+echo "/home/utils/upramdisk2 2048" >> $rclocalfile
+
+echo >> $rclocalfile
+#echo "# Создание файлов (контроль жизни программ) в RAM" >> $rclocalfile
+echo "cp /home/utils/wd.lifes /mnt/ramdisk/wd.lifes" >> $rclocalfile
+echo "cp /home/utils/master.life /mnt/ramdisk/master.life" >> $rclocalfile
+echo "cp /home/utils/mslave.life /mnt/ramdisk/mslave.life" >> $rclocalfile
+
+echo >> $rclocalfile
+echo "#cron &" >> $rclocalfile
+
+echo >> $rclocalfile
+if [ "$node_ip" != "$master_ip" ]; then
+	echo "##/home/tabr/master master.cfg &" >> $rclocalfile
+else
+	echo "#/home/tabr/master master.cfg &" >> $rclocalfile
+fi
+
+echo "#/home/slave/mslave mslave.cfg &" >> $rclocalfile
+
+echo >> $rclocalfile
+chmod 640 $rclocalfile
+
+
+################### wd.life ########################
+echo > $lifesfile
+echo "[WD]" >> $lifesfile
+if [ "$node_ip" != "$master_ip" ]; then
+	echo "master = 0" >> $lifesfile
+else
+	echo "master = 1" >> $lifesfile
+fi
+echo "master_life = 0" >> $lifesfile
+echo "mslave_life = 0" >> $lifesfile
+
+echo >> $lifesfile
+chmod 640 $lifesfile
+
+
+################### mslave.cfg ########################
+echo > $cfgfile
+echo "[moxa]" >> $cfgfile
+
+# Установка лог файла
+echo "log = /mnt/ramdisk/mslave.log" >> $cfgfile
+echo "log_old = /mnt/ramdisk/mslave-old.log" >> $cfgfile
+
+# Таймер сканирования устройств на сети RS485
+echo "Tscan = 20" >> $cfgfile
+
+# Таймаут приема кадра на сети RS485
+# Tout(20)*1000us= 20ms
+echo "Tout = 60" >> $cfgfile
+
+# Число попыток передачи кадра по сети RS485
+echo "nRetries = 3" >> $cfgfile
+
+echo >> $cfgfile
+echo "[WDT]" >> $cfgfile
+
+# Разрешение работы WatchDog
+echo "enable = 1" >> $cfgfile
+
+# Цикл WatchDog
+echo "Tsec = 10" >> $cfgfile
+echo "Tusec = 0" >> $cfgfile
+
+# WatchDog таймер (30000)=30s
+echo "Tms = 30000" >> $cfgfile
+
+# Файл для контроля жизни программы через CRON
+echo "lifeFile = /mnt/ramdisk/mslave.life" >> $cfgfile
+
+echo >> $cfgfile
+echo "[eth0]" >> $cfgfile
+
+# IP адрес узла
+echo "ip = $node_ip" >> $cfgfile
+
+echo >> $cfgfile
+echo "[FIFO]" >> $cfgfile
+
+# номер порта на котором ждем запросы для FIFO
+echo "port = 8888" >> $cfgfile
+
+# очередь коннектов
+echo "queue_len = 10" >> $cfgfile
+
+# размер очереди
+echo "len = 1000" >> $cfgfile
+
+echo >> $cfgfile
+echo "[RT]" >> $cfgfile
+
+# RT server IP, port
+echo "sendIp = $master_ip" >> $cfgfile
+echo "sendPort = 8890" >> $cfgfile
+echo "recvIp = $master_ip" >> $cfgfile
+echo "recvPort = 8891" >> $cfgfile
+
+echo >> $cfgfile
+echo "[LOGGER]" >> $cfgfile
+
+# LOGGER server IP, port
+echo "sendIp = $master_ip" >> $cfgfile
+echo "sendPort = 8890" >> $cfgfile
+
+# Максимальное количество строк лога
+echo "maxLines = 1024" >> $cfgfile
+
+echo >> $cfgfile
+echo "[SNMP]" >> $cfgfile
+
+if [ "$node_ip" != "$master_ip" ]; then
+	echo "n = 0" >> $cfgfile
+	echo "uso = 0" >> $cfgfile
+else
+	echo "1 = 192.168.1.150" >> $cfgfile
+	echo "2 = 192.168.1.151" >> $cfgfile
+	echo "n = 2" >> $cfgfile
+	echo "uso = $snmp_uso" >> $cfgfile
+fi
+
+echo >> $cfgfile
+echo "[RS]" >> $cfgfile
+
+# Параметры серийного порта
+# 0: none, 1: odd, 2: even, 3: space, 4: mark
+echo "prmParity = 0" >> $cfgfile
+
+# 5 .. 8
+echo "prmDatabits = 8" >> $cfgfile
+
+# 1, 2
+echo "prmStopbit = 1" >> $cfgfile
+
+# 50, 75, 110, 134, 150, 200, 300,
+# 600, 1200, 1800, 2400, 4800, 9600,
+# 19200, 38400, 57600, 115200, 230400,
+# 460800, 500000, 576000, 921600
+echo "speed = 19200" >> $cfgfile
+#echo "speed = 57600" >> $cfgfile
+#echo "speed = 115200" >> $cfgfile
+
+echo >> $cfgfile
+echo "[RS485_1]" >> $cfgfile
+
+# Сеть RS485 - 1 (активные устройства)
+echo "port = 1" >> $cfgfile
+echo "adr = 128" >> $cfgfile
+
+# Разрешение серийного порта
+# 1- включить, 0- отключить
+echo "enable = $rs1_enable" >> $cfgfile
+
+# Диапазон адресов
+echo "dstBeg = $rs1_beg" >> $cfgfile
+echo "dstEnd = $rs1_end" >> $cfgfile
+
+echo >> $cfgfile
+echo "[RS485_2]" >> $cfgfile
+
+# Сеть RS485 - 2 (пассивные устройства)
+echo "port = 2" >> $cfgfile
+echo "adr = 128" >> $cfgfile
+
+# Разрешение серийного порта
+# 1- включить, 0- отключить
+echo "enable = $rs2_enable" >> $cfgfile
+
+# Диапазон адресов
+echo "dstBeg = $rs2_beg" >> $cfgfile
+echo "dstEnd = $rs2_end" >> $cfgfile
+
+echo >> $cfgfile
+echo "[LS]" >> $cfgfile
+
+# Идентификаторы подсистем ЛС
+echo "gen = General" >> $cfgfile
+
+echo >> $cfgfile
+echo "[REQ]" >> $cfgfile
+
+# Запросы
+echo "ag = AccessGranted" >> $cfgfile
+echo "ms = GetMagStatus" >> $cfgfile
+echo "gl = GetLog" >> $cfgfile
+echo "ns = GetNetworkStatus" >> $cfgfile
+
+echo >> $cfgfile
+chmod 640 $cfgfile

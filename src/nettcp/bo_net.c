@@ -1,6 +1,11 @@
 #include "bo_net.h"
+#include "bo_send_lst.h"
 
+static int bo_sendData(int sock, char *data, unsigned int dataSize);
+static int bo_sendData2(int sock, char *data, unsigned int dataSize);
 
+static void delSockLst(struct BO_SOCK_LST *lst);
+static int bo_addToSockLst(struct BO_SOCK_LST *lst, char *ip);
 /*
  * @brief		откр сокет
  * @return		возвращает socket или -1 вслучае ошибки 
@@ -112,11 +117,188 @@ int bo_waitConnect(int sock, int *clientfd, char **errTxt)
 }
 
 /* ----------------------------------------------------------------------------
+ * @brief	 ищет по ip нужный socket в списке; если данные не удалось отправить
+ *		 сокет закрывается и пересоздается попытка повторяется 
+ * @return	[-1] - error [1]- OK
+ */
+int bo_sendDataFIFO(char *ip, unsigned int port, 
+	char *data, unsigned int dataSize)
+{
+	static struct BO_SOCK_LST *lst = NULL;
+	static int err_count = 0;
+	int ans = -1, sock = 0, exec = -1;
+	
+	if(lst == NULL) lst = bo_init_sock_lst(10, port);
+	if(lst == NULL) goto exit;
+	/**/
+	sock = bo_get_sock_by_ip(lst, ip);
+	if(sock  == -1) {
+		sock = bo_addToSockLst(lst, ip);
+		printf("CLIENT sock[%d]\n", sock);
+		if(sock == -1) {
+			err_count++;
+			bo_log("bo_sendDataFIFO[%s] can't add to lst", ip);
+			goto exit;
+		}
+	}
+	/* Отправка данных */
+	exec = bo_sendData2(sock, data, dataSize);
+	if(exec == -1) {
+		bo_log("bo_sendDataFIFO->bo_sendData2[%s] can't send. Reconnect", ip);
+		bo_del_by_sck_sock_lst(lst, sock);
+		sock = bo_addToSockLst(lst, ip);
+		if(sock == -1) {
+			bo_log("bo_sendDataFIFO[%s] can't add to lst", ip);
+			err_count++;
+			goto exit;
+		}
+		exec = bo_sendData2(sock, data, dataSize);
+		if(exec == -1) {
+			bo_log("bo_sendDataFIFO[%s] can't send", ip);
+			bo_del_by_sck_sock_lst(lst, sock);
+		}
+		
+	}
+	ans = exec;
+	
+	if(err_count == 10) {
+		err_count = 0;
+		bo_log("bo_sendDataFIFO ERROR err_count = 10 delete lst");
+		delSockLst(lst);
+		lst = NULL;
+	}
+	
+	exit:
+	return ans;
+}
+
+static void delSockLst(struct BO_SOCK_LST *lst)
+{
+	int i = -1;
+
+	i = lst->head;
+	while(i != -1) {
+		bo_del_item_sock_lst(lst, i);
+		i = *(lst->next + i);
+	}
+	bo_del_sock_lst(lst);
+}
+/*
+ * @return [sock] OK [-1] ERROR
+ */
+static int bo_addToSockLst(struct BO_SOCK_LST *lst, char *ip)
+{
+	int ans = -1, exec = -1;
+	
+	exec = bo_add_sock_lst(lst, ip);
+	if(exec == -1) {
+		bo_log("bo_addToSockLst ip[%s] ERROR can't add to lst", ip);
+		goto exit;
+	}
+	
+	exec = bo_get_sock_by_ip(lst, ip);
+	if(exec == -1) {
+		bo_log("bo_addToSockLst ip[%s] ERROR can't get sock after add", ip);
+		goto exit;
+	}
+	
+	ans = exec;
+	exit:
+	return ans;
+}
+/* ----------------------------------------------------------------------------
+ * @brief	отправка данных 
+ * @return	[-1] ERROR [1] - OK
+ */
+static int bo_sendData(int sock, char *data, unsigned int dataSize) 
+{
+	int exec = -1, ans = -1;
+	const int err = -1;
+	char head[3] = "SET";
+	unsigned char len[2] = {0};
+	char buf[4] = {0};
+	if(sock != -1) {
+		boIntToChar(dataSize, len);
+		exec = bo_sendAllData(sock, (unsigned char*)head, 3);
+		if(exec == -1) {
+			bo_log("SEND HEAD ERROR errno[%s]", strerror(errno));
+			goto error;
+		}
+		exec = bo_sendAllData(sock, len, 2);
+		if(exec == -1) {
+			bo_log("SEND LEN ERROR errno[%s]", strerror(errno));
+			goto error;
+		}
+		
+		exec = bo_sendAllData(sock, (unsigned char*)data, dataSize);
+		if(exec == -1) {
+			bo_log("SEND DATA ERROR errno[%s]", strerror(errno));
+			goto error;
+		}
+		exec = bo_recvAllData(sock, (unsigned char*)buf, 3, 3);
+		if(exec == -1) {
+			bo_log("RECV ANS ERROR errno[%s]", strerror(errno));
+			goto error;
+		}
+		if(strstr(buf, "OK")) ans = 1;
+		else {
+			buf[3] = 0;
+			bo_log("bo_sendData wait OK recv[%s]", buf);
+			goto error;
+		}
+	} 
+	if(err == 1) {
+		error:
+		bo_log("bo_sendData ERROR errno[%s]", strerror(errno));
+		ans = -1;
+	}
+	return ans;
+}
+
+static int bo_sendData2(int sock, char *data, unsigned int dataSize)
+{
+	int exec = -1, ans = -1;
+	const int err = -1;
+	char head[3] = "SET";
+	unsigned char len[2] = {0};
+	unsigned char tmp[1300] = {0};
+	char buf[4] = {0};
+	if(sock != -1) {
+		memcpy(tmp, head, 3);
+		boIntToChar(dataSize, len);
+		memcpy(tmp +3, len, 2);
+		memcpy(tmp + 5, data, dataSize);
+		
+		exec = bo_sendAllData(sock, tmp, dataSize+5);
+		if(exec == -1) {
+			bo_log("SEND DATA ERROR errno[%s]", strerror(errno));
+			goto error;
+		}
+		exec = bo_recvAllData(sock, (unsigned char*)buf, 3, 3);
+		if(exec == -1) {
+			bo_log("RECV ANS ERROR errno[%s]", strerror(errno));
+			goto error;
+		}
+		if(strstr(buf, "OK")) ans = 1;
+		else {
+			buf[3] = 0;
+			bo_log("bo_sendData2 wait OK recv[%s]", buf);
+			goto error;
+		}
+	} 
+	if(err == 1) {
+		error:
+		bo_log("bo_sendData2 ERROR errno[%s]", strerror(errno));
+		ans = -1;
+	}
+	return ans;
+} 
+/* ----------------------------------------------------------------------------
  * @brief	устанав соед с узлом -> отпр SET|LEN|DATA -> ждем ответ OK ->
  *		закр сокет
  * @return	[-1] - error; [1] - OK  
  */
-int bo_sendDataFIFO(char *ip, unsigned int port, 
+int bo_sendDataFIFO_depricated(char *ip, unsigned int port, 
 	char *data, unsigned int dataSize)
 {
 	int ans  = -1;
@@ -234,9 +416,13 @@ int bo_sendXXXMsg(int sock, char *head, char *data, int dataSize)
 	int ans  = -1;
 	int exec = -1;
 	unsigned char len[2] = {0};
-	char buf[4] = {0};
+	/*
+		char buf[4] = {0};
+	*/
+	unsigned char tmp[1300] = {0};
 	
 	boIntToChar(dataSize, len);
+	/*
 	exec = bo_sendAllData(sock, (unsigned char*)head, 3);
 	if(exec == -1) {
 		bo_log("bo_sendXXXMsg() %s send[head] errno[%s]",
@@ -258,7 +444,19 @@ int bo_sendXXXMsg(int sock, char *head, char *data, int dataSize)
 			strerror(errno));
 		goto end;
 	}
-
+	*/
+	memcpy(tmp, head, 3);
+	memcpy(tmp + 3, len, 2);
+	memcpy(tmp + 5, data, dataSize);
+	exec = bo_sendAllData(sock, tmp, dataSize + 5);
+	if(exec == -1) {
+		bo_log("bo_sendXXXMsg() %s send[data] errno[%s]",
+			"WARN",
+			strerror(errno));
+		goto end;
+	} else ans = 1;
+	
+	/*
 	exec = bo_recvAllData(sock, (unsigned char*)buf, 3, 3);
 	if(exec == -1) {
 		bo_log("bo_sendXXXMsg() %s recv ans errno[%s]",
@@ -271,6 +469,7 @@ int bo_sendXXXMsg(int sock, char *head, char *data, int dataSize)
 				buf, "data don't send to client.");
 		}
 	}
+	 */
 	end:
 	return ans;
 }
@@ -345,19 +544,26 @@ int bo_setConnect(char *ip, int port)
 	int n = 0;
 	int conSet = 0;
 	struct sockaddr_in saddr;
-	
+	int exec = -1, flag = 1;
 	sock = bo_crtSock(ip, port, &saddr);
 
 	if(sock > 0) {
 		bo_setTimerRcv(sock);
-		while(n < 10) {
+		/* откл Алгоритм Нейгла */
+		exec = setsockopt(sock, 
+			IPPROTO_TCP, 
+			TCP_NODELAY, 
+			(char*)&flag,
+			sizeof(flag));
+		if(exec == -1) bo_log("m_addClient can't setsockopt(TCP_NODELAY)");
+		while(n < 3) {
 			if(connect(sock, (struct sockaddr *)&saddr, 
 			   sizeof(struct sockaddr)) == 0) {
 				conSet = 1; 
 				break;
 			} else {
 				
-				bo_log("bo_setConnect() n[%d] \nerrno[%s] ip[%s] \
+				bo_log("bo_setConnect() n[%d] errno[%s] ip[%s] \
 					port[%d] ",
 					n,
 					strerror(errno),
@@ -514,7 +720,7 @@ void bo_closeSocket(int sock)
 	int exec = 0;
 	exec = close(sock);
 	if(exec == -1) {
-		bo_log("bo_loseSock() errno[%s]", strerror(errno));
+		bo_log("bo_closeSock() errno[%s]", strerror(errno));
 	}
 }
 

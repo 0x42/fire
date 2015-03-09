@@ -185,10 +185,13 @@ static void coreErr(struct paramThr *p)
 
 static void coreOk(struct paramThr *p) 
 { 
+	/*
 	int exec = -1;
 	unsigned char msg[] = " OK";
+	
 	exec = bo_sendAllData(p->sock, msg, 3);
 	if(exec == -1) bo_log("coreOk() errno[%s]", strerror(errno));
+	*/
 	p->status = QUIT;
 }
 

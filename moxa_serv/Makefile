@@ -23,6 +23,7 @@ SRC5   = ../src/nettcp/bo_fifo.c
 SRC6   = ../src/nettcp/bo_net_get.c
 SRC7   = ../src/tools/ocfg.c
 SRC8   = ../src/tools/oht.c
+SRC9   = ../src/nettcp/bo_send_lst.c
 
 OBJ    = build/main.o
 OBJ1   = build/dbgout.o
@@ -33,6 +34,7 @@ OBJ5   = build/bo_fifo.o
 OBJ6   = build/bo_net_get.o
 OBJ7   = build/ocfg.o
 OBJ8   = build/oht.o
+OBJ9   = build/bo_send_lst.o
 
 default:
 	$(CC) $(INC_DIR) $(CFLAGS) $(SRC1) -o $(OBJ1)
@@ -43,10 +45,11 @@ default:
 	$(CC) $(INC_DIR) $(CFLAGS) $(SRC6) -o $(OBJ6)	
 	$(CC) $(INC_DIR) $(CFLAGS) $(SRC7) -o $(OBJ7)	
 	$(CC) $(INC_DIR) $(CFLAGS) $(SRC8) -o $(OBJ8)	
+	$(CC) $(INC_DIR) $(CFLAGS) $(SRC9) -o $(OBJ9)	
 
 	$(CC) $(INC_DIR) $(CFLAGS) $(SRC)  -o $(OBJ)
 	$(CC) $(LDFLAGS) -g $(OBJ1) $(OBJ2) $(OBJ3) $(OBJ4) $(OBJ5) \
-	      $(OBJ6) $(OBJ7) $(OBJ8)  $(OBJ) -o $(TARGET)
+	      $(OBJ6) $(OBJ7) $(OBJ8) $(OBJ9)  $(OBJ) -o $(TARGET)
 
 memtrace:
 	MALLOC_TRACE=trace.log $(TARGET)

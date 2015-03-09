@@ -156,8 +156,6 @@ static void m_readConfig(TOHT *cfg, int n, char **argv)
 			f_log	  = cfg_getstring(cfg, "log:file", f_log);
 			f_log_old = cfg_getstring(cfg, "log:file_old", f_log_old);
 			maxrow    = cfg_getint(cfg, "log:maxrow", maxrow);
-			
-
 		} else {
 			bo_log(" WARNING error[%s] %s", 
 				"can't read config file",
@@ -208,7 +206,7 @@ static void m_servWork(int sock_in, int sock_out,
 	
 	while(stop == 1) {
 		tval.tv_sec  = 0;
-		tval.tv_usec = 100000;
+		tval.tv_usec = 5000;
 		FD_ZERO(&r_set);
 		FD_ZERO(&w_set);
 		FD_ZERO(&e_set);
@@ -225,7 +223,6 @@ static void m_servWork(int sock_in, int sock_out,
 		 * значит его надо закрыть.*/
 		m_addSockToSet(llist_out, &r_set);
 		exec = select(maxdesc, &r_set, NULL, NULL, &tval);
-		
 		if(exec == -1) {
 			bo_log("bo_net_master.c->m_servWork() select errno[%s]",
 				strerror(errno));
@@ -248,7 +245,7 @@ static void m_servWork(int sock_in, int sock_out,
 		
 		if(exec > -1) {
 			chk_sock_N++;
-			if(chk_sock_N == 10) {
+			if(chk_sock_N == 200) {
 			/*	dbgout("CHK SOCK OUT exec[%d]\n", exec); */
 				/* проверка соединений sock_out */
 				m_askSock(llist_out, tr);
@@ -271,7 +268,8 @@ static void m_servWork(int sock_in, int sock_out,
  */
 static void m_addClient(struct bo_llsock *list, int servSock, fd_set *set)
 {
-	int sock = -1;
+	int sock = -1, exec = -1;
+	int flag = 1;
 	/* char ip[16] = {0}; */
 	/* провер подкл ли кто-нибудь на серверный сокет */
 	if(FD_ISSET(servSock, set) == 1) {
@@ -282,6 +280,13 @@ static void m_addClient(struct bo_llsock *list, int servSock, fd_set *set)
 		} else {
 			/* макс время ожид прихода пакета, 
 			 * чтобы искл блокировки */
+			/* откл Алгоритм Нейгла */
+			exec = setsockopt(sock, 
+				IPPROTO_TCP, 
+				TCP_NODELAY, 
+				(char*)&flag,
+				sizeof(flag));
+			if(exec == -1) bo_log("m_addClient can't setsockopt(TCP_NODELAY)");
 			bo_setTimerRcv2(sock, 5, 500);
 			bo_addll(list, sock);
 			/*
@@ -352,8 +357,6 @@ static void m_workClient(struct bo_llsock *list_in, struct bo_llsock *list_out,
 	tval.tv_sec = 0;
 	tval.tv_usec = 50;
 	
-	
-	dbgout("CHK FROM LIST_IN: ");
 	i = bo_get_head(list_in);
 	while(i != -1) {
 		exec = bo_get_val(list_in, &val, i);
@@ -367,7 +370,7 @@ static void m_workClient(struct bo_llsock *list_in, struct bo_llsock *list_out,
 					
 					if(ok == 1) tr_log("From ip[%s]", ip);
 					else tr_log("From ip[can't read ip]");
-					
+
 					tr_log("<<<< TAB ROUTE <<<< ");
 					for(i = 0; i < tr->size; i++) {
 						key = *(tr->key + i);
@@ -383,7 +386,6 @@ static void m_workClient(struct bo_llsock *list_in, struct bo_llsock *list_out,
 		i = exec;
 	}
 	/* закрываем сокет удал записи из таблицы роутов для этого сокета */
-	dbgout("\nCHK LIST OUT TO CLOSE:  ");
 	i = bo_get_head(list_out);
 	while(i != -1) {
 		exec = bo_get_val(list_out, &val, i);
@@ -421,6 +423,7 @@ static void m_workClient(struct bo_llsock *list_in, struct bo_llsock *list_out,
 			dbgout("\n");
 		}
 	}
+
 	dbgout("\n");
 }
 
@@ -488,18 +491,18 @@ static int m_recvClientMsg(int sock, TOHT *tr)
 	struct paramThr p;
 	/*  */
 	int t_msg = 0;
+	/*
 	int i; char *key; char *val;
-
-	dbgout("m_recvClientMsg() sock is set[%d] \n", sock);
+	*/
 	p.sock = sock;
 	p.route_tab = tr;
 	p.buf = recvBuf;
 	p.bufSize = recvBufLen;
 	p.length = 0;
 	p.log = logArr;
-	
 	t_msg = bo_master_core(&p);
-	
+
+/*
 	tr_log("==== TAB ROUTE ==== \n");
 	dbgout("==== TAB ROUTE ==== \n");
 	for(i = 0; i < tr->size; i++) {
@@ -512,7 +515,7 @@ static int m_recvClientMsg(int sock, TOHT *tr)
 	}
 	dbgout("==== END TAB ==== \n");
 	tr_log("==== END TAB ==== \n");
-
+*/
 	return t_msg;
 }
 

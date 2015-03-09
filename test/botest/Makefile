@@ -18,6 +18,7 @@ SRC1 = \
     ../../src/nettcp/bo_fifo.c \
     ../../src/nettcp/bo_net_get.c \
     ../../src/nettcp/bo_net.c \
+    ../../src/nettcp/bo_send_lst.c \
     ../../src/tools/ocfg.c \
     ../../src/tools/oht.c \
     ../../src/tools/dbgout.c \
@@ -36,7 +37,13 @@ SRC4 = \
     ../llist/test_runners/Test_llist_Runners.c \
     ../llist/test_runners/all_tests.c \
     ../llist/testllist.c \
-    ../../src/tools/listsock.c
+    ../../src/tools/listsock.c \
+    ../../src/nettcp/bo_send_lst.c \
+    ../../src/nettcp/bo_net.c \
+    ../../src/log/bologging.c \
+    ../../src/tools/dbgout.c \
+    ../../src/tools/ort.c \
+    ../../src/tools/oht.c
 
 SRC5 = \
     ../master/test_runners/Test_master_Runners.c \
@@ -44,6 +51,7 @@ SRC5 = \
     ../master/testmaster.c \
     ../../src/log/bologging.c \
     ../../src/nettcp/bo_net.c \
+    ../../src/nettcp/bo_send_lst.c\
     ../../src/tools/ocrc.c \
     ../../src/tools/oht.c \
     ../../src/nettcp/bo_net_master_core.c \
@@ -66,7 +74,7 @@ fifo:
 	./$(TARGET)
 
 llist:
-	$(CC) $(INC_DIRS) $(SRC_FILES_UNITY) $(SRC4) -o $(TARGET)
+	$(CC) $(INC_DIRS) $(SRC_FILES_UNITY) $(SRC4) -lpthread  -o $(TARGET)
 	./$(TARGET)
 
 log:

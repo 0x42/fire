@@ -1,0 +1,13 @@
+#!/bin/sh
+
+/home/utils/upramdisk2 2048
+
+cp /home/utils/wd.lifes /mnt/ramdisk/wd.lifes
+cp /home/utils/master.life /mnt/ramdisk/master.life
+cp /home/utils/mslave.life /mnt/ramdisk/mslave.life
+
+#cron &
+
+#/home/tabr/master master.cfg &
+#/home/slave/mslave mslave.cfg &
+

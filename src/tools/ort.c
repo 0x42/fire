@@ -29,15 +29,15 @@
 void str_splitInt(int *buf, const char *istr, const char *dlm)
 {
 	char *str = str_dup(istr);
-	char *pch;
 	int i = 0;
 	
-	pch = strtok(str, dlm);
-	while (pch != NULL)
-	{
-		buf[i++] = atoi(pch);
-		pch = strtok(NULL, dlm);
+	char *tok = str, *end = str;
+	while (tok != NULL) {
+		tok = strsep(&end, dlm);
+		buf[i++] = atoi(tok);
+		tok = end;
 	}
+
 	free(str);
 }
 
@@ -51,15 +51,21 @@ void str_splitInt(int *buf, const char *istr, const char *dlm)
 void str_splitRt(struct rtbl *rt, const char *istr, const char *dlm)
 {
 	char *str = str_dup(istr);
-	char *pch;
 	
-	pch = strtok(str, dlm);
-	rt->adr = atoi(pch);
-	pch = strtok(NULL, dlm);
-	strcpy(rt->ip, pch);
-	pch = strtok(NULL, dlm);
-	rt->port = atoi(pch);
-
+	char *tok = str, *end = str;
+	if (tok != NULL) {
+		tok = strsep(&end, dlm);
+		rt->adr = atoi(tok);
+		if (tok != NULL) {
+			tok = strsep(&end, dlm);
+			strcpy(rt->ip, tok);
+			if (tok != NULL) {
+				tok = strsep(&end, dlm);
+				rt->port = atoi(tok);
+			}
+		}
+	}
+	
 	free(str);
 }
 
@@ -73,12 +79,16 @@ void str_splitRt(struct rtbl *rt, const char *istr, const char *dlm)
 void str_splitVal(struct rtbl *rt, const char *istr, const char *dlm)
 {
 	char *str = str_dup(istr);
-	char *pch;
 	
-	pch = strtok(str, dlm);
-	strcpy(rt->ip, pch);
-	pch = strtok(NULL, dlm);
-	rt->port = atoi(pch);
+	char *tok = str, *end = str;
+	if (tok != NULL) {
+		tok = strsep(&end, dlm);
+		strcpy(rt->ip, tok);
+		if (tok != NULL) {
+			tok = strsep(&end, dlm);
+			rt->port = atoi(tok);
+		}
+	}
 
 	free(str);
 }

@@ -51,6 +51,7 @@ void bo_del_bysock(struct bo_llsock *llist, int sock);
 void bo_setflag_bysock(struct bo_llsock *llist, int sock, int flag);
 
 int bo_getip_bysock(struct bo_llsock *llist, int sock, char *ip);
+
 #endif	/* LISTSOCK_H */
 
 /* 0x42 */

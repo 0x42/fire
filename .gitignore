@@ -2,7 +2,9 @@
 *.o
 *.err
 *.log
+*.txt
 *.log(old)
+*.gdb
 *.out
 *~
 .directory

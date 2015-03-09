@@ -1,0 +1,5 @@
+#!/bin/sh
+
+echo "This is my WatchDog !!!" > /var/cron
+
+/home/utils/wd

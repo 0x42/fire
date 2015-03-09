@@ -7,14 +7,26 @@
 #include "bo_fifo.h"
 #include "../tools/ocfg.h"
 #include "../tools/oht.h"
+#include "bo_send_lst.h"
 
 extern unsigned int boCharToInt	(unsigned char *buf);
 
 struct ParamSt;
 static void readConfig		(TOHT *cfg, int n, char **argv);
+static int  runSockServ		();
+static void workSockServ	(int sock_serv, unsigned char *buf, 
+				int bufSize, TOHT *tab);
+
+static void clientEvent		(struct BO_SOCK_LST *sock_lst, 
+				fd_set *set,
+				unsigned char *buf,
+				int bufSize,
+				int *end, 
+				TOHT *tab);
+static int isClosed	(int sock);
 
 static void fifoServWork	();
-static void fifoReadPacket	(int clientSock, unsigned char *buffer, 
+static int  fifoReadPacket	(int clientSock, unsigned char *buffer, 
 				 int bufSize, int *endPr, TOHT *tab);
 static void fifoReadHead	(struct ParamSt *param);
 static void fifoQuit		(struct ParamSt *param);
@@ -28,10 +40,13 @@ static void fifoDelHead		(struct ParamSt *param);
 static void fifoEnd		(struct ParamSt *param);
 static void fifoMem		(struct ParamSt *param);
 
-static int bo_parseOnCommands	(unsigned char *buf, int bufSize);
+static int bo_parseOnCommands		(unsigned char *buf, int bufSize);
 static unsigned int readPacketLength	(struct ParamSt *param);
 static int bo_checkDblMsg		(struct ParamSt *param);
 static int bo_chkDbl_setMark		(struct ParamSt *param);
+
+static void addToEventLst		(struct BO_SOCK_LST *sock_lst, 
+					fd_set *set);
 
 /* ----------------------------------------------------------------------------
  * @port	- порт на котором висит слуш сокет
@@ -106,7 +121,9 @@ struct ParamSt {
  */
 void bo_fifo_thrmode(int port, int queue_len, int fifo_len)
 {
+	
 	bo_log(" %s %s %s", "FIFO", "INFO", "START(THR mode) moxa_serv");
+	printf("FIFO server start\n");
 	fifoconf.port      = port;
 	fifoconf.queue_len = queue_len;
 	fifoconf.fifo_len  = fifo_len;
@@ -115,7 +132,7 @@ void bo_fifo_thrmode(int port, int queue_len, int fifo_len)
 		fifoServWork(); 
 		bo_delFIFO();
 	}
-	
+	printf("FIFO server finish\n");
 	bo_log("%s %s %s", "FIFO", "INFO", "END	moxa_serv");
 }
 
@@ -177,14 +194,11 @@ static void readConfig(TOHT *cfg, int n, char **argv)
 static void fifoServWork()
 {
 	int sockfdMain = -1;
-	int stop = 1;
-	int countErr  = 0;
-	char *errTxt = NULL;
-	int clientfd = 0;
 	/* размер ячейки в FIFO */
 	int bufferSize = BO_FIFO_ITEM_VAL;
 	unsigned char *buffer1 = NULL;
 	TOHT *tab = NULL;
+
 	bo_log(" %s %s %s", "FIFO", "INFO", " RUN ");
 	
 	/* создаем буфер */
@@ -201,55 +215,169 @@ static void fifoServWork()
 	}
 	
 	sockfdMain = -1;
-	sockfdMain = bo_servStart(fifoconf.port, fifoconf.queue_len);
+	sockfdMain = runSockServ();
 	
-	while(stop == 1) {
-		
-		if( sockfdMain  != -1 ) {
-			if(bo_waitConnect(sockfdMain, &clientfd, &errTxt) == 1) {
-				countErr = 0;
-				/* передаем флаг stop. Ф-ия может поменять его на -1
-				   если придет пакет END */
-				fifoReadPacket(clientfd, buffer1, bufferSize, &stop, tab);
-			} else {
-				countErr++;
-				bo_log(" %s %s %s errno[%s]", "FIFO", "ERROR", 
-					"fifoServWork()", errTxt);
-			}
-		} else {
-			sleep(1);
-			sockfdMain = bo_servStart(fifoconf.port, fifoconf.queue_len);
-		}
-		if(countErr == 5) {
-			bo_log(" FIFO ERROR fifoServWork() restart server socket");
-			countErr = 0;
-			bo_closeSocket(sockfdMain);
-			sockfdMain = -1;
-		}
+	if(sockfdMain == -1) { 
+		bo_log("FIFO ERROR fifoServWork() can't create server socket");
+		goto exit; 
+	} else {
+		workSockServ(sockfdMain, buffer1, bufferSize, tab);
 	}
 	
-	bo_closeSocket(sockfdMain);
+	if(sockfdMain != -1) bo_closeSocket(sockfdMain);
+	
 	exit:
 	if(tab != NULL) ht_free(tab);
 	if(buffer1 != NULL) free(buffer1);
 }
- 
+
+static int runSockServ()
+{
+	int ans = -1 , n = 0, sock = -1;
+	while(n != 5) {
+		sock = bo_servStart(fifoconf.port, fifoconf.queue_len);
+		if(sock != -1) { ans = sock; break; }
+		sleep(1);
+		n++;
+	}
+	return ans;
+}
+
+static void workSockServ(int sock_serv, unsigned char *buf, int bufSize, TOHT *tab)
+ {
+	int stop = 1, exec = -1, sock_cl = -1;
+	int option;
+	int err_count = 0; 
+	fd_set r_set;
+	struct BO_SOCK_LST *sock_lst = NULL;
+
+	/* создаем список подкл клиентов */
+	sock_lst = bo_init_sock_lst(5, 0);
+	if(sock_lst == NULL) {
+		bo_log("fifoServWork->bo_init_sock_lst ERROR can't crt sock_lst");
+		goto exit;
+	}
+	
+	while(stop == 1) {
+		sock_cl = -1;
+		FD_ZERO(&r_set);
+		FD_SET(sock_serv, &r_set);
+	
+		addToEventLst(sock_lst, &r_set);
+
+		exec = select(FD_SETSIZE, &r_set, NULL, NULL, NULL);
+		
+		if(exec == -1) {
+			bo_log("bo_net_fifo_server()->workSockServ ERROR select[%s]",
+				strerror(errno));
+			goto exit;
+		} else {
+			if(FD_ISSET(sock_serv, &r_set)) {
+				sock_cl = accept(sock_serv, NULL, NULL);
+				if(sock_cl == -1) {
+					bo_log("bo_net_fifo_server->[%s] ERROR accept[%s]",
+						"workSockServ",
+						strerror(errno));
+					err_count++;
+				} else {
+					bo_setTimerRcv2(sock_cl, 0, 200000);
+					/* при перезапуске программы позволяет повторно использовать адрес 
+					 * порт, иначе придется ждать 2MSL */
+					option = 1;
+					setsockopt(sock_cl, SOL_SOCKET, SO_REUSEADDR, 
+						&option, sizeof(option));
+					exec = bo_add_sock_lst2(sock_lst, sock_cl);
+					if(exec == -1) {
+						bo_log("workSockServ can't add sock_cl");
+						err_count++;
+						bo_closeSocket(sock_cl);
+					}
+				}
+			}
+			clientEvent(sock_lst, &r_set, buf, bufSize, &stop, tab);
+		}
+		if(err_count == 5) {
+			bo_log("workSockServ a lot of error count == 5 STOP FIFO");
+			goto exit;
+		}
+	}
+	exit:
+	if(sock_lst != NULL) { bo_log("workSockServ->delete sock_lst"); }
+}
+
+static void addToEventLst(struct BO_SOCK_LST *sock_lst, fd_set *set)
+{
+	struct BO_ITEM_SOCK_LST *item = NULL;
+	int i = -1, sock;
+	
+	i = sock_lst->head;
+	while(i != -1) {
+		item = sock_lst->arr + i;
+		sock = item->sock;
+		if(sock != -1) FD_SET(sock, set);
+		i = *(sock_lst->next + i);
+	}
+}
+
+static void clientEvent(struct BO_SOCK_LST *sock_lst, 
+			fd_set *set,
+			unsigned char *buf,
+			int bufSize,
+			int *end, 
+			TOHT *tab)
+{
+	struct BO_ITEM_SOCK_LST *item = NULL;
+	int i = -1, exec = -1;
+	
+	if(sock_lst->n > 0) {
+		i = sock_lst->head;
+		while(i != -1) {
+			item = sock_lst->arr + i;
+			if(FD_ISSET(item->sock, set) == 1) {
+				if(isClosed(item->sock) == -1) {
+					bo_del_item_sock_lst(sock_lst, i);
+				}
+				exec = fifoReadPacket(
+					item->sock,
+					buf, 
+					bufSize, 
+					end, 
+					tab);
+				if(exec == -1) { 
+					bo_del_item_sock_lst(sock_lst, i);
+				}
+			} 
+			i = *(sock_lst->next + i);
+		}
+	}
+}
+
+static int isClosed(int sock)
+{
+	int fl = -1, ans = -1;
+	char buf;
+	fl = recv(sock, &buf, 1, MSG_PEEK);
+	if(fl < 1) ans = -1;
+	else ans = 1;
+	return ans;
+}
 /* ---------------------------------------------------------------------------
-  * @brief		читаем пакет и пишем/забираем/удаляем в/из FIFO
-  * @clientSock		дескриптор сокета(клиента) При завершении сокет закр-ся.
-  * @buffer		буфер в который пишем данные. 
-  * @bufSize		bufSize = BO_FIFO_ITEM_VAL(bo_fifo.h)
-  * @endPr		флаг прекращ работы сервера и заверш программы
- *  @tab		хранит значен IP - ID сообщения(для искл дублирования)
-  */
-static void fifoReadPacket(int clientSock, unsigned char *buffer, int bufSize,
+ * @brief		читаем пакет и пишем/забираем/удаляем в/из FIFO
+ * @clientSock		дескриптор сокета(клиента) При завершении сокет закр-ся.
+ * @buffer		буфер в который пишем данные. 
+ * @bufSize		bufSize = BO_FIFO_ITEM_VAL(bo_fifo.h)
+ * @endPr		флаг прекращ работы сервера и заверш программы
+ * @tab			хранит значен IP - ID сообщения(для искл дублирования)
+ * @return		[1] OK [-1] ERR	  
+ */
+static int fifoReadPacket(int clientSock, unsigned char *buffer, int bufSize,
 			int *endPr, TOHT *tab)
 {
 	int stop = -1;
-	int i = 1;
 	struct ParamSt param;
 	char idBuf[9] = {0};
 	int exec = -1;
+	int ans = 1;
 	
 	param.clientfd = clientSock;
 	memset(param.ip, 0, 16);
@@ -259,19 +387,13 @@ static void fifoReadPacket(int clientSock, unsigned char *buffer, int bufSize,
 	param.id       = idBuf;
 	packetStatus   = READHEAD;
 	
-	/* устан максимальное время ожидания одного пакета */
-	bo_setTimerRcv(clientSock);
-	
-	/* при перезапуске программы позволяет повторно использовать адрес 
-	 * порт, иначе придется ждать 2MSL */
-	setsockopt(clientSock, SOL_SOCKET, SO_REUSEADDR, &i, sizeof(i));
-	
 	exec = bo_getIp(clientSock, param.ip);
 	if(exec == -1) memset(param.ip, '-', 15);
 	while(stop == -1) {
-	/*
-	 * 	bo_log("\nFIFO = %s\n", PacketStatusTxt[packetStatus]);
-	*/	
+		/*
+		 * bo_log("FIFO = %s ", PacketStatusTxt[packetStatus]);
+	 	 */
+		if(packetStatus == ANSERR) ans = -1;
 		if(packetStatus == QUIT) break;
 		if(packetStatus == END) {
 			*endPr = -1;
@@ -280,7 +402,7 @@ static void fifoReadPacket(int clientSock, unsigned char *buffer, int bufSize,
 		statusTable[packetStatus](&param);
 	}
 	
-	bo_closeSocket(clientSock);	
+	return ans;
 }
 
  /* ---------------------------------------------------------------------------
@@ -325,6 +447,7 @@ static void fifoReadPacket(int clientSock, unsigned char *buffer, int bufSize,
 	int flag = -1;
 	int count = 0;
 	int totalSize = 0;
+	
 	length = readPacketLength(param);
 	totalSize = param->bufSize + 8; /* 8 = id msg length */ 
 	if((length > 0) & (length <= totalSize)) {
@@ -424,9 +547,10 @@ static void fifoAnsOk(struct ParamSt *param)
 	unsigned char msg[] = " OK";
 	packetStatus = QUIT;
 	exec = bo_sendAllData(sock, msg, 3);
-	if(exec == -1) bo_log(" %s fifoAnsOk() errno[%s]", 
-				"FIFO", 
-				strerror(errno)); 
+	if(exec == -1) { 
+		bo_log(" %s fifoAnsOk() errno[%s]", "FIFO", strerror(errno));
+		packetStatus = ANSERR;
+	} 
 }
 
  /* ---------------------------------------------------------------------------
@@ -454,7 +578,6 @@ static void fifoAnsErr(struct ParamSt *param)
 	int sock = param->clientfd;
 	unsigned char msg[] = "ERR";
 	packetStatus = QUIT;
-	
 	exec = bo_sendAllData(sock, msg, sizeof(msg));
 	if(exec == -1) bo_log(" %s fifoAnsErr() errno[%s]", 
 		"FIFO",

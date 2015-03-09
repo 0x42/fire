@@ -140,14 +140,28 @@ int uso_tx(struct actx_thread_arg *targ, unsigned int sch)
 	return 0;
 }
 
-int uso_print_sq(struct actx_thread_arg *targ, unsigned int sch) 
+int uso_print_sq_new(struct actx_thread_arg *targ, unsigned int sch) 
+{
+	int j;
+	char data[1200] = {0};
+	int res = 0;
+
+	for (j=0; j<rxBuf.wpos; j++) {
+		data[j] = (unsigned char)rxBuf.buf[j];
+	}
+	
+	printf("[%s]\n", data);
+	
+	return res;
+}
+
+void uso_print_sq(struct actx_thread_arg *targ, unsigned int sch) 
 {
 	char csch[10];
 	unsigned char ln;
 	unsigned int rxsch;
 	int i, j;
 	char data[1200];
-	int res = 0;
 	char tmstr[50] = {0};
 
 	memset(csch, 0, 10);
@@ -195,8 +209,6 @@ int uso_print_sq(struct actx_thread_arg *targ, unsigned int sch)
 	}
 
 	rcv_ok = 1; */
-		
-	return res;
 }
 
 int uso_proc(struct actx_thread_arg *targ, unsigned int sch)
@@ -226,10 +238,14 @@ int uso_proc(struct actx_thread_arg *targ, unsigned int sch)
 					res = sch;
 				} else {
 					/** Стоп
-					rcv_ok = 1;
-					res = 0;
-					 */
-					res = -2;
+					    rcv_ok = 1;
+					
+					    bo_log("actx_485: uso_answer()"); */
+					res = uso_answer(targ, &txBuf);
+					if (res < 0)
+						res = -1;
+					else
+						res = -2;
 				}
 			} else {
 				/** Выполнять блок размером в N запросов
@@ -274,7 +290,9 @@ int uso_session(struct actx_thread_arg *targ, unsigned int sch)
 					    printf("actx_485: next zapros\n"); */
 					res = uso_proc(targ, sch);
 				} else {
-					bo_log("actx_485: uso_quNetStat()");
+					/**
+					bo_log("actx_485:
+					uso_answer()"); */
 					res = uso_answer(targ, &txBuf);
 				}
 			} else {
@@ -283,27 +301,14 @@ int uso_session(struct actx_thread_arg *targ, unsigned int sch)
 			}
 		}
 	} else if (rxBuf.buf[2] == (char)targ->cdsqId) {
-		/** Ответ от устройства */
-		res = uso_print_sq(targ, sch);
-		/* 
-		if (targ->test_nm > 0) {
-			if (rcv_nm <= targ->test_nm) {
-				if (rcv_sch < (targ->test_m + targ->test_ln))
-					rcv_sch++;
-				else {
-					rcv_sch = (unsigned int)targ->test_ln;
-					rcv_nm++;
-				}
-				
-				res = 0;
-			} else {
-				
-				res = -2;
-			}
-			} */
+		/** Ответ от устройства
+		bo_log("actx_485: from PR"); */
+		uso_print_sq(targ, sch);
+		res = uso_answer(targ, &txBuf);
 	} else if (rxBuf.buf[2] == (char)targ->cdmsId) {
 		printf("USO: magistral status\n");
 		uso_print_ms();
+		res = uso_answer(targ, &txBuf);
 	} else if (rxBuf.buf[2] == (char)targ->cdnsId) {
 		printf("uso_session: cdns\n");
 		/**
@@ -326,9 +331,11 @@ int uso_session(struct actx_thread_arg *targ, unsigned int sch)
 					apsv_ln++;
 				}
 			}
+		res = uso_answer(targ, &txBuf);
 	} else if (rxBuf.buf[2] == (char)targ->cdquLogId) {
 		/** Print Log */
 		if (targ->logger) uso_printLog();
+		res = uso_answer(targ, &txBuf);
 	} else {
 		bo_log("USO: ??? id= %d", (unsigned int)rxBuf.buf[2]);
 		printf("uso_session: error\n");
@@ -342,6 +349,7 @@ void *actx_485(void *arg)
 	struct actx_thread_arg *targ = (struct actx_thread_arg *)arg;
 	int res;
 	unsigned int sch;
+	char tmstr[50] = {0};
 	
 	sch = (unsigned int)targ->test_ln;
 	nm = 1;
@@ -354,56 +362,64 @@ void *actx_485(void *arg)
 	write(1, "uso:\n", 5);
 
 	while (1) {
+		/**
+		memset(tmstr, 0, 50);
+		
+		bo_getTimeNow(tmstr, 50);
+
+		printf("actx_485[%s]\n", tmstr);
+		*/
 		res = rx(targ);
 		if (res < 0) {
 			bo_log("actx_485: rx() exit");
 			break;
 		}
-		
-		if (rxBuf.buf[0] == (char)targ->adr) {
-			switch (get_rxFl(&rxBuf)) {
-			case RX_DATA_READY:
-				/** USO */
-				if (rxBuf.wpos == 4) {
-					/** Нас сканируют */
-					write(1, "uso: scan()\n", 13);
-					res = scan(targ, &txBuf);
-					if (res < 0) {
-						bo_log("actx_485: scan() exit");
-						pthread_exit(0);
-					}
-				} else {
-					/**
-					write(1, "uso: active()\n", 15);
-					*/
-					res = uso_session(targ, sch);
-					if (res == -1)
-						pthread_exit(0);
-					else if (res == -2) {
-						/** Стоп */
-						printf("actx_485: USO TEST STOP\n");
-						rcv_ok = 1;
-						/* pthread_exit(0); */
-					} else if (res > 0)
-						sch = res;
+		/**
+		   if (rxBuf.buf[0] == (char)targ->adr) {
+		*/
+		switch (get_rxFl(&rxBuf)) {
+		case RX_DATA_READY:
+			/** USO */
+			if (rxBuf.wpos == 4) {
+				/** Нас сканируют */
+				write(1, "uso: scan()\n", 13);
+				res = scan(targ, &txBuf);
+				if (res < 0) {
+					bo_log("actx_485: scan() exit");
+					pthread_exit(0);
 				}
-				
-				break;
-			case RX_ERROR:
-				/** Ошибка кадра */
-				bo_log("actx_485(): Cadr Error !");
-				break;
-			case RX_TIMEOUT:
-				/** Текущее устройство не отвечает */
-				bo_log("actx_485(): timeout dst= %d",
-				       (unsigned int)rxBuf.buf[1]);
-				break;
-			default:
-				bo_log("actx_485(): state ??? fl= %d",
-				       get_rxFl(&rxBuf));
-				break;
+			} else {
+				/**
+				   write(1, "uso: active()\n", 15);
+				*/
+				res = uso_session(targ, sch);
+				if (res == -1)
+					pthread_exit(0);
+				else if (res == -2) {
+					/** Стоп */
+					printf("actx_485: USO TEST STOP\n");
+					rcv_ok = 1;
+					/* pthread_exit(0); */
+				} else if (res > 0)
+					sch = res;
 			}
+				
+			break;
+		case RX_ERROR:
+			/** Ошибка кадра */
+			bo_log("actx_485(): Cadr Error !");
+			break;
+		case RX_TIMEOUT:
+			/** Текущее устройство не отвечает */
+			bo_log("actx_485(): timeout dst= %d",
+			       (unsigned int)rxBuf.buf[1]);
+			break;
+		default:
+			bo_log("actx_485(): state ??? fl= %d",
+			       get_rxFl(&rxBuf));
+			break;
 		}
+		/** } */
 	}
 	
 	bo_log("actx_485: exit");

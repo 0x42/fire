@@ -30,6 +30,7 @@
 /** Кол-во (макс.) устройств на каждой шине RS485 */
 #define DST_BUF_SZ 256
 
+#ifdef __SNMP__
 /** Кол-во (макс.) IP адресов для контроля магистрали (SNMP) */
 #define SNMP_IP_MAX 64
 
@@ -39,6 +40,7 @@ struct snmp_thread_arg {
 			         * состояния магистрали */
 	int n;                  /** Размер массива */
 };
+#endif
 
 /** Структура данных для потока fifo_serv() */
 struct fifo_thread_arg {
@@ -52,11 +54,13 @@ struct sfifo_thread_arg {
 	int port;         /** Номер порта FIFO сервера */
 };
 
+#ifdef __LOG__
 /** Структура данных для потока logSendSock_connect() */
 struct log_thread_arg {
 	char *logSend_ip; /** IP адрес LOG сервера */
 	int logSend_port; /** Номер порта LOG сервера */
 };
+#endif
 
 /** Структура данных для потока wdt() */
 struct wdt_thread_arg {
@@ -70,8 +74,8 @@ struct wdt_thread_arg {
 struct chan_thread_arg {
 	int tscan;        /** Таймер сканирования устройств на сети RS485 */
 	int tout;         /** Таймаут приема кадра на сети RS485 */
-	unsigned int utxdel;  /** Коэффициент для задержки на передачу
-			       * по сети RS485 */
+	/** Коэффициент для задержки на передачу
+	unsigned int utxdel;  * по сети RS485 */
 	int wdt_en;       /** Разрешение работы WatchDog */
 	int nretries;     /** Число попыток передачи кадра по сети RS485 */
 	int port;         /** Номер порта RS485 */
@@ -83,15 +87,19 @@ struct chan_thread_arg {
 	int dst_end;
 	char *ip;         /** IP адрес узла */
 	int fifo_port;    /** Номер порта FIFO сервера */
+#ifdef __SNMP__
 	int snmp_n;       /** Размер массива IP адресов для мониторинга
 			   * состояния магистрали */
 	int snmp_uso;     /** Адрес УСО для передачи состояния магистрали */
+	int cdmsId;       /** Идентификатор запроса 'GetNetworkStatus' */
+#endif
+#ifdef __LOG__
 	int logMaxLines;  /** Максимальное количество строк лога */
+	int cdquLogId;    /** Идентификатор запроса 'GetLog' */
+#endif
 	int cdDest;       /** Идентификатор подсистемы ЛС */
 	int cdaId;        /** Идентификатор запроса 'AccessGranted' */
 	int cdnsId;       /** Идентификатор запроса 'GetNetRS485Status' */
-	int cdquLogId;    /** Идентификатор запроса 'GetLog' */
-	int cdmsId;       /** Идентификатор запроса 'GetNetworkStatus' */
 };
 
 /** Структура данных для потоков rtbl_recv(), rtbl_send() */
@@ -162,9 +170,11 @@ int rtSend_sock;  /** Сокет для отправки локальной та
 int rtRecv_sock;  /** Сокет для получения глобальной таблицы
 		   * маршрутов от контроллера master */
 
+#ifdef __LOG__
 int logSend_sock;  /** Сокет для работы с логами */
 
 pthread_mutex_t	mx_sendSocket;  /** Защита ресурса logSend_sock */
+#endif
 
 
 /** Идентификатор кадров отправляемых через FIFO */
@@ -215,7 +225,10 @@ int get_bufDst(struct thr_dst_buf *b);
 void send_rtbl(char *ip);
 void put_rtbl(struct chan_thread_arg *targ, struct thr_dst_buf *b, int dst);
 void remf_rtbl(struct chan_thread_arg *targ, struct thr_dst_buf *b, int dst);
-void putLog();
+
+#ifdef __LOG__
+void putLog(struct thr_rx_buf *b);
+#endif
 
 void prepareFIFO(struct thr_rx_buf *rb, char *key, int dst);
 
@@ -245,8 +258,12 @@ void *rtbl_send(void *arg);  /** Отправка локальной табли�
 			      * мастеру */
 void *fifo_serv(void *arg);  /** Сервер FIFO */
 void *send_fifo(void *arg);  /** Стек FIFO */
+#ifdef __LOG__
 void *logSendSock_connect(void *arg);  /** Сервер LOG */
+#endif
+#ifdef __SNMP__
 void *snmp_serv(void *arg);  /** Сервер SNMP */
+#endif
 
 
 #endif	/* _SLAVE_H */

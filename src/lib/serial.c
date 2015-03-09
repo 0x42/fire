@@ -25,6 +25,7 @@
 
 #include "serial.h"
 
+
 static struct	termios oldtio[ MAX_PORT_NUM], newtio[ MAX_PORT_NUM];
 static int	fd_map[ MAX_PORT_NUM]={ -1, -1, -1, -1, -1, -1, -1, -1};///< -1 means SERIAL_ERROR_FD
 
@@ -63,7 +64,7 @@ int	SerialOpen( int port)
 	sprintf( device, "/dev/ttyM%d", port);
 #else
 	sprintf( device, "/dev/ttyUSB%d", port);
-	/* sprintf( device, "/dev/ttyS%d", port); */
+/* sprintf( device, "/dev/ttyS%d", port); */
 #endif
 	fd = open( device, O_RDWR|O_NOCTTY);
 	if( fd <0)
@@ -102,11 +103,16 @@ int	SerialOpen( int port)
 int	SerialWrite( int port, char* str, int len)
 {
 	int fd= FindFD( port);
-
+	int res;
+	
 	if( fd < 0)			///< error
 		return fd;
 
-	return write( fd, str, len);
+	res = write( fd, str, len);
+	if (res < 0)
+		return -1;
+	
+	return res;
 }
 
 /*---------------------------------------------------------------------------*/
