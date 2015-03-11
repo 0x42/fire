@@ -348,6 +348,20 @@ void *chan2(void *arg)
 				 * наличие запросов к ним. */
 				res = passiveFromActive(targ);
 				if (res < 0) break;
+			} else {
+				pthread_mutex_lock(&mx_psv);
+				
+				if (get_state(&psvdata_ready) == 1) {
+					put_state(&psvdata_ready, 0);
+					pthread_cond_signal(&psvdata);
+				}
+				
+				if (get_state(&psvAnsdata_ready) == 1) {
+					put_state(&psvAnsdata_ready, 3);
+					pthread_cond_signal(&psvAnsdata);
+				}
+				
+				pthread_mutex_unlock(&mx_psv);
 			}
 		}
 		

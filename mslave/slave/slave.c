@@ -707,21 +707,21 @@ int tx(struct chan_thread_arg *targ, struct thr_tx_buf *b, char *msg)
 {
 	char buf[BUF485_SZ];  /** Буфер передатчика RS485 */
 	int res;
-	/**
+	
 	int i;
 	char dt[3] = {0};
 	char data[1024] = {0};
-	*/
+	
 	
 	res = writer(b, buf, targ->port);	
 	if (res < 0) return -1;
 
-	/**
+	
 	for (i=0; i<b->wpos+3; i++) {
 		sprintf(dt, "%02X", (unsigned char)buf[i]);
 		strncat(data, dt, 2);
 	}
-	printf("tx(%s): [%s]\n", msg, data); */
+	printf("tx(%s): [%s]\n", msg, data);
 	/** bo_log("tx(%s): [%s]", msg, data); */
 	
 	return res;
@@ -739,11 +739,11 @@ int rx(struct chan_thread_arg *targ, struct thr_rx_buf *b, int tout, char *msg)
 {
 	char buf[BUF485_SZ];  /** Буфер приемника RS485 */
 	int res;
-	/**
+	
 	int i;
 	char dt[3] = {0};
 	char data[1024] = {0};
-	*/
+	
 	
 	put_rxFl(b, RX_WAIT);  /** Состояние приема - 'ожидание данных' */
 	b->wpos = 0;           /** Позиция записи в начало буфера приемника */
@@ -754,12 +754,12 @@ int rx(struct chan_thread_arg *targ, struct thr_rx_buf *b, int tout, char *msg)
 		if (res < 0) return -1;
 	}
 
-	/**
+	
 	for (i=0; i<b->wpos+3; i++) {
 		sprintf(dt, "%02X", (unsigned char)buf[i]);
 		strncat(data, dt, 2);
 	}
-	printf("rx(%s): [%s]\n", msg, data); */
+	printf("rx(%s): [%s]\n", msg, data);
 	/** bo_log("rx(%s): [%s]", msg, data); */
 	
 	return 0;
