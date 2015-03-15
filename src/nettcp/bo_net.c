@@ -513,7 +513,7 @@ int bo_crtSock(char *ip, unsigned int port, struct sockaddr_in *saddr)
 	struct in_addr servip;
 	int i = 1;
 	sock = socket(AF_INET, SOCK_STREAM, 0);
-	if(sock != -1) {
+	if(sock > 0) {
 		saddr->sin_family = AF_INET;
 		saddr->sin_port = htons(port);
 		inet_aton(ip, &servip);
@@ -580,7 +580,9 @@ int bo_setConnect(char *ip, int port)
 			sock = -1;
 		}
 		
-	}
+	} else
+		sock = -1;
+	
 	return sock;
 }
 
@@ -718,10 +720,14 @@ int bo_getIp(int sock, char *ip)
 void bo_closeSocket(int sock)
 {
 	int exec = 0;
-	exec = close(sock);
-	if(exec == -1) {
-		bo_log("bo_closeSock() errno[%s]", strerror(errno));
-	}
+	if (sock > 0) {
+		exec = close(sock);
+		if(exec == -1) {
+			bo_log("bo_closeSocket() errno[%s]", strerror(errno));
+		}
+	} else
+		bo_log("bo_closeSocket() try close bad sock[%d]", sock);
+	
 }
 
 /* 0x42 */

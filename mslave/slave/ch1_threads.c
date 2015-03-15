@@ -784,6 +784,16 @@ void *chan1(void *arg)
 				/** Ответ через FIFO */
 				res = activeFromFIFO(targ);
 				if (res < 0) break;
+
+			} else {
+				pthread_mutex_lock(&mx_actFIFO);
+				
+				if (get_state(&actFIFOdata_ready) == 1) {
+					put_state(&actFIFOdata_ready, 0);
+					pthread_cond_signal(&actFIFOdata);
+				}
+				
+				pthread_mutex_unlock(&mx_actFIFO);
 			}
 		}
 		
