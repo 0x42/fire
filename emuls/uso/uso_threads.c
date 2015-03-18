@@ -374,52 +374,51 @@ void *actx_485(void *arg)
 			bo_log("actx_485: rx() exit");
 			break;
 		}
-		/**
-		   if (rxBuf.buf[0] == (char)targ->adr) {
-		*/
-		switch (get_rxFl(&rxBuf)) {
-		case RX_DATA_READY:
-			/** USO */
-			if (rxBuf.wpos == 4) {
-				/** Нас сканируют */
-				write(1, "uso: scan()\n", 13);
-				res = scan(targ, &txBuf);
-				if (res < 0) {
-					bo_log("actx_485: scan() exit");
-					pthread_exit(0);
+		
+		if (rxBuf.buf[0] == (char)targ->adr) {
+			switch (get_rxFl(&rxBuf)) {
+			case RX_DATA_READY:
+				/** USO */
+				if (rxBuf.wpos == 4) {
+					/** Нас сканируют */
+					write(1, "uso: scan()\n", 13);
+					res = scan(targ, &txBuf);
+					if (res < 0) {
+						bo_log("actx_485: scan() exit");
+						pthread_exit(0);
+					}
+				} else {
+					/**
+					   write(1, "uso: active()\n", 15);
+					*/
+					res = uso_session(targ, sch);
+					if (res == -1)
+						pthread_exit(0);
+					else if (res == -2) {
+						/** Стоп */
+						printf("actx_485: USO TEST STOP\n");
+						rcv_ok = 1;
+						/* pthread_exit(0); */
+					} else if (res > 0)
+						sch = res;
 				}
-			} else {
-				/**
-				   write(1, "uso: active()\n", 15);
-				*/
-				res = uso_session(targ, sch);
-				if (res == -1)
-					pthread_exit(0);
-				else if (res == -2) {
-					/** Стоп */
-					printf("actx_485: USO TEST STOP\n");
-					rcv_ok = 1;
-					/* pthread_exit(0); */
-				} else if (res > 0)
-					sch = res;
-			}
 				
-			break;
-		case RX_ERROR:
-			/** Ошибка кадра */
-			bo_log("actx_485(): Cadr Error !");
-			break;
-		case RX_TIMEOUT:
-			/** Текущее устройство не отвечает */
-			bo_log("actx_485(): timeout dst= %d",
-			       (unsigned int)rxBuf.buf[1]);
-			break;
-		default:
-			bo_log("actx_485(): state ??? fl= %d",
-			       get_rxFl(&rxBuf));
-			break;
+				break;
+			case RX_ERROR:
+				/** Ошибка кадра */
+				bo_log("actx_485(): Cadr Error !");
+				break;
+			case RX_TIMEOUT:
+				/** Текущее устройство не отвечает */
+				bo_log("actx_485(): timeout dst= %d",
+				       (unsigned int)rxBuf.buf[1]);
+				break;
+			default:
+				bo_log("actx_485(): state ??? fl= %d",
+				       get_rxFl(&rxBuf));
+				break;
+			}
 		}
-		/** } */
 	}
 	
 	bo_log("actx_485: exit");

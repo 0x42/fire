@@ -38,8 +38,9 @@ void gen_moxa_default_cfg(char *cfile)
 		cfg_put(cfg, "moxa:Tscan", "20");
 
 		/** Таймаут приема кадра на сети RS485 
-		 * Tout*100us= 20ms */
+		 * Tout*1000us= 200ms */
 		cfg_put(cfg, "moxa:Tout", "200");
+		cfg_put(cfg, "moxa:Tout_scan", "30");
 
 		/** Число попыток передачи кадра по сети RS485 */
 		cfg_put(cfg, "moxa:nRetries", "3");
@@ -806,7 +807,7 @@ int scan(struct chan_thread_arg *targ,
 	if (res < 0) return -1;
 	
 	/** Прием */
-	res = rx(targ, rb, targ->tout, msg);
+	res = rx(targ, rb, targ->tout_scan, msg);
 	if (res < 0) return -1;
 	
 	if (get_rxFl(rb) >= RX_DATA_READY) {

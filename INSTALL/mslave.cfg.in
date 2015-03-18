@@ -85,7 +85,8 @@ echo "Tscan = 20" >> $cfgfile
 
 # Таймаут приема кадра на сети RS485
 # Tout(20)*1000us= 20ms
-echo "Tout = 60" >> $cfgfile
+echo "Tout = 150" >> $cfgfile
+echo "Tout_scan = 30" >> $cfgfile
 
 # Число попыток передачи кадра по сети RS485
 echo "nRetries = 3" >> $cfgfile
