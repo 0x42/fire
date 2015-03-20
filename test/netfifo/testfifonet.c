@@ -195,20 +195,41 @@ TEST(fifo, sendSETL10MSG10) /* NEED RUN SERVER*/
 	int exec = 0;
 	int sock;
 	int bufSize = 0;
-	int msgSize = 10;
+	int msgSize = 18;
 	unsigned char *msg = "AAAAAAAAAA";
 	unsigned char buf[1200] = {0};
-	ans = bo_sendDataFIFO("127.0.0.1", 8888, msg, msgSize);
+	unsigned char id[8] = {0};
+	unsigned char packet[18] = {0};
+	unsigned char len[2] = {0};
+	boIntToChar(18, len);
+	
+	memcpy((packet + 8), len, 2);
+	sprintf(id, "%08d", 123);
+	memcpy(packet, id, 8);
+	memcpy((packet+10), msg, 10);
+	
+	ans = bo_sendDataFIFO("127.0.0.1", 8888, packet, msgSize);
+	if(ans != 1) goto error;
+	printf("sleep \n");
+	sleep(10);
+	
+	memcpy((packet + 8), len, 2);
+	sprintf(id, "%08d", 12345);
+	memcpy(packet, id, 8);
+	memcpy((packet+10), msg, 10);
+	
+	ans = bo_sendDataFIFO("127.0.0.1", 8888, packet, msgSize);
 	if(ans != 1) goto error;
 	exec = bo_recvDataFIFO("127.0.0.1", 8888, buf, 1200);
 	if(exec > 0) {
 		if(msgSize == bufSize) {
 			ans = -1;
 			for(i = 0; i < msgSize; i++) {
-				if(msg[i] != buf[i]) goto error;
+				if(packet[i] != buf[i]) goto error;
 			}
 			ans = 1;
 		}
+		
 		exec = bo_recvDataFIFO("127.0.0.1", 8888, buf, 1200);
 		if(exec == 0 ) {
 			ans = 1;
@@ -223,6 +244,7 @@ TEST(fifo, sendSETL10MSG10) /* NEED RUN SERVER*/
 		printf("error when recv data from FIFO \n");
 		ans = -1;
 	}
+	
 	error:
 	TEST_ASSERT_EQUAL(1, ans);
 }

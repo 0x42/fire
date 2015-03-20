@@ -6,11 +6,11 @@ TEST_GROUP_RUNNER(fifo)
 //	RUN_TEST_CASE(fifo, sendOneByte);
 	
 //	RUN_TEST_CASE(fifo, getFromEmptyFifo);
-//	RUN_TEST_CASE(fifo, sendSETL10MSG10);
+	RUN_TEST_CASE(fifo, sendSETL10MSG10);
 //	RUN_TEST_CASE(fifo, sendSETL10MSG9);
 //	RUN_TEST_CASE(fifo, sendOnlyHead);
 //	RUN_TEST_CASE(fifo, send100MSGSET10);
-	RUN_TEST_CASE(fifo, testThrModel);
+//	RUN_TEST_CASE(fifo, testThrModel);
 //	RUN_TEST_CASE(fifo, testIDmsg);
 	/* тест FIFO */
 //	RUN_TEST_CASE(fifo, addOneGetOne);

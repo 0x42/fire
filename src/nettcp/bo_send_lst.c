@@ -367,29 +367,35 @@ void bo_print_sock_lst(struct BO_SOCK_LST *sock_lst)
 	
 	size = sock_lst->size;
 	size = 3;
-	printf("size[%d] n[%d]\nind :", size, sock_lst->n);
+	printf("size[%d] n[%d]", size, sock_lst->n);
+	printf("\nip  :");
 	for(i = 0; i < size; i++) {
-		printf("[%d] ", i);
+		item = sock_lst->arr + i;
+		printf("[%16s]", item->ip);
+	}
+	printf("\nind :");
+	for(i = 0; i < size; i++) {
+		printf("          [%3d]   ", i);
 	}
 	printf("\nsock:");
 	for(i = 0; i < size; i++) {
 		item = sock_lst->arr + i;
-		printf("[%d] ", item->sock);
+		printf("          [%3d]   ", item->sock);
 	}
 	printf("\nprev:");
 	
 	for(i = 0; i < size; i++) {
-		printf("[%d] ", *(sock_lst->prev + i));
+		printf("          [%3d]   ", *(sock_lst->prev + i));
 	}
 	printf("\nnext:");
 	
 	for(i = 0; i < size; i++) {
-		printf("[%d] ", *(sock_lst->next + i));
+		printf("          [%3d]   ", *(sock_lst->next + i));
 	}
 	printf("\nfree:");
 	
 	for(i = 0; i < size; i++) {
-		printf("[%d] ", *(sock_lst->free + i));
+		printf("          [%3d]   ", *(sock_lst->free + i));
 	}
 	printf("\n");
 }

@@ -314,7 +314,17 @@ static void addToEventLst(struct BO_SOCK_LST *sock_lst, fd_set *set)
 	while(i != -1) {
 		item = sock_lst->arr + i;
 		sock = item->sock;
-		if(sock != -1) FD_SET(sock, set);
+		if(sock != -1) {
+/*			printf("ip:  [%s]\n", item->ip);
+			printf("ind: [%d]\n", i);
+			printf("sock:[%d]\n", item->sock);
+			printf("prev:[%d]\n", *(sock_lst->prev + i));
+			printf("next:[%d]\n", *(sock_lst->next + i));
+			printf("free:[%d]\n", *(sock_lst->free + i));
+			printf("head:[%d]\n", sock_lst->head);
+			printf("tail:[%d]\n", sock_lst->tail);
+*/			FD_SET(sock, set);
+		}
 		i = *(sock_lst->next + i);
 	}
 }
@@ -330,21 +340,26 @@ static void clientEvent(struct BO_SOCK_LST *sock_lst,
 	int i = -1, exec = -1;
 	
 	if(sock_lst->n > 0) {
-		i = sock_lst->head;
+/*		dbgout("\nclientEvent->SOCK_LST:\n");
+		bo_print_sock_lst(sock_lst);
+		dbgout("\nend\n");
+*/		i = sock_lst->head;
 		while(i != -1) {
 			item = sock_lst->arr + i;
 			if(FD_ISSET(item->sock, set) == 1) {
-				if(isClosed(item->sock) == -1) {
+			/*	dbgout("EVENT: sock[%d]\n", item->sock);
+			*/	if(isClosed(item->sock) == -1) {
 					bo_del_item_sock_lst(sock_lst, i);
-				}
-				exec = fifoReadPacket(
-					item->sock,
-					buf, 
-					bufSize, 
-					end, 
-					tab);
-				if(exec == -1) { 
-					bo_del_item_sock_lst(sock_lst, i);
+				} else {
+					exec = fifoReadPacket(
+						item->sock,
+						buf, 
+						bufSize, 
+						end, 
+						tab);
+					if(exec == -1) { 
+						bo_del_item_sock_lst(sock_lst, i);
+					}
 				}
 			} 
 			i = *(sock_lst->next + i);
@@ -417,6 +432,7 @@ static int fifoReadPacket(int clientSock, unsigned char *buffer, int bufSize,
 	char buf[bufSize + 1];
 	int exec = 0;
 	buf[bufSize] = '\0';
+	dbgout("fifoReadHead sock client[%d]\n", param->clientfd);
 	exec = bo_recvAllData(param->clientfd, (unsigned char *)buf, bufSize, 3);
 	if(exec == -1) {
 		bo_log("%s fifoReadHead() errno[%s]", "FIFO", strerror(errno));
