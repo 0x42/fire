@@ -53,7 +53,7 @@ int main(int argc, char *argv[])
 	/** unsigned int utxdel; */
 	
 	int tscan;
-	int tout, nretries;
+	int tout, tout_scan, nretries;
 
 	int wdt_en;
 	unsigned long wdt_tm;
@@ -116,6 +116,7 @@ int main(int argc, char *argv[])
 	/** Установка таймеров */
 	tscan = cfg_getint(cfg, "moxa:Tscan", -1);
 	tout = cfg_getint(cfg, "moxa:Tout", -1);
+	tout_scan = cfg_getint(cfg, "moxa:Tout_scan", -1);
 	nretries = cfg_getint(cfg, "moxa:nRetries", -1);
 	
 	/** Установка параметров WatchDog */
@@ -373,6 +374,7 @@ int main(int argc, char *argv[])
 	ch1_targ.ch2_enable = ch2_enable;
 	ch1_targ.tscan = tscan;
 	ch1_targ.tout = tout;
+	ch1_targ.tout_scan = tout_scan;
 	/** ch1_targ.utxdel = utxdel; */
 	ch1_targ.wdt_en = wdt_en;
 	ch1_targ.nretries = nretries;
@@ -402,6 +404,7 @@ int main(int argc, char *argv[])
 	ch2_targ.ch2_enable = ch2_enable;
 	ch2_targ.tscan = tscan;
 	ch2_targ.tout = tout;
+	ch2_targ.tout_scan = tout_scan;
 	/** ch2_targ.utxdel = utxdel; */
 	ch2_targ.wdt_en = wdt_en;
 	ch2_targ.nretries = nretries;

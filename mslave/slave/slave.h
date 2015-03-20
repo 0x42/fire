@@ -74,6 +74,8 @@ struct wdt_thread_arg {
 struct chan_thread_arg {
 	int tscan;        /** Таймер сканирования устройств на сети RS485 */
 	int tout;         /** Таймаут приема кадра на сети RS485 */
+	int tout_scan;    /** Таймаут приема кадра на сети RS485
+			   * сканирование устройств */
 	/** Коэффициент для задержки на передачу
 	unsigned int utxdel;  * по сети RS485 */
 	int wdt_en;       /** Разрешение работы WatchDog */
