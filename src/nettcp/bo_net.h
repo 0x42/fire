@@ -41,9 +41,9 @@ int bo_sendXXXMsg(int sock, char *head, char *data, int dataSize);
 
 int bo_chkSock(int sock);
 
-/* получить данные в FIFO */
+/* получить данные в FIFO
 int bo_recvDataFIFO(char *ip, unsigned int port, unsigned char *buf, int bufSize);
-
+*/
 /* получ данные из таблицы маршрут по адрессу 485*/
 int bo_recvRoute(char *ip, 
 		 unsigned int port, 

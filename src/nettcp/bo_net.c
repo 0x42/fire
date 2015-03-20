@@ -115,7 +115,6 @@ int bo_waitConnect(int sock, int *clientfd, char **errTxt)
 	}
 	return ans;
 }
-
 /* ----------------------------------------------------------------------------
  * @brief	 ищет по ip нужный socket в списке; если данные не удалось отправить
  *		 сокет закрывается и пересоздается попытка повторяется 
@@ -143,6 +142,7 @@ int bo_sendDataFIFO(char *ip, unsigned int port,
 	}
 	/* Отправка данных */
 	exec = bo_sendData2(sock, data, dataSize);
+	printf("bo_sendData2 - 1 exec[%d]", exec);
 	if(exec == -1) {
 		bo_log("bo_sendDataFIFO->bo_sendData2[%s] can't send. Reconnect", ip);
 		bo_del_by_sck_sock_lst(lst, sock);
@@ -153,6 +153,7 @@ int bo_sendDataFIFO(char *ip, unsigned int port,
 			goto exit;
 		}
 		exec = bo_sendData2(sock, data, dataSize);
+		printf("bo_sendData2 - 2 exec[%d]", exec);
 		if(exec == -1) {
 			bo_log("bo_sendDataFIFO[%s] can't send", ip);
 			bo_del_by_sck_sock_lst(lst, sock);
@@ -266,7 +267,7 @@ static int bo_sendData2(int sock, char *data, unsigned int dataSize)
 	if(sock != -1) {
 		memcpy(tmp, head, 3);
 		boIntToChar(dataSize, len);
-		memcpy(tmp +3, len, 2);
+		memcpy(tmp + 3, len, 2);
 		memcpy(tmp + 5, data, dataSize);
 		
 		exec = bo_sendAllData(sock, tmp, dataSize+5);
@@ -279,8 +280,10 @@ static int bo_sendData2(int sock, char *data, unsigned int dataSize)
 			bo_log("RECV ANS ERROR errno[%s]", strerror(errno));
 			goto error;
 		}
-		if(strstr(buf, "OK")) ans = 1;
-		else {
+		if(strstr(buf, "OK")) { 
+			ans = 1;
+			printf("bo_sendData2 recv[OK]\n");
+		} else {
 			buf[3] = 0;
 			bo_log("bo_sendData2 wait OK recv[%s]", buf);
 			goto error;
@@ -648,8 +651,7 @@ int bo_recvAllData(int sock, unsigned char *buf, int bufSize, int length)
 void bo_setTimerRcv(int sock)
 {
 	struct timeval tval;
-	/* 1,5 мсек*/
-	tval.tv_sec = 5;
+	tval.tv_sec = 1;
 	tval.tv_usec = 500000;
 	/* устан максимальное время ожидания одного пакета */
 	setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tval, sizeof(tval));

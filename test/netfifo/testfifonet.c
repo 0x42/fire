@@ -84,7 +84,7 @@ TEST(fifo, getFromEmptyFifo) /* NEED RUN SERVER*/
 	int ans = -1;
 	
 	printf("getFromEmptyFifo() ... \n");
-	exec = bo_recvDataFIFO("127.0.0.1", 8888, buf, 20);
+//	exec = bo_recvDataFIFO("127.0.0.1", 8888, buf, 20);
 	if(exec == -1) {
 		printf("recv error %s\n", strerror(errno)); 
 	} else {
@@ -208,43 +208,26 @@ TEST(fifo, sendSETL10MSG10) /* NEED RUN SERVER*/
 	memcpy(packet, id, 8);
 	memcpy((packet+10), msg, 10);
 	
-	ans = bo_sendDataFIFO("127.0.0.1", 8888, packet, msgSize);
+	ans = bo_sendDataFIFO("192.168.1.129", 8888, packet, msgSize);
 	if(ans != 1) goto error;
+	else printf("main recv[OK 1]\n");
 	printf("sleep \n");
-	sleep(10);
+	
+	sleep(30);
+	printf("....\n");
+	ans = bo_sendDataFIFO("192.168.1.128", 8888, packet, msgSize);
+	sleep(30);
 	
 	memcpy((packet + 8), len, 2);
 	sprintf(id, "%08d", 12345);
 	memcpy(packet, id, 8);
 	memcpy((packet+10), msg, 10);
 	
-	ans = bo_sendDataFIFO("127.0.0.1", 8888, packet, msgSize);
+	ans = bo_sendDataFIFO("192.168.1.129", 8888, packet, msgSize);
 	if(ans != 1) goto error;
-	exec = bo_recvDataFIFO("127.0.0.1", 8888, buf, 1200);
-	if(exec > 0) {
-		if(msgSize == bufSize) {
-			ans = -1;
-			for(i = 0; i < msgSize; i++) {
-				if(packet[i] != buf[i]) goto error;
-			}
-			ans = 1;
-		}
-		
-		exec = bo_recvDataFIFO("127.0.0.1", 8888, buf, 1200);
-		if(exec == 0 ) {
-			ans = 1;
-		} else {
-			printf("FIFO is not empty\n");
-			ans = -1;
-		}
-	} else if(exec == 0){
-		printf("FIFO is empty \n");
-		ans = -1;
-	} else {
-		printf("error when recv data from FIFO \n");
-		ans = -1;
-	}
-	
+	else printf("main resv[OK 2] \n");
+	printf("end\n");
+	sleep(300);
 	error:
 	TEST_ASSERT_EQUAL(1, ans);
 }
