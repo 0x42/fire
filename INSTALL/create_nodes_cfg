@@ -13,7 +13,7 @@ echo > $nodesfile
 #                            |             |   |   | |   |   |
 #sh mslave.cfg.in $nodesfile 192.168.1.128 1 229 230 1   2   5
 
-#sh mslave.cfg.in $nodesfile 192.168.1.128 1 229 230 1   2   5
+sh mslave.cfg.in $nodesfile 192.168.100.127 1 129 132 1   1   4
 sh mslave.cfg.in $nodesfile 192.168.100.128 1 129 132 1   1   4
 sh mslave.cfg.in $nodesfile 192.168.100.129 1 129 132 1   1   4
 

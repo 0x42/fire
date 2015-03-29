@@ -302,6 +302,7 @@ static void workSockServ(int sock_serv, unsigned char *buf, int bufSize, TOHT *t
 		}
 	}
 	exit:
+	bo_log("ERROR bo_net_fifo_server.workSockServ STOP");
 	if(sock_lst != NULL) { bo_log("workSockServ->delete sock_lst"); }
 }
 
@@ -432,7 +433,7 @@ static int fifoReadPacket(int clientSock, unsigned char *buffer, int bufSize,
 	char buf[bufSize + 1];
 	int exec = 0;
 	buf[bufSize] = '\0';
-	dbgout("fifoReadHead sock client[%d]\n", param->clientfd);
+
 	exec = bo_recvAllData(param->clientfd, (unsigned char *)buf, bufSize, 3);
 	if(exec == -1) {
 		bo_log("%s fifoReadHead() errno[%s]", "FIFO", strerror(errno));

@@ -133,7 +133,7 @@ int bo_sendDataFIFO(char *ip, unsigned int port,
 	sock = bo_get_sock_by_ip(lst, ip);
 	if(sock  == -1) {
 		sock = bo_addToSockLst(lst, ip);
-		printf("CLIENT sock[%d]\n", sock);
+		bo_log("bo_sendDataFIFO ADD CLIENT sock[%d]ip[%s]\n", sock, ip);
 		if(sock == -1) {
 			err_count++;
 			bo_log("bo_sendDataFIFO[%s] can't add to lst", ip);
@@ -142,18 +142,17 @@ int bo_sendDataFIFO(char *ip, unsigned int port,
 	}
 	/* Отправка данных */
 	exec = bo_sendData2(sock, data, dataSize);
-	printf("bo_sendData2 - 1 exec[%d]", exec);
 	if(exec == -1) {
 		bo_log("bo_sendDataFIFO->bo_sendData2[%s] can't send. Reconnect", ip);
 		bo_del_by_sck_sock_lst(lst, sock);
 		sock = bo_addToSockLst(lst, ip);
+		bo_log("bo_sendDataFIFO ADD CLIENT sock[%d]ip[%s]\n", sock, ip);
 		if(sock == -1) {
 			bo_log("bo_sendDataFIFO[%s] can't add to lst", ip);
 			err_count++;
 			goto exit;
 		}
 		exec = bo_sendData2(sock, data, dataSize);
-		printf("bo_sendData2 - 2 exec[%d]", exec);
 		if(exec == -1) {
 			bo_log("bo_sendDataFIFO[%s] can't send", ip);
 			bo_del_by_sck_sock_lst(lst, sock);
@@ -282,7 +281,6 @@ static int bo_sendData2(int sock, char *data, unsigned int dataSize)
 		}
 		if(strstr(buf, "OK")) { 
 			ans = 1;
-			printf("bo_sendData2 recv[OK]\n");
 		} else {
 			buf[3] = 0;
 			bo_log("bo_sendData2 wait OK recv[%s]", buf);

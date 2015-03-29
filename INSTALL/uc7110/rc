@@ -38,8 +38,8 @@ insmod /lib/modules/2.6.19-uc1MoXaRt/kernel/drivers/char/mxser.ko
 #	1	- set to RS485-2Wires
 #	2	- set to RS422
 #	3	- set to RS485-4Wires
-setinterface /dev/ttyM0 0	# set the serial port interface to RS232
-setinterface /dev/ttyM1 0	# set the serial port interface to RS232
+setinterface /dev/ttyM0 1	# set the serial port interface to RS232
+setinterface /dev/ttyM1 1	# set the serial port interface to RS232
 
 #Below line will change your network configuration
 #after execute MDMAgent.exe.

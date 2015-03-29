@@ -8,6 +8,6 @@ cp /home/utils/mslave.life /mnt/ramdisk/mslave.life
 
 #cron &
 
-##/home/tabr/master master.cfg &
+#/home/tabr/master master.cfg &
 #/home/slave/mslave mslave.cfg &
 
