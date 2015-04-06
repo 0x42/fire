@@ -54,9 +54,11 @@ int main(int argc, char *argv[])
 	
 	int tscan;
 	int tout, tout_scan, nretries;
-
+	
+#if defined (__MOXA_TARGET__) && defined (__WDT__)
 	int wdt_en;
 	unsigned long wdt_tm;
+#endif
 	
 	int ch1_enable, ch2_enable;
 	
@@ -70,27 +72,26 @@ int main(int argc, char *argv[])
 #ifdef __LOG__
 	char logSend_ip[16];
 	unsigned int logSend_port, logMaxLines;
+	int cdquLogId;
+	char req_gl[32];
 #endif
 	
 #ifdef __SNMP__
 	int snmp_n, snmp_uso;
 	char *tempip;
+	int cdmsId;
+	int i;
+	char key[7] = {0};
+	char req_ms[32];
 #endif
 	
 	char ls_gen[32];
 	char req_ag[32];
 	char req_ns[32];
-	char req_gl[32];
-	char req_ms[32];
-
+	
 	int cdDest;
 	int cdaId;
 	int cdnsId;
-	int cdquLogId;
-	int cdmsId;
-	
-	int i;
-	char key[7] = {0};
 	
 	TOHT *cfg;
 
@@ -122,8 +123,11 @@ int main(int argc, char *argv[])
 	/** Установка параметров WatchDog */
 	wdt_targ.tsec = cfg_getint(cfg, "WDT:Tsec", -1);
 	wdt_targ.tusec = cfg_getint(cfg, "WDT:Tusec", -1);
+
+#if defined (__MOXA_TARGET__) && defined (__WDT__)
 	wdt_tm = (unsigned long)cfg_getint(cfg, "WDT:Tms", -1);
 	wdt_en = cfg_getint(cfg, "WDT:enable", -1);
+#endif
 	/** Инициализация файла для контроля жизни программы через CRON */
 	sprintf(lifeFile, cfg_getstring(cfg, "WDT:lifeFile", NULL));
 	/* gen_moxa_cron_life(lifeFile); */
@@ -214,6 +218,7 @@ int main(int argc, char *argv[])
 	ch1_targ.dst_beg = cfg_getint(cfg, "RS485_1:dstBeg", -1);
 	ch1_targ.dst_end = cfg_getint(cfg, "RS485_1:dstEnd", -1);
 	ch1_enable = cfg_getint(cfg, "RS485_1:enable", -1);
+	ch1_targ.ch_usleep = cfg_getint(cfg, "RS485_1:usleep", -1);
 	
 	if (ch1_enable) {
 		SerialSetParam(ch1_targ.port, rs_parity, rs_databits, rs_stopbit);
@@ -229,6 +234,7 @@ int main(int argc, char *argv[])
 	ch2_targ.dst_beg = cfg_getint(cfg, "RS485_2:dstBeg", -1);
 	ch2_targ.dst_end = cfg_getint(cfg, "RS485_2:dstEnd", -1);
 	ch2_enable = cfg_getint(cfg, "RS485_2:enable", -1);
+	ch2_targ.ch_usleep = cfg_getint(cfg, "RS485_2:usleep", -1);
 
 	if (ch2_enable) {
 		SerialSetParam(ch2_targ.port, rs_parity, rs_databits, rs_stopbit);
@@ -271,7 +277,6 @@ int main(int argc, char *argv[])
 	pthread_attr_setdetachstate(&pattr, PTHREAD_CREATE_JOINABLE);
 
 	pthread_mutex_init(&mx_psv, NULL);
-	pthread_mutex_init(&mx_actFIFO, NULL);
 	pthread_mutex_init(&mx_rtl, NULL);
 	pthread_mutex_init(&mx_rtg, NULL);
 
@@ -279,9 +284,8 @@ int main(int argc, char *argv[])
 	pthread_mutex_init(&mx_sendSocket, NULL);
 #endif
 
-	init_thrState(&psvdata_ready);
-	init_thrState(&psvAnsdata_ready);
-	init_thrState(&actFIFOdata_ready);
+	init_thrState(&psv_local_stage);
+	init_thrState(&psv_fifo_stage);
 
 	init_thrRxBuf(&rxBuf);
 	init_thrTxBuf(&txBuf);
@@ -294,7 +298,6 @@ int main(int argc, char *argv[])
 	/** Инициализация условных переменных с выделением памяти */
 	pthread_cond_init(&psvdata, NULL);
 	pthread_cond_init(&psvAnsdata, NULL);
-	pthread_cond_init(&actFIFOdata, NULL);
 
 
 	/** Таблицы маршрутов */
@@ -376,7 +379,9 @@ int main(int argc, char *argv[])
 	ch1_targ.tout = tout;
 	ch1_targ.tout_scan = tout_scan;
 	/** ch1_targ.utxdel = utxdel; */
+#if defined (__MOXA_TARGET__) && defined (__WDT__)
 	ch1_targ.wdt_en = wdt_en;
+#endif
 	ch1_targ.nretries = nretries;
 	ch1_targ.ip = ip;
 	ch1_targ.fifo_port = fifo_port;
@@ -406,7 +411,9 @@ int main(int argc, char *argv[])
 	ch2_targ.tout = tout;
 	ch2_targ.tout_scan = tout_scan;
 	/** ch2_targ.utxdel = utxdel; */
+#if defined (__MOXA_TARGET__) && defined (__WDT__)
 	ch2_targ.wdt_en = wdt_en;
+#endif
 	ch2_targ.nretries = nretries;
 	ch2_targ.ip = ip;
 	ch2_targ.fifo_port = fifo_port;
@@ -445,9 +452,10 @@ int main(int argc, char *argv[])
 		init_thrWdtlife(&wdt_life);
 		printf("WatchDog enabled ok\n");
 	}
+	
+	wdt_targ.wdt_en = wdt_en;
 #endif
 
-	wdt_targ.wdt_en = wdt_en;
 	wdt_targ.lifeFile = lifeFile;
 	result = pthread_create(&thread_wdt, &pattr, &wdt, &wdt_targ);
 	if (result) {
@@ -491,7 +499,6 @@ int main(int argc, char *argv[])
 	/** Разрушаем блокировки и условные переменные, освобождаем память. */
 
 	pthread_mutex_destroy(&mx_psv);
-	pthread_mutex_destroy(&mx_actFIFO);
 	pthread_mutex_destroy(&mx_rtl);
 	pthread_mutex_destroy(&mx_rtg);
 
@@ -509,11 +516,9 @@ int main(int argc, char *argv[])
 
 	pthread_cond_destroy(&psvdata);
 	pthread_cond_destroy(&psvAnsdata);
-	pthread_cond_destroy(&actFIFOdata);
 	
-	destroy_thrState(&psvdata_ready);
-	destroy_thrState(&psvAnsdata_ready);
-	destroy_thrState(&actFIFOdata_ready);
+	destroy_thrState(&psv_local_stage);
+	destroy_thrState(&psv_fifo_stage);
 	
 #if defined (__MOXA_TARGET__) && defined (__WDT__)
 	if (wdt_en) {

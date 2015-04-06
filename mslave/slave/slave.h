@@ -76,6 +76,7 @@ struct chan_thread_arg {
 	int tout;         /** Таймаут приема кадра на сети RS485 */
 	int tout_scan;    /** Таймаут приема кадра на сети RS485
 			   * сканирование устройств */
+	int ch_usleep;    /** Задержка на сети RS485 uS */
 	/** Коэффициент для задержки на передачу
 	unsigned int utxdel;  * по сети RS485 */
 	int wdt_en;       /** Разрешение работы WatchDog */
@@ -140,14 +141,24 @@ struct sta {
 pthread_cond_t psvdata;       /** Условная переменная */
 pthread_cond_t psvAnsdata;    /** Условная переменная */
 pthread_mutex_t	mx_psv;       /** защита */
-struct sta psvdata_ready;     /** Переменная состояния */
-struct sta psvAnsdata_ready;     /** Переменная состояния */
+struct sta psv_local_stage;     /** Переменная состояния */
+struct sta psv_fifo_stage;     /** Переменная состояния */
+
+/** Значения для флага psv_local_stage */
+#define PSVL_FREE    0  /**  */
+#define PSVL_BEGIN   1  /**  */
+#define PSVL_PROCESS 2  /**  */
+#define PSVL_ERROR   3  /**  */
+#define PSVL_OK      4  /**  */
+
+/** Значения для флага psv_fifo_stage */
+#define PSVF_FREE    0  /**  */
+#define PSVF_PROCESS 2  /**  */
 
 /** Синхронизация обмена данными при ответе пассивного устройства на
  * запрос активному устройству FIFO */
-pthread_cond_t actFIFOdata;    /** Условная переменная */
-pthread_mutex_t	mx_actFIFO;    /** защита */
-struct sta actFIFOdata_ready;  /** Переменная состояния */
+pthread_cond_t psvdata_fifo;    /** Условная переменная */
+struct sta psvdata_fifo_ready;  /** Переменная состояния */
 
 /** Структура данных для организации обмена данными между узлами */
 struct thr_fifo_buf {
@@ -246,6 +257,8 @@ int scan(struct chan_thread_arg *targ,
 	 struct thr_dst_buf *db,
 	 int dst,
 	 char *msg);
+
+/** void print_rtbl(TOHT *rt); */
 
 extern void bo_fifo_thrmode(int port, int queue_len, int fifo_len);
 

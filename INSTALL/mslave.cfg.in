@@ -14,7 +14,7 @@ rs2_end=$8
 echo $node_ip >> $nodesfile
 
 # Установка адреса IP мастера
-master_ip="192.168.100.128"
+master_ip="192.168.1.127"
 
 # Адрес УСО для отправки состояния магистрали
 snmp_uso="129"
@@ -46,12 +46,12 @@ echo "#cron &" >> $rclocalfile
 
 echo >> $rclocalfile
 if [ "$node_ip" != "$master_ip" ]; then
-	echo "##/home/tabr/master master.cfg &" >> $rclocalfile
+	echo "#/home/tabr/master /home/tabr/master.cfg &" >> $rclocalfile
 else
-	echo "#/home/tabr/master master.cfg &" >> $rclocalfile
+	echo "/home/tabr/master /home/tabr/master.cfg &" >> $rclocalfile
 fi
 
-echo "#/home/slave/mslave mslave.cfg &" >> $rclocalfile
+echo "/home/slave/mslave /home/slave/mslave.cfg &" >> $rclocalfile
 
 echo >> $rclocalfile
 chmod 640 $rclocalfile
@@ -81,7 +81,7 @@ echo "log = /mnt/ramdisk/mslave.log" >> $cfgfile
 echo "log_old = /mnt/ramdisk/mslave-old.log" >> $cfgfile
 
 # Таймер сканирования устройств на сети RS485
-echo "Tscan = 20" >> $cfgfile
+echo "Tscan = 10" >> $cfgfile
 
 # Таймаут приема кадра на сети RS485
 # Tout(20)*1000us= 20ms
@@ -189,6 +189,9 @@ echo "adr = 128" >> $cfgfile
 # 1- включить, 0- отключить
 echo "enable = $rs1_enable" >> $cfgfile
 
+# Задержка на сети RS485 (порт 1) uS
+echo "usleep = 0" >> $cfgfile
+
 # Диапазон адресов
 echo "dstBeg = $rs1_beg" >> $cfgfile
 echo "dstEnd = $rs1_end" >> $cfgfile
@@ -203,6 +206,9 @@ echo "adr = 128" >> $cfgfile
 # Разрешение серийного порта
 # 1- включить, 0- отключить
 echo "enable = $rs2_enable" >> $cfgfile
+
+# Задержка на сети RS485 (порт 2) uS
+echo "usleep = 0" >> $cfgfile
 
 # Диапазон адресов
 echo "dstBeg = $rs2_beg" >> $cfgfile

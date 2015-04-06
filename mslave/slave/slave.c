@@ -98,27 +98,31 @@ void gen_moxa_default_cfg(char *cfile)
 		    600, 1200, 1800, 2400, 4800, 9600,
 		    19200, 38400, 57600, 115200, 230400,
 		    460800, 500000, 576000, 921600 */
-		cfg_put(cfg, "RS:speed", "19200");
+		cfg_put(cfg, "RS:speed", "57600");
 
 		/** Сеть RS485 - 1 (активные устройства) */
 		cfg_put(cfg, "RS485_1:port", "1");
 		cfg_put(cfg, "RS485_1:adr", "128");
 		/** 1- включить, 0- отключить */
 		cfg_put(cfg, "RS485_1:enable", "1");
+		/** Задержка на сети RS485 (порт 1) uS */
+		cfg_put(cfg, "RS485_1:usleep", "0");
 
 		/** Диапазон адресов */
-		cfg_put(cfg, "RS485_1:dstBeg", "229");
-		cfg_put(cfg, "RS485_1:dstEnd", "230");
+		cfg_put(cfg, "RS485_1:dstBeg", "129");
+		cfg_put(cfg, "RS485_1:dstEnd", "132");
 
 		/** Сеть RS485 - 2 (пассивные устройства) */
 		cfg_put(cfg, "RS485_2:port", "2");
-		cfg_put(cfg, "RS485_2:adr", "1");
+		cfg_put(cfg, "RS485_2:adr", "128");
 		/** 1- включить, 0- отключить */
 		cfg_put(cfg, "RS485_2:enable", "1");
+		/** Задержка на сети RS485 (порт 2) uS */
+		cfg_put(cfg, "RS485_2:usleep", "0");
 
 		/** Диапазон адресов */
-		cfg_put(cfg, "RS485_2:dstBeg", "2");
-		cfg_put(cfg, "RS485_2:dstEnd", "5");
+		cfg_put(cfg, "RS485_2:dstBeg", "1");
+		cfg_put(cfg, "RS485_2:dstEnd", "4");
 
 		/** Идентификаторы подсистем ЛС */
 		cfg_put(cfg, "LS:gen", "General");           /** 0xC2*/
@@ -414,6 +418,8 @@ void send_rtbl(char *ip)
 			buf[3],
 			rt_getport(rtl, key));
 		
+		/** bo_log("send_rtbl(): %s", data); */
+
 		crc = crc16modbus(data, 21);
 		boIntToChar(crc, cbuf);
 		data[dataSize-2] = cbuf[0];
@@ -557,6 +563,24 @@ void remf_rtbl(struct chan_thread_arg *targ, struct thr_dst_buf *b, int dst)
 		pthread_mutex_unlock(&mx_rtl);
 	}
 }
+
+/**
+void print_rtbl(TOHT *rt)
+{
+	int i;
+
+	printf("--------------------\n");
+	if (rt == NULL) return;
+	
+	if (rt->n) {
+		for (i=0; i<rt->size; i++) {
+			if (rt->key[i])
+				printf("%s:%s\n", rt->key[i], rt->val[i]);
+		}
+	}
+	printf("-----------------------------\n");
+}
+*/
 
 #ifdef __LOG__
 /**

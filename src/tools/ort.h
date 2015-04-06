@@ -39,6 +39,7 @@ int rt_getport(TOHT *ht, const char *key);
 
 int rt_put(TOHT *ht, const char *key, const char *val);
 void rt_remove(TOHT *ht, const char *key);
+void rt_removeAll(TOHT *ht);
 
 void rt_save(TOHT *ht, const char *rtname);
 TOHT *rt_load(const char *rtname);

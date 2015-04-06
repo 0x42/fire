@@ -260,6 +260,23 @@ void rt_remove(TOHT *ht, const char *key)
 	ht_remove(ht, key);
 }
 
+/**
+ * rt_removeAll - Удалить все записи в таблице.
+ * @ht:  Таблица.
+ *
+ */
+void rt_removeAll(TOHT *ht)
+{
+	int i;
+
+	if (ht == NULL) return;	
+	if (ht->n) {
+		for (i=0; i<ht->size; i++) {
+			if (ht->key[i])
+				ht_remove(ht, ht->key[i]);
+		}
+	}
+}
 
 /**
  * rt_save - Сохранить данные таблицы маршрутов в файл.

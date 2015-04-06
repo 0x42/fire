@@ -15,6 +15,7 @@
 
 
 #include "slave.h"
+#include "ort.h"
 #include "bologging.h"
 #include "bo_net.h"
 #include "bo_fifo.h"
@@ -219,6 +220,11 @@ void *rtbl_recv(void *arg)
 		}
 
 		p.sock = rtRecv_sock;
+		
+		pthread_mutex_lock(&mx_rtg);
+		rt_removeAll(rtg);
+		pthread_mutex_unlock(&mx_rtg);
+		
 		p.route_tab = rtg;
 		p.buf = rtBuf;
 		p.bufSize = BO_MAX_TAB_BUF;

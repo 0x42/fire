@@ -13,6 +13,7 @@
 #include "bo_net_master_core_log.h"
 #include "bo_cycle_arr.h"
 #include "bo_parse.h"
+#include "bo_fifo.h"
 #ifdef __SNMP__
 #include "bo_snmp_mng.h"
 #endif
@@ -323,6 +324,8 @@ void prepare_cadr_snmpStat(struct chan_thread_arg *targ,
  * @msg:
  * @return  0- успех, -1 неудача.
  *
+ * Если устройство, не отвечает на запрос, то оно (после определенного
+ * количества попыток) удаляется из локальной таблицы маршрутов.
  */
 int active_TxRx(struct chan_thread_arg *targ, int dst, char *msg)
 {
@@ -452,70 +455,109 @@ int active_snmp(struct chan_thread_arg *targ, int dst)
  *
  */
 int active_local(struct chan_thread_arg *targ, int dst)
-{
-	int res;
-	
+{	
 	pthread_mutex_lock(&mx_psv);
 
-	put_state(&psvdata_ready, 1);
-	put_state(&psvAnsdata_ready, 1);
+	put_state(&psv_local_stage, PSVL_BEGIN);
 	
 	/** Ожидаем готовности послать кадр
 	    пассивному устройствуву */
-	while (get_state(&psvdata_ready) == 1)
+	while (get_state(&psv_local_stage) == PSVL_BEGIN)
 		pthread_cond_wait(&psvdata, &mx_psv);
-
-	/** Ожидаем ответ от пассивного устройства */
-	while (get_state(&psvAnsdata_ready) == 1)
-		pthread_cond_wait(&psvAnsdata, &mx_psv);
-
-	if (get_state(&psvAnsdata_ready) == 3) {
-		/** Пассивное устройство не дало ответ */
-		bo_log("active_local(): not response from pass");
-		put_state(&psvAnsdata_ready, 0);
-		pthread_mutex_unlock(&mx_psv);
-		return 0;
-	}
 	
 	pthread_mutex_unlock(&mx_psv);
 	
-	/** Данные для передачи подготовлены */
-	res = active_TxRx(targ, dst, "1aloc");
-	
-	return res;
+	return 0;
 }
 
 /**
- * activeFromFIFO - Ответ от пассивного устройства активному устройству
- *               через стек FIFO.
+ * active_local_answ - Ответ от устройства локального узла.
+ * @targ: Указатель на структуру chan_thread_arg{}.
+ * @dst:  Адрес устройства.
+ * @return  0- успех, -1 неудача.
+ *
+ */
+int active_local_answ(struct chan_thread_arg *targ)
+{
+	unsigned int dst;
+	int res;
+	
+	switch (get_state(&psv_local_stage)) {
+	case PSVL_ERROR:
+		/** пассивное устройство не дало ответ */
+		res = 0;
+		break;
+	case PSVL_OK:
+		/** имеем ответ активному устройству */
+		dst = (unsigned int)rx2Buf.buf[0];
+		prepare_cadr(&txBuf, rx2Buf.buf, rx2Buf.wpos);
+		
+		/** Данные для передачи подготовлены */
+		res = active_TxRx(targ, dst, "1aloc");
+		break;
+	default:
+		res = 0;
+		break;
+	}
+
+	if ((get_state(&psv_local_stage) == PSVL_ERROR) ||
+	    (get_state(&psv_local_stage) == PSVL_OK)) {
+		pthread_mutex_lock(&mx_psv);
+		
+		put_state(&psv_local_stage, PSVL_FREE);
+		pthread_cond_signal(&psvAnsdata);
+		
+		pthread_mutex_unlock(&mx_psv);
+	}
+
+	return res;
+}
+
+
+/**
+ * data_FIFO - Получение из FIFO кадра и отправка его адрессату.
  * @targ: Указатель на структуру chan_thread_arg{}.
  * @return  0- успех, -1 неудача.
  *
  */
-int activeFromFIFO(struct chan_thread_arg *targ)
+int data_FIFO(struct chan_thread_arg *targ)
 {
 	unsigned int dst;
 	int res = 0;
-	
-	if (get_state(&actFIFOdata_ready) == 1) {
-		/** Есть данные для передачи ответа активному
-		 * устройству от пассивного через FIFO */
-		pthread_mutex_lock(&mx_actFIFO);
 
-		prepare_cadr(&txBuf, (char *)getFifo_buf, getFifo_ans);
+	if (get_state(&psv_fifo_stage) == PSVF_FREE) {
 		
-		dst = (unsigned int)txBuf.buf[0];
-		/** bo_log("activeFromFIFO(): dst= [%d]", dst); */
-
-		put_state(&actFIFOdata_ready, 0);
-		pthread_cond_signal(&actFIFOdata);
-		
-		pthread_mutex_unlock(&mx_actFIFO);
-		
-		/** Данные для передачи подготовлены */
-		res = active_TxRx(targ, dst, "1fifo");
+		getFifo_ans = bo_getFifoVal(getFifo_buf,
+					    BO_FIFO_ITEM_VAL);
+		if (getFifo_ans > 0) {
+			/** Если в FIFO есть данные */
+			dst = (unsigned int)getFifo_buf[0];
+			
+			if (test_bufDst(&dstBuf, dst) != -1) {
+				/** Есть данные для передачи
+				 * ответа активному устройству
+				 * от пассивного через FIFO */
+				
+				prepare_cadr(&txBuf,
+					     (char *)getFifo_buf,
+					     getFifo_ans);
+				
+				dst = (unsigned int)txBuf.buf[0];
+				
+				/** Данные для передачи подготовлены */
+				res = active_TxRx(targ, dst, "1fifo");
+				if (res < 0) return -1;
+				
+			} else if (test_bufDst(&dst2Buf, dst) != -1) {
+				/** В FIFO есть данные для передачи
+				 * пассивному устройству */
+				put_state(&psv_fifo_stage, PSVF_PROCESS);
+			} else
+				bo_log("data_FIFO(): unknown dst= %d",
+				       dst);
+		}
 	}
-
+	
 	return res;
 }
 
@@ -695,9 +737,6 @@ void *chan1(void *arg)
 	int res;
 	
 	while (1) {
-		if (!targ->ch1_enable) {
-			usleep(50000);
-		}
 		
 		if (count_scan == targ->tscan) {
 			count_scan = 0;
@@ -753,53 +792,57 @@ void *chan1(void *arg)
 
 		if (targ->ch1_enable) {
 			if (dstBuf.wpos > 0) {
-				dst = get_bufDst(&dstBuf);
-				/** (1 раз в 50 мсек) */
+				if (get_state(&psv_local_stage) == PSVL_FREE) {
+					dst = get_bufDst(&dstBuf);
+					/** (1 раз в 50 мсек) */
 #ifdef __SNMP__
-				if ((dst == targ->snmp_uso) &&
-				    (targ->snmp_n > 0 && targ->snmp_n <= SNMP_IP_MAX)) {
-					bo_snmp_lock_mut();
-					if (bo_snmp_isChange() == 1) {
-						bo_snmp_unlock_mut();
-						printf("chan1: magistral status\n");
-						/** Есть изменения на магистрали */
-						res = active_snmp(targ, dst);
+					if ((dst == targ->snmp_uso) &&
+					    (targ->snmp_n > 0 && targ->snmp_n <= SNMP_IP_MAX)) {
+						bo_snmp_lock_mut();
+						if (bo_snmp_isChange() == 1) {
+							bo_snmp_unlock_mut();
+							printf("chan1: magistral status\n");
+							/** Есть изменения на магистрали */
+							res = active_snmp(targ, dst);
+						} else {
+							bo_snmp_unlock_mut();
+							/** Разрешение активным устройствам */
+							res = active(targ, dst);
+						}
 					} else {
-						bo_snmp_unlock_mut();
-						/** Разрешение активным устройствам
-						    bo_log("ch1(): activate 1 dst=[%d]", dst); */
+#endif
+						/** Разрешение активным устройствам */
 						res = active(targ, dst);
-					}
-				} else {
-#endif
-					/** Разрешение активным устройствам
-					    bo_log("ch1(): activate 2 dst=[%d]", dst); */
-					res = active(targ, dst);
 #ifdef __SNMP__
-				}
+					}
 #endif
-				
-				if (res < 0) break;
-
-				/** Ответ через FIFO */
-				res = activeFromFIFO(targ);
-				if (res < 0) break;
-
-			} else {
-				pthread_mutex_lock(&mx_actFIFO);
-				
-				if (get_state(&actFIFOdata_ready) == 1) {
-					put_state(&actFIFOdata_ready, 0);
-					pthread_cond_signal(&actFIFOdata);
+					if (res < 0) break;
 				}
 				
-				pthread_mutex_unlock(&mx_actFIFO);
+			} else {
+				pthread_mutex_lock(&mx_psv);
+				
+				if (get_state(&psv_local_stage) != PSVL_FREE) {
+					put_state(&psv_local_stage, PSVL_FREE);
+					pthread_cond_signal(&psvAnsdata);
+				}
+				
+				pthread_mutex_unlock(&mx_psv);
 			}
 		}
 		
+		res = active_local_answ(targ);
+		if (res < 0) break;
+		
+		res = data_FIFO(targ);
+		if (res < 0) break;
+
+		if (targ->ch_usleep != 0)
+			usleep(targ->ch_usleep);
+		
 #if defined (__MOXA_TARGET__) && defined (__WDT__)
-			if (targ->wdt_en)
-				put_wdtlife(&wdt_life, WDT_CHAN1);
+		if (targ->wdt_en)
+			put_wdtlife(&wdt_life, WDT_CHAN1);
 #endif
 		count_scan++;
 	}
