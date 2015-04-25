@@ -210,7 +210,7 @@ void prepare_cadr_quLog(struct chan_thread_arg *targ,
 #ifdef __SNMP__
 /**
  * prepare_cadr_snmpStat - Формирование кадра для передающего буфера
- *                         (запрос состояния магистрали).
+ *                         (запрос состояния коммутаторов).
  * @targ: Указатель на структуру chan_thread_arg{}.
  * @b:    Указатель на структуру thr_tx_buf{}.
  * @dst:  Адрес устройства.
@@ -447,28 +447,6 @@ int active_snmp(struct chan_thread_arg *targ, int dst)
 }
 #endif
 
-/**
- * active_local - Запросы устройствам локального узла.
- * @targ: Указатель на структуру chan_thread_arg{}.
- * @dst:  Адрес устройства.
- * @return  0- успех, -1 неудача.
- *
- */
-int active_local(struct chan_thread_arg *targ, int dst)
-{	
-	pthread_mutex_lock(&mx_psv);
-
-	put_state(&psv_local_stage, PSVL_BEGIN);
-	
-	/** Ожидаем готовности послать кадр
-	    пассивному устройствуву */
-	while (get_state(&psv_local_stage) == PSVL_BEGIN)
-		pthread_cond_wait(&psvdata, &mx_psv);
-	
-	pthread_mutex_unlock(&mx_psv);
-	
-	return 0;
-}
 
 /**
  * active_local_answ - Ответ от устройства локального узла.
@@ -614,16 +592,23 @@ int active_process(struct chan_thread_arg *targ, int dst)
 			res = 0;
 		
 	} else if (test_bufDst(&dst2Buf, (unsigned char)rxBuf.buf[0]) != -1) {
-		if (targ->ch2_enable) {
-			/** Кадр сети RS485 (local node) */
-			/** Запрос для пассивного устройства загрузить
-			 * в лог. */
+		/** Кадр сети RS485 (local node) */
+		/** Запрос для пассивного устройства загрузить
+		 * в лог. */
 #ifdef __LOG__
-			putLog(&rxBuf);
+		putLog(&rxBuf);
 #endif
-			res = active_local(targ, dst);
-		} else
-			bo_log("active(): key= [%s] ch2 disable", key);
+		pthread_mutex_lock(&mx_psv);
+		
+		put_state(&psv_local_stage, PSVL_BEGIN);
+		
+		/** Ожидаем готовности послать кадр
+		    пассивному устройствуву */
+		while (get_state(&psv_local_stage) == PSVL_BEGIN)
+			pthread_cond_wait(&psvdata, &mx_psv);
+		
+		pthread_mutex_unlock(&mx_psv);
+		res = 0;
 		
 	} else {
 		pthread_mutex_lock(&mx_rtg);
@@ -738,9 +723,9 @@ void *chan1(void *arg)
 	
 	while (1) {
 		
-		if (count_scan == targ->tscan) {
-			count_scan = 0;
-			if (targ->ch1_enable) {
+		if (targ->enable) {
+			if (count_scan == targ->tscan) {
+				count_scan = 0;
 				/** Сканируем устройства порт 1 RS485
 				 *  (1 раз в сек) */
 #ifdef __PRINT__
@@ -788,9 +773,7 @@ void *chan1(void *arg)
 				write(1, "\n", 1);
 #endif
 			}
-		}
-
-		if (targ->ch1_enable) {
+			
 			if (dstBuf.wpos > 0) {
 				if (get_state(&psv_local_stage) == PSVL_FREE) {
 					dst = get_bufDst(&dstBuf);
@@ -829,16 +812,16 @@ void *chan1(void *arg)
 				
 				pthread_mutex_unlock(&mx_psv);
 			}
-		}
 		
-		res = active_local_answ(targ);
-		if (res < 0) break;
+			res = active_local_answ(targ);
+			if (res < 0) break;
+		}
 		
 		res = data_FIFO(targ);
 		if (res < 0) break;
 
-		if (targ->ch_usleep != 0)
-			usleep(targ->ch_usleep);
+		if (targ->usleep != 0)
+			usleep(targ->usleep);
 		
 #if defined (__MOXA_TARGET__) && defined (__WDT__)
 		if (targ->wdt_en)

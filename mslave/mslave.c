@@ -218,7 +218,7 @@ int main(int argc, char *argv[])
 	ch1_targ.dst_beg = cfg_getint(cfg, "RS485_1:dstBeg", -1);
 	ch1_targ.dst_end = cfg_getint(cfg, "RS485_1:dstEnd", -1);
 	ch1_enable = cfg_getint(cfg, "RS485_1:enable", -1);
-	ch1_targ.ch_usleep = cfg_getint(cfg, "RS485_1:usleep", -1);
+	ch1_targ.usleep = cfg_getint(cfg, "RS485_1:usleep", -1);
 	
 	if (ch1_enable) {
 		SerialSetParam(ch1_targ.port, rs_parity, rs_databits, rs_stopbit);
@@ -234,7 +234,7 @@ int main(int argc, char *argv[])
 	ch2_targ.dst_beg = cfg_getint(cfg, "RS485_2:dstBeg", -1);
 	ch2_targ.dst_end = cfg_getint(cfg, "RS485_2:dstEnd", -1);
 	ch2_enable = cfg_getint(cfg, "RS485_2:enable", -1);
-	ch2_targ.ch_usleep = cfg_getint(cfg, "RS485_2:usleep", -1);
+	ch2_targ.usleep = cfg_getint(cfg, "RS485_2:usleep", -1);
 
 	if (ch2_enable) {
 		SerialSetParam(ch2_targ.port, rs_parity, rs_databits, rs_stopbit);
@@ -373,8 +373,7 @@ int main(int argc, char *argv[])
 
 	write(1, "send_fifo start ok\n", 14);
 	
-	ch1_targ.ch1_enable = ch1_enable;
-	ch1_targ.ch2_enable = ch2_enable;
+	ch1_targ.enable = ch1_enable;
 	ch1_targ.tscan = tscan;
 	ch1_targ.tout = tout;
 	ch1_targ.tout_scan = tout_scan;
@@ -405,8 +404,7 @@ int main(int argc, char *argv[])
 
 	write(1, "ch1 start ok\n", 13);
 	
-	ch2_targ.ch1_enable = ch1_enable;
-	ch2_targ.ch2_enable = ch2_enable;
+	ch2_targ.enable = ch2_enable;
 	ch2_targ.tscan = tscan;
 	ch2_targ.tout = tout;
 	ch2_targ.tout_scan = tout_scan;
